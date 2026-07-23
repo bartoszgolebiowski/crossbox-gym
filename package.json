@@ -1,0 +1,32 @@
+{
+  "name": "crossbox-gym",
+  "version": "0.1.0",
+  "scripts": {
+    "build": "tsc",
+    "cdk": "cdk",
+    "test:integration": "node scripts/run-integration-tests.mjs",
+    "seed": "tsx scripts/seed-admin.ts"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.147",
+    "@types/node": "^22.0.0",
+    "aws-cdk": "^2.1000.0",
+    "esbuild": "^0.24.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.2",
+    "typescript": "~5.9.3"
+  },
+  "dependencies": {
+    "@aws-sdk/client-cloudformation": "^3.731.0",
+    "@aws-sdk/client-cognito-identity-provider": "^3.731.0",
+    "@aws-sdk/client-dynamodb": "^3.731.0",
+    "@aws-sdk/client-s3": "^3.731.0",
+    "@aws-sdk/client-ses": "^3.731.0",
+    "@aws-sdk/client-sqs": "^3.731.0",
+    "@aws-sdk/client-ssm": "^3.731.0",
+    "@aws-sdk/lib-dynamodb": "^3.731.0",
+    "aws-cdk-lib": "^2.261.0",
+    "constructs": "^10.5.0",
+    "stripe": "latest"
+  }
+}
