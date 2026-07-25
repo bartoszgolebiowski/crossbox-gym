@@ -8,26 +8,68 @@ describe('Member PWA Test Suite', () => {
   let memberSession: TestUserSession;
 
   before(async () => {
-    // TODO: Initialize context & create member session with active subscription
+    context = await getTestContext();
+    memberSession = await createTestUserSession(context, { role: 'member', withActiveSubscription: true });
   });
 
   test('GET /member/dashboard returns profile, active subscription, and gym locations', async () => {
-    // TODO: Invoke GET /member/dashboard with member IdToken, assert profile, subscription, locations array
+    const res = await fetch(`${context.apiUrl}/member/dashboard`, {
+      headers: { 'Authorization': `Bearer ${memberSession.idToken}` }
+    });
+
+    assert.equal(res.status, 200);
+    const data = await res.json() as any;
+    assert.ok(data.user, 'Expected user profile');
+    assert.ok(Array.isArray(data.locations), 'Expected locations array');
   });
 
   test('POST /member/consent records terms version and IP address', async () => {
-    // TODO: Invoke POST /member/consent with terms_version="v1.0", assert message and check DDB
+    const res = await fetch(`${context.apiUrl}/member/consent`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${memberSession.idToken}`
+      },
+      body: JSON.stringify({ terms_version: 'v1.0' })
+    });
+
+    assert.equal(res.status, 200);
+    const data = await res.json() as any;
+    assert.ok(data.message.includes('Consent recorded'));
   });
 
   test('POST /member/qr generates valid signed HMAC QR code for active member', async () => {
-    // TODO: Invoke POST /member/qr, verify qr_code payload contains user_id, timestamp, hmac
+    const res = await fetch(`${context.apiUrl}/member/qr`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${memberSession.idToken}`
+      }
+    });
+
+    assert.equal(res.status, 200);
+    const data = await res.json() as any;
+    assert.ok(data.qr_code, 'Expected qr_code payload');
+    const qrObj = JSON.parse(data.qr_code);
+    assert.ok(qrObj.hmac, 'Expected HMAC signature in QR payload');
   });
 
   test('POST /member/portal-session returns customer portal URL', async () => {
-    // TODO: Invoke POST /member/portal-session, assert 200 and portal url
+    const res = await fetch(`${context.apiUrl}/member/portal-session`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${memberSession.idToken}`
+      }
+    });
+
+    assert.equal(res.status, 200);
+    const data = await res.json() as any;
+    assert.ok(data.url, 'Expected portal URL');
   });
 
   test('GET /member/dashboard without auth header returns 401', async () => {
-    // TODO: Invoke GET /member/dashboard without Authorization header, assert status 401
+    const res = await fetch(`${context.apiUrl}/member/dashboard`);
+    assert.equal(res.status, 401);
   });
 });

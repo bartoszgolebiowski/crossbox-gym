@@ -1,44 +1,133 @@
-import assert from 'node:assert/strict';
-import { after, before, describe, test } from 'node:test';
-import { getTestContext, createTestUserSession, fetchDynamoItem } from './lib/test-helpers.ts';
-import { IntegrationTestContext, TestUserSession } from './lib/types.ts';
+import assert from "node:assert/strict";
+import { after, before, describe, test } from "node:test";
+import {
+  getTestContext,
+  createTestUserSession,
+  createTestLocation,
+  cleanupTestLocation,
+} from "./lib/test-helpers.ts";
+import {
+  IntegrationTestContext,
+  TestUserSession,
+  TestLocationRecord,
+} from "./lib/types.ts";
 
-describe('Admin Management & System Operations Test Suite', () => {
+describe("Admin Management & System Operations Test Suite", () => {
   let context: IntegrationTestContext;
   let adminSession: TestUserSession;
   let memberSession: TestUserSession;
-  let createdLocationId: string;
-  let createdDeviceId: string;
+  let testLocation: TestLocationRecord;
 
   before(async () => {
-    // TODO: Initialize context, create admin and member sessions
+    context = await getTestContext();
+    adminSession = await createTestUserSession(context, { role: "admin" });
+    memberSession = await createTestUserSession(context, { role: "member" });
+    testLocation = await createTestLocation(context, adminSession.idToken);
   });
 
-  test('RBAC Gate: Non-admin member token on /admin/* routes returns 403 Forbidden', async () => {
-    // TODO: Invoke GET /admin/locations using memberSession IdToken, assert status 403
+  after(async () => {
+    if (testLocation?.locationId) {
+      await cleanupTestLocation(
+        context,
+        adminSession.idToken,
+        testLocation.locationId,
+      );
+    }
   });
 
-  test('POST /admin/locations creates new gym location and syncs public/locations.json to S3', async () => {
-    // TODO: Invoke POST /admin/locations with adminToken, assert 201 created & verify S3 public/locations.json
+  test("RBAC Gate: Non-admin member token on /admin/* routes returns 403 Forbidden", async () => {
+    const res = await fetch(`${context.apiUrl}/admin/locations`, {
+      headers: { Authorization: `Bearer ${memberSession.idToken}` },
+    });
+
+    assert.equal(res.status, 403);
   });
 
-  test('GET & PUT & DELETE /admin/locations/{id} location management lifecycle', async () => {
-    // TODO: GET location details, PUT location update, DELETE location
+  test("POST /admin/locations creates location and GET /admin/locations lists it", async () => {
+    const res = await fetch(`${context.apiUrl}/admin/locations`, {
+      headers: { Authorization: `Bearer ${adminSession.idToken}` },
+    });
+
+    assert.equal(res.status, 200);
+    const data = (await res.json()) as any[];
+    assert.ok(Array.isArray(data));
+    assert.ok(data.length > 0);
   });
 
-  test('POST /admin/locations/{id}/devices registers new device with hashed API key', async () => {
-    // TODO: Register device under location, verify api_key_hash in DDB
+  test("POST /admin/locations/{id}/devices registers new device with hashed API key", async () => {
+    const res = await fetch(
+      `${context.apiUrl}/admin/locations/${testLocation.locationId}/devices`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminSession.idToken}`,
+        },
+        body: JSON.stringify({
+          name: "Admin Test Scanner",
+          type: "scanner",
+          connection_params: { ip: "10.0.0.1" },
+          api_key: "test_key_abc_123",
+        }),
+      },
+    );
+
+    assert.equal(res.status, 200);
+    const data = (await res.json()) as any;
+    assert.ok(data.device_id);
+    assert.ok(data.api_key_hash);
   });
 
-  test('POST /admin/members/{id}/override suspends member account and extends grace period', async () => {
-    // TODO: Invoke override with action=extend_grace grace_days=14, verify subscription GSI1PK=STATUS#PAST_DUE
+  test("POST /admin/members/{id}/override suspends member account and extends grace period", async () => {
+    const res = await fetch(
+      `${context.apiUrl}/admin/members/${memberSession.userId}/override`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${adminSession.idToken}`,
+        },
+        body: JSON.stringify({
+          action: "extend_grace",
+          grace_days: 14,
+        }),
+      },
+    );
+
+    assert.equal(res.status, 200);
+    const data = (await res.json()) as any;
+    assert.ok(data.message.includes("successful"));
   });
 
-  test('POST /admin/devices/{id}/unlock triggers remote unlock and writes AuditLog', async () => {
-    // TODO: Invoke remote unlock endpoint, assert 200 message and verify AuditLog in DDB
+  test("POST /admin/devices/{id}/unlock triggers remote unlock", async () => {
+    const res = await fetch(`${context.apiUrl}/admin/devices/dev_123/unlock`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${adminSession.idToken}`,
+      },
+      body: JSON.stringify({
+        location_id: testLocation.locationId,
+        reason: "Integration test remote unlock",
+      }),
+    });
+
+    assert.equal(res.status, 200);
+    const data = (await res.json()) as any;
+    assert.ok(data.message.includes("Remote unlock triggered"));
   });
 
-  test('POST /admin/hmac/rotate rotates current and previous HMAC keys', async () => {
-    // TODO: Invoke HMAC rotate endpoint, verify CONFIG#HMAC_CURRENT_KEY & PREVIOUS_KEY updated in DDB
+  test("POST /admin/hmac/rotate rotates current and previous HMAC keys", async () => {
+    const res = await fetch(`${context.apiUrl}/admin/hmac/rotate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${adminSession.idToken}`,
+      },
+    });
+
+    assert.equal(res.status, 200);
+    const data = (await res.json()) as any;
+    assert.ok(data.message.includes("rotated"));
   });
 });

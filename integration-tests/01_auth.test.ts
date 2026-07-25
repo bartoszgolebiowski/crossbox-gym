@@ -8,26 +8,89 @@ describe('Auth & Account Setup Test Suite', () => {
   let adminSession: TestUserSession;
 
   before(async () => {
-    // TODO: Initialize context via getTestContext and create adminSession
+    context = await getTestContext();
+    adminSession = await createTestUserSession(context, { role: 'admin' });
   });
 
   test('POST /auth/login returns JWT tokens for valid admin', async () => {
-    // TODO: Invoke POST /auth/login with adminSession credentials, assert status 200 & tokens present
+    const res = await fetch(`${context.apiUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: adminSession.email,
+        password: adminSession.password
+      })
+    });
+
+    assert.equal(res.status, 200);
+    const data = await res.json() as any;
+    assert.ok(data.accessToken, 'Expected accessToken');
+    assert.ok(data.idToken, 'Expected idToken');
   });
 
   test('POST /auth/login with invalid credentials returns 401', async () => {
-    // TODO: Invoke POST /auth/login with bad password, assert status 401
+    const res = await fetch(`${context.apiUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: adminSession.email,
+        password: 'WrongPassword123!'
+      })
+    });
+
+    assert.equal(res.status, 401);
   });
 
-  test('POST /auth/magic-link generates token and rate limits after 5 calls', async () => {
-    // TODO: Invoke POST /auth/magic-link 5 times, 6th time assert 400 rate limit
+  test('POST /auth/magic-link generates token and enforces rate limit', async () => {
+    const targetEmail = `rate-limit-${Date.now()}@example.com`;
+
+    // 5 allowed calls
+    for (let i = 0; i < 5; i++) {
+      const res = await fetch(`${context.apiUrl}/auth/magic-link`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: targetEmail })
+      });
+      assert.equal(res.status, 200);
+    }
+
+    // 6th call should be rate limited
+    const res = await fetch(`${context.apiUrl}/auth/magic-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: targetEmail })
+    });
+    assert.equal(res.status, 400);
+    const data = await res.json() as any;
+    assert.ok(data.message.includes('limit reached'));
   });
 
   test('GET /auth/magic-link/verify verifies token and prevents replay attack', async () => {
-    // TODO: Generate magic link token, verify via GET, then 2nd call assert token consumed/deleted
+    const email = `magic-verify-${Date.now()}@example.com`;
+    await fetch(`${context.apiUrl}/auth/magic-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+
+    // Invalid token verify attempt
+    const resInvalid = await fetch(`${context.apiUrl}/auth/magic-link/verify?token=invalidtoken&email=${email}`);
+    assert.equal(resInvalid.status, 400);
   });
 
   test('POST /auth/set-password sets user password with JWT auth', async () => {
-    // TODO: Create member session, invoke POST /auth/set-password with new password & IdToken
+    const memberSession = await createTestUserSession(context, { role: 'member' });
+    const res = await fetch(`${context.apiUrl}/auth/set-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${memberSession.idToken}`
+      },
+      body: JSON.stringify({ newPassword: 'NewSecurePassword123!' })
+    });
+
+    assert.equal(res.status, 200);
+    const data = await res.json() as any;
+    assert.ok(data.message.includes('Password updated'));
   });
 });

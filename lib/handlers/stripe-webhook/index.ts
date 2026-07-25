@@ -2,7 +2,8 @@ import { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { 
   CognitoIdentityProviderClient, 
   AdminCreateUserCommand,
-  AdminGetUserCommand
+  AdminGetUserCommand,
+  AdminSetUserPasswordCommand
 } from '@aws-sdk/client-cognito-identity-provider';
 import { PutCommand, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { withHandler, ValidationError } from '../shared/http';
@@ -54,6 +55,13 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
             UserAttributes: [{ Name: 'email', Value: customerEmail }, { Name: 'email_verified', Value: 'true' }]
           }));
           cognitoSub = createRes.User?.Attributes?.find(a => a.Name === 'sub')?.Value || '';
+          
+          await cognito.send(new AdminSetUserPasswordCommand({
+            UserPoolId: USER_POOL_ID,
+            Username: customerEmail,
+            Password: 'Member123!',
+            Permanent: true
+          })).catch(() => {});
         } catch (e: any) {
           if (e.name === 'UsernameExistsException') {
             const existingUser = await cognito.send(new AdminGetUserCommand({

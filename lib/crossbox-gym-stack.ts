@@ -166,11 +166,9 @@ export class CrossboxGymStack extends cdk.Stack {
 
     // --- 6. API Gateway (HTTP) ---
 
-    const corsOrigins = this.node.tryGetContext('corsOrigins') || ['http://localhost:5173', 'http://localhost:3000'];
-
     const httpApi = new apigw.HttpApi(this, 'HttpApi', {
       corsPreflight: {
-        allowOrigins: corsOrigins.split ? corsOrigins.split(',') : corsOrigins,
+        allowOrigins: ['*'],
         allowMethods: [
           apigw.CorsHttpMethod.GET,
           apigw.CorsHttpMethod.POST,
@@ -178,7 +176,7 @@ export class CrossboxGymStack extends cdk.Stack {
           apigw.CorsHttpMethod.DELETE,
           apigw.CorsHttpMethod.OPTIONS,
         ],
-        allowHeaders: ['Content-Type', 'Authorization', 'X-Api-Key'],
+        allowHeaders: ['*'],
         maxAge: cdk.Duration.hours(24),
       },
     });

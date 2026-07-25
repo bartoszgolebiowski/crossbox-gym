@@ -37,7 +37,7 @@ try {
 
   // 3. Run integration test suite
   try {
-    run(`node --import tsx --test "integration-tests/main-flow.test.ts" -- --stack ${STACK} --region ${REGION}`);
+    run(`node --import tsx --test "integration-tests/*.test.ts" -- --stack ${STACK} --region ${REGION}`);
     testExitCode = 0;
   } catch {
     testExitCode = 1;

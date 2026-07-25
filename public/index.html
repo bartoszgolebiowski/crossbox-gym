@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrossBox Gym - Member Passbook</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0B0E14;
+      --bg-card: #151921;
+      --bg-card-hover: #1E232F;
+      --primary: #FF2E63;
+      --primary-glow: rgba(255, 46, 99, 0.4);
+      --secondary: #00ADB5;
+      --secondary-glow: rgba(0, 173, 181, 0.4);
+      --accent: #FFD369;
+      --text-main: #EEEEEE;
+      --text-muted: #9AA0A6;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --radius: 16px;
+      --font-heading: 'Space Grotesk', sans-serif;
+      --font-body: 'Outfit', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(255, 46, 99, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(0, 173, 181, 0.12) 0%, transparent 40%);
+      background-attachment: fixed;
+    }
+
+    header {
+      padding: 20px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11, 14, 20, 0.85);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: var(--font-heading);
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: #fff;
+      box-shadow: 0 0 20px var(--primary-glow);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 10px 22px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: var(--font-body);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), #D61C4E);
+      color: #fff;
+      box-shadow: 0 4px 15px var(--primary-glow);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px var(--primary-glow);
+    }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--secondary);
+    }
+
+    .btn-danger {
+      background: rgba(255, 46, 99, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(255, 46, 99, 0.3);
+    }
+
+    .btn-danger:hover {
+      background: rgba(255, 46, 99, 0.25);
+    }
+
+    main {
+      flex: 1;
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .hero h1 {
+      font-family: var(--font-heading);
+      font-size: 48px;
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #FFFFFF 0%, #B0B0B0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero h1 span {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 32px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    .card-title {
+      font-family: var(--font-heading);
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: var(--text-main);
+      font-size: 15px;
+      font-family: var(--font-body);
+      transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--secondary);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-active {
+      background: rgba(0, 242, 254, 0.15);
+      color: #00F2FE;
+      border: 1px solid rgba(0, 242, 254, 0.3);
+    }
+
+    .qr-container {
+      background: #FFFFFF;
+      padding: 16px;
+      border-radius: 16px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 220px;
+      height: 220px;
+      margin: 20px auto;
+      box-shadow: 0 0 30px var(--secondary-glow);
+    }
+
+    .response-box {
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 14px;
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--secondary);
+      max-height: 200px;
+      overflow-y: auto;
+      word-break: break-all;
+      margin-top: 15px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 30px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-color);
+      font-size: 14px;
+    }
+
+    .link-admin {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .link-admin:hover {
+      color: var(--secondary);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-logo">CB</div>
+      <span>CROSSBOX <span style="color: var(--primary);">MEMBER</span></span>
+    </div>
+    <div class="nav-links">
+      <div id="navAuthenticated" style="display: none; align-items: center; gap: 14px;">
+        <span id="userEmailBadge" class="status-badge status-active">Member</span>
+        <button class="btn btn-danger" onclick="logout()">Log Out</button>
+      </div>
+      <a href="admin.html" class="link-admin">Admin Portal &rarr;</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>24/7 Digital <span>Access Pass</span></h1>
+      <p>Your instant turnstile key passbook & membership dashboard</p>
+    </section>
+
+    <!-- VIEW 1: LOGIN FORM (Shown when NOT logged in) -->
+    <div id="loginView">
+      <div class="card" style="max-width: 480px; margin: 0 auto;">
+        <div class="card-title">🔐 Member Sign In</div>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">
+          Log in with your credentials to generate your digital turnstile access pass.
+        </p>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input type="email" id="loginEmail" class="form-control" value="admin@crossboxgym.com">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="loginPassword" class="form-control" value="Admin123!">
+        </div>
+        <button class="btn btn-primary" style="width: 100%; margin-bottom: 12px;" onclick="login()">Log In to Member Portal</button>
+        <button class="btn btn-secondary" style="width: 100%;" onclick="quickRegister()">Simulate Instant Member Setup</button>
+        <div id="loginError" class="response-box" style="display: none; color: #FF2E63;"></div>
+      </div>
+    </div>
+
+    <!-- VIEW 2: MEMBER DASHBOARD (Shown ONLY when logged in, login form is HIDDEN) -->
+    <div id="dashboardView" style="display: none;">
+      
+      <!-- Instant QR Access Pass -->
+      <div class="card" style="text-align: center;">
+        <div class="card-title" style="justify-content: center;">📱 Digital Turnstile Pass</div>
+        <p style="color: var(--text-muted); font-size: 14px;">
+          Hold this 60-second HMAC-SHA256 signed QR code up to any CrossBox scanner to open the turnstile.
+        </p>
+        <div class="qr-container">
+          <img id="qrImage" src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=CROSSBOX_DEMO" alt="QR Code Pass" style="width: 180px; height: 180px; display: block;" />
+        </div>
+        <button class="btn btn-primary" style="padding: 12px 32px;" onclick="generateQR()">🔄 Refresh Access Pass</button>
+        <div id="qrInfo" style="margin-top: 12px; font-size: 13px; color: var(--secondary);"></div>
+      </div>
+
+      <div class="grid-2">
+        <!-- Dashboard Details -->
+        <div class="card">
+          <div class="card-title">📊 Membership Status</div>
+          <div id="dashboardContent">
+            <p style="color: var(--text-muted);">Loading member profile & subscription...</p>
+          </div>
+          <button class="btn btn-secondary" style="width: 100%; margin-top: 20px;" onclick="loadDashboard()">Refresh Dashboard</button>
+        </div>
+
+        <!-- Stripe Portal & Webhook Mock -->
+        <div class="card">
+          <div class="card-title">💳 Subscription & Billing</div>
+          <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+            Manage customer portal or test instant subscription webhook events.
+          </p>
+          <button class="btn btn-primary" style="width: 100%; margin-bottom: 12px;" onclick="openPortal()">Manage Stripe Billing Portal</button>
+          <button class="btn btn-secondary" style="width: 100%;" onclick="simulateWebhook()">Simulate Active Webhook Event</button>
+          <div id="billingOutput" class="response-box" style="display: none;"></div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2026 CrossBox Gym Systems. Powered by AWS CDK, Lambda Node22, Cognito & DynamoDB.
+  </footer>
+
+  <script>
+    const API_URL = "https://vk3p7x4dt2.execute-api.eu-central-1.amazonaws.com";
+
+    // Check stored session on load
+    window.onload = () => {
+      const token = localStorage.getItem('cb_member_token');
+      const email = localStorage.getItem('cb_member_email');
+      if (token) {
+        showDashboard(email || 'Member');
+      }
+    };
+
+    async function login() {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const errBox = document.getElementById('loginError');
+
+      try {
+        const res = await fetch(`${API_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem('cb_member_token', data.idToken);
+          localStorage.setItem('cb_member_email', email);
+          showDashboard(email);
+        } else {
+          errBox.style.display = 'block';
+          errBox.innerHTML = `❌ Login Failed: ${data.message || JSON.stringify(data)}`;
+        }
+      } catch (err) {
+        errBox.style.display = 'block';
+        errBox.innerHTML = `❌ Network Error: ${err.message}`;
+      }
+    }
+
+    async function quickRegister() {
+      const email = prompt("Enter email for new member setup:", "newmember@example.com");
+      if (!email) return;
+
+      try {
+        await fetch(`${API_URL}/webhook/stripe`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'stripe-signature': 'mock_sig'
+          },
+          body: JSON.stringify({
+            type: 'checkout.session.completed',
+            data: { object: { customer_details: { email }, subscription: 'sub_demo_123', customer: 'cus_demo_123' } }
+          })
+        });
+        alert(`Member ${email} provisioned! Now click Log In.`);
+        document.getElementById('loginEmail').value = email;
+      } catch (e) {
+        alert('Provisioning failed: ' + e.message);
+      }
+    }
+
+    function showDashboard(email) {
+      document.getElementById('loginView').style.display = 'none';
+      document.getElementById('dashboardView').style.display = 'block';
+      document.getElementById('navAuthenticated').style.display = 'flex';
+      document.getElementById('userEmailBadge').innerText = email;
+      
+      loadDashboard();
+      generateQR();
+    }
+
+    function logout() {
+      localStorage.removeItem('cb_member_token');
+      localStorage.removeItem('cb_member_email');
+      document.getElementById('loginView').style.display = 'block';
+      document.getElementById('dashboardView').style.display = 'none';
+      document.getElementById('navAuthenticated').style.display = 'none';
+    }
+
+    async function generateQR() {
+      const token = localStorage.getItem('cb_member_token');
+      const qrImg = document.getElementById('qrImage');
+      const qrInfo = document.getElementById('qrInfo');
+
+      if (!token) return;
+
+      try {
+        const res = await fetch(`${API_URL}/member/qr`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        const data = await res.json();
+        if (res.ok && data.qr_code) {
+          const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(data.qr_code)}`;
+          qrImg.src = qrUrl;
+          qrInfo.innerHTML = `✅ Signed HMAC Pass Valid (Expires in ${data.expires_in}s)`;
+        } else {
+          qrInfo.innerHTML = `⚠️ ${data.message || 'Active subscription required'}`;
+        }
+      } catch (err) {
+        qrInfo.innerHTML = `Error: ${err.message}`;
+      }
+    }
+
+    async function loadDashboard() {
+      const token = localStorage.getItem('cb_member_token');
+      const container = document.getElementById('dashboardContent');
+
+      try {
+        const res = await fetch(`${API_URL}/member/dashboard`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok) {
+          container.innerHTML = `
+            <div style="font-size: 15px;">
+              <p style="margin-bottom: 8px;"><strong>Email:</strong> ${data.user?.email || 'N/A'}</p>
+              <p style="margin-bottom: 8px;"><strong>Subscription:</strong> <span class="status-badge status-active">${data.subscription?.status || 'ACTIVE'}</span></p>
+              <p style="margin-bottom: 8px;"><strong>Available Gyms:</strong> ${data.locations?.length || 1} Location(s)</p>
+            </div>
+          `;
+        } else {
+          container.innerHTML = `<p style="color: var(--primary);">Failed to load profile: ${data.message}</p>`;
+        }
+      } catch (e) {
+        container.innerHTML = `<p style="color: var(--primary);">Network Error: ${e.message}</p>`;
+      }
+    }
+
+    async function openPortal() {
+      const token = localStorage.getItem('cb_member_token');
+      const output = document.getElementById('billingOutput');
+      try {
+        const res = await fetch(`${API_URL}/member/portal-session`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        output.style.display = 'block';
+        output.innerHTML = `Stripe Customer Portal:<br><a href="${data.url}" target="_blank" style="color: var(--secondary);">${data.url}</a>`;
+      } catch (e) {
+        output.style.display = 'block';
+        output.innerHTML = `Error: ${e.message}`;
+      }
+    }
+
+    async function simulateWebhook() {
+      const email = localStorage.getItem('cb_member_email') || 'member@example.com';
+      const output = document.getElementById('billingOutput');
+
+      try {
+        const res = await fetch(`${API_URL}/webhook/stripe`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'stripe-signature': 'mock_sig'
+          },
+          body: JSON.stringify({
+            type: 'checkout.session.completed',
+            data: { object: { customer_details: { email }, subscription: 'sub_demo_123', customer: 'cus_demo_123' } }
+          })
+        });
+        const data = await res.json();
+        output.style.display = 'block';
+        output.innerHTML = `Webhook Triggered:<br>${JSON.stringify(data)}`;
+        loadDashboard();
+      } catch (err) {
+        output.style.display = 'block';
+        output.innerHTML = `Webhook Error: ${err.message}`;
+      }
+    }
+  </script>
+</body>
+</html>

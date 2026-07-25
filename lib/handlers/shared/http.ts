@@ -44,10 +44,9 @@ export interface HandlerResult {
 type BusinessHandler = (event: APIGatewayProxyEventV2) => Promise<HandlerResult | unknown>;
 
 function corsHeaders(): Record<string, string> {
-  const origin = process.env.FRONTEND_URL ?? '*';
   return {
-    'Access-Control-Allow-Origin': origin,
-    'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Api-Key',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': '*',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
   };
 }
@@ -75,7 +74,12 @@ export function assertAdmin(event: APIGatewayProxyEventV2): string {
   const claims = extractJwtClaims(event);
   if (!claims) throw new UnauthorizedError('Unauthorized');
   const groups = claims['cognito:groups'];
-  const isAdmin = Array.isArray(groups) ? groups.includes('admins') : groups === 'admins';
+  let isAdmin = false;
+  if (Array.isArray(groups)) {
+    isAdmin = groups.includes('admins');
+  } else if (typeof groups === 'string') {
+    isAdmin = groups.includes('admins');
+  }
   if (!isAdmin) throw new ForbiddenError('Admin access required');
   return (claims.sub as string) || 'admin';
 }

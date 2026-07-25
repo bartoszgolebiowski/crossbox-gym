@@ -127,6 +127,25 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     return result.Items || [];
   }
 
+  // POST /admin/devices/{id}/unlock
+  if (method === 'POST' && path.endsWith('/unlock')) {
+    const deviceId = path.split('/')[3];
+    const body = parseJsonBody(event);
+
+    await sqs.send(new SendMessageCommand({
+      QueueUrl: UNLOCK_QUEUE,
+      MessageBody: JSON.stringify({
+        location_id: body.location_id,
+        device_id: deviceId,
+        user_id: adminId,
+        timestamp: new Date().toISOString()
+      })
+    }));
+
+    await logAudit(adminId, 'remote_unlock', { target_id: deviceId, reason: body.reason });
+    return { message: 'Remote unlock triggered' };
+  }
+
   // POST /admin/locations/{id}/devices
   if (method === 'POST' && path.includes('/devices')) {
     const locationId = path.split('/')[3];
@@ -149,25 +168,6 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     await ddb.send(new PutCommand({ TableName: MAIN_TABLE, Item: item }));
     await logAudit(adminId, 'create_device', { target_id: deviceId, location_id: locationId });
     return item;
-  }
-
-  // POST /admin/devices/{id}/unlock
-  if (method === 'POST' && path.endsWith('/unlock')) {
-    const deviceId = path.split('/')[3];
-    const body = parseJsonBody(event);
-
-    await sqs.send(new SendMessageCommand({
-      QueueUrl: UNLOCK_QUEUE,
-      MessageBody: JSON.stringify({
-        location_id: body.location_id,
-        device_id: deviceId,
-        user_id: adminId,
-        timestamp: new Date().toISOString()
-      })
-    }));
-
-    await logAudit(adminId, 'remote_unlock', { target_id: deviceId, reason: body.reason });
-    return { message: 'Remote unlock triggered' };
   }
 
   // POST /admin/hmac/rotate

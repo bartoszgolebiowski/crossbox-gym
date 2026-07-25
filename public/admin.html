@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrossBox Gym - Administrator Management Console</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #0B0E14;
+      --bg-card: #151921;
+      --bg-card-hover: #1E232F;
+      --primary: #00ADB5;
+      --primary-glow: rgba(0, 173, 181, 0.4);
+      --secondary: #FF2E63;
+      --accent: #FFD369;
+      --text-main: #EEEEEE;
+      --text-muted: #9AA0A6;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --radius: 16px;
+      --font-heading: 'Space Grotesk', sans-serif;
+      --font-body: 'Outfit', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      line-height: 1.5;
+      background-image: 
+        radial-gradient(circle at 10% 20%, rgba(0, 173, 181, 0.12) 0%, transparent 40%),
+        radial-gradient(circle at 90% 80%, rgba(255, 46, 99, 0.12) 0%, transparent 40%);
+      background-attachment: fixed;
+    }
+
+    header {
+      padding: 20px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--border-color);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(11, 14, 20, 0.85);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: var(--font-heading);
+      font-size: 24px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-logo {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: #fff;
+      box-shadow: 0 0 20px var(--primary-glow);
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 10px 22px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-family: var(--font-body);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), #008B9B);
+      color: #fff;
+      box-shadow: 0 4px 15px var(--primary-glow);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px var(--primary-glow);
+    }
+
+    .btn-secondary {
+      background: var(--bg-card);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--primary);
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, #FF9900, #FF5500);
+      color: #fff;
+    }
+
+    .btn-danger {
+      background: rgba(255, 46, 99, 0.15);
+      color: var(--secondary);
+      border: 1px solid rgba(255, 46, 99, 0.3);
+    }
+
+    .btn-danger:hover {
+      background: rgba(255, 46, 99, 0.25);
+    }
+
+    main {
+      flex: 1;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    .hero {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .hero h1 {
+      font-family: var(--font-heading);
+      font-size: 48px;
+      font-weight: 900;
+      line-height: 1.1;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #FFFFFF 0%, #B0B0B0 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero h1 span {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 18px;
+      color: var(--text-muted);
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 30px;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 4px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .card:hover::before {
+      opacity: 1;
+    }
+
+    .card-title {
+      font-family: var(--font-heading);
+      font-size: 22px;
+      font-weight: 700;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .form-control {
+      width: 100%;
+      padding: 12px 16px;
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: var(--text-main);
+      font-size: 15px;
+      font-family: var(--font-body);
+      transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-admin {
+      background: rgba(0, 173, 181, 0.15);
+      color: #00ADB5;
+      border: 1px solid rgba(0, 173, 181, 0.3);
+    }
+
+    .response-box {
+      background: var(--bg-dark);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 14px;
+      font-family: monospace;
+      font-size: 13px;
+      color: var(--primary);
+      max-height: 220px;
+      overflow-y: auto;
+      word-break: break-all;
+      margin-top: 15px;
+    }
+
+    footer {
+      text-align: center;
+      padding: 30px;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-color);
+      font-size: 14px;
+    }
+
+    .link-member {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+    }
+
+    .link-member:hover {
+      color: var(--secondary);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <div class="brand-logo">CB</div>
+      <span>CROSSBOX <span style="color: var(--primary);">ADMIN</span></span>
+    </div>
+    <div class="nav-links">
+      <div id="navAuthenticated" style="display: none; align-items: center; gap: 14px;">
+        <span id="adminBadge" class="status-badge status-admin">Administrator</span>
+        <button class="btn btn-danger" onclick="logout()">Log Out</button>
+      </div>
+      <a href="index.html" class="link-member">&larr; Member Portal</a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <h1>System <span>Control Console</span></h1>
+      <p>Manage Gym Locations, Turnstile Hardware, Security Keys & Member Overrides</p>
+    </section>
+
+    <!-- VIEW 1: ADMIN LOGIN FORM (Shown when NOT logged in) -->
+    <div id="loginView">
+      <div class="card" style="max-width: 480px; margin: 0 auto;">
+        <div class="card-title">🛡️ Administrator Authentication</div>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 20px;">
+          Log in with your administrator credentials to access system controls.
+        </p>
+        <div class="form-group">
+          <label>Admin Email</label>
+          <input type="email" id="loginEmail" class="form-control" value="admin@crossboxgym.com">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" id="loginPassword" class="form-control" value="Admin123!">
+        </div>
+        <button class="btn btn-primary" style="width: 100%;" onclick="login()">Log In to Admin Console</button>
+        <div id="loginError" class="response-box" style="display: none; color: #FF2E63;"></div>
+      </div>
+    </div>
+
+    <!-- VIEW 2: ADMIN MANAGEMENT DASHBOARD (Shown ONLY when logged in, login form is HIDDEN) -->
+    <div id="adminView" style="display: none;">
+      <div class="grid">
+        <!-- Card 1: Gym Locations & Hardware Devices -->
+        <div class="card">
+          <div class="card-title">📍 Gym Locations & Devices</div>
+          <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+            Create location metadata and register turnstile scanner devices.
+          </p>
+          <div class="form-group">
+            <label>Location Name</label>
+            <input type="text" id="locName" class="form-control" value="CrossBox Warsaw Downtown">
+          </div>
+          <div class="form-group">
+            <label>Address</label>
+            <input type="text" id="locAddress" class="form-control" value="Marszalkowska 1, Warsaw">
+          </div>
+          <button class="btn btn-primary" style="width: 100%; margin-bottom: 12px;" onclick="createLocation()">+ Create Location</button>
+          <button class="btn btn-secondary" style="width: 100%;" onclick="listLocations()">📋 List Locations</button>
+          <div id="locationOutput" class="response-box" style="display: none;"></div>
+        </div>
+
+        <!-- Card 2: Remote Hardware Control -->
+        <div class="card">
+          <div class="card-title">⚡ Remote Unlock & HMAC Keys</div>
+          <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+            Trigger emergency remote turnstile unlock or rotate security HMAC keys.
+          </p>
+          <div class="form-group">
+            <label>Target Device ID</label>
+            <input type="text" id="unlockDeviceId" class="form-control" value="dev_turnstile_01">
+          </div>
+          <button class="btn btn-warning" style="width: 100%; margin-bottom: 12px;" onclick="remoteUnlock()">🔓 Trigger Remote Unlock</button>
+          <button class="btn btn-secondary" style="width: 100%;" onclick="rotateHMAC()">🔄 Rotate HMAC Keys</button>
+          <div id="remoteOutput" class="response-box" style="display: none;"></div>
+        </div>
+
+        <!-- Card 3: Member Overrides & Suspensions -->
+        <div class="card">
+          <div class="card-title">👥 Member Access Override</div>
+          <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+            Manually suspend member access or extend grace periods.
+          </p>
+          <div class="form-group">
+            <label>Target User ID / Email</label>
+            <input type="text" id="overrideUserId" class="form-control" placeholder="User ID">
+          </div>
+          <div class="form-group">
+            <label>Action</label>
+            <select id="overrideAction" class="form-control">
+              <option value="suspend">Suspend Member Access</option>
+              <option value="extend_grace">Extend Grace Period (7 days)</option>
+              <option value="activate">Re-Activate Member</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" style="width: 100%;" onclick="memberOverride()">Apply Access Override</button>
+          <div id="overrideOutput" class="response-box" style="display: none;"></div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    &copy; 2026 CrossBox Gym Systems. Powered by AWS CDK, Lambda Node22, Cognito & DynamoDB.
+  </footer>
+
+  <script>
+    const API_URL = "https://vk3p7x4dt2.execute-api.eu-central-1.amazonaws.com";
+
+    // Check stored admin session on load
+    window.onload = () => {
+      const token = localStorage.getItem('cb_admin_token');
+      const email = localStorage.getItem('cb_admin_email');
+      if (token) {
+        showAdminConsole(email || 'Admin');
+      }
+    };
+
+    async function login() {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      const errBox = document.getElementById('loginError');
+
+      try {
+        const res = await fetch(`${API_URL}/auth/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem('cb_admin_token', data.idToken);
+          localStorage.setItem('cb_admin_email', email);
+          showAdminConsole(email);
+        } else {
+          errBox.style.display = 'block';
+          errBox.innerHTML = `❌ Login Failed: ${data.message || JSON.stringify(data)}`;
+        }
+      } catch (err) {
+        errBox.style.display = 'block';
+        errBox.innerHTML = `❌ Network Error: ${err.message}`;
+      }
+    }
+
+    function showAdminConsole(email) {
+      document.getElementById('loginView').style.display = 'none';
+      document.getElementById('adminView').style.display = 'block';
+      document.getElementById('navAuthenticated').style.display = 'flex';
+      document.getElementById('adminBadge').innerText = email;
+    }
+
+    function logout() {
+      localStorage.removeItem('cb_admin_token');
+      localStorage.removeItem('cb_admin_email');
+      document.getElementById('loginView').style.display = 'block';
+      document.getElementById('adminView').style.display = 'none';
+      document.getElementById('navAuthenticated').style.display = 'none';
+    }
+
+    async function createLocation() {
+      const name = document.getElementById('locName').value;
+      const address = document.getElementById('locAddress').value;
+      const output = document.getElementById('locationOutput');
+      const token = localStorage.getItem('cb_admin_token');
+
+      try {
+        const res = await fetch(`${API_URL}/admin/locations`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name, address })
+        });
+        const data = await res.json();
+        output.style.display = 'block';
+        output.innerHTML = `Location Created:<br>${JSON.stringify(data, null, 2)}`;
+      } catch (err) {
+        output.style.display = 'block';
+        output.innerHTML = `Error: ${err.message}`;
+      }
+    }
+
+    async function listLocations() {
+      const output = document.getElementById('locationOutput');
+      const token = localStorage.getItem('cb_admin_token');
+
+      try {
+        const res = await fetch(`${API_URL}/admin/locations`, {
+          method: 'GET',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        output.style.display = 'block';
+        output.innerHTML = `Locations List:<br>${JSON.stringify(data, null, 2)}`;
+      } catch (err) {
+        output.style.display = 'block';
+        output.innerHTML = `Error: ${err.message}`;
+      }
+    }
+
+    async function remoteUnlock() {
+      const deviceId = document.getElementById('unlockDeviceId').value;
+      const output = document.getElementById('remoteOutput');
+      const token = localStorage.getItem('cb_admin_token');
+
+      try {
+        const res = await fetch(`${API_URL}/admin/devices/${deviceId}/unlock`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ location_id: 'loc_01', reason: 'Web Portal Remote Unlock Test' })
+        });
+        const data = await res.json();
+        output.style.display = 'block';
+        output.innerHTML = `Remote Unlock Triggered:<br>${JSON.stringify(data, null, 2)}`;
+      } catch (err) {
+        output.style.display = 'block';
+        output.innerHTML = `Error: ${err.message}`;
+      }
+    }
+
+    async function rotateHMAC() {
+      const output = document.getElementById('remoteOutput');
+      const token = localStorage.getItem('cb_admin_token');
+
+      try {
+        const res = await fetch(`${API_URL}/admin/hmac/rotate`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        output.style.display = 'block';
+        output.innerHTML = `HMAC Key Rotation:<br>${JSON.stringify(data, null, 2)}`;
+      } catch (err) {
+        output.style.display = 'block';
+        output.innerHTML = `Error: ${err.message}`;
+      }
+    }
+
+    async function memberOverride() {
+      const userId = document.getElementById('overrideUserId').value || 'demo_user';
+      const action = document.getElementById('overrideAction').value;
+      const output = document.getElementById('overrideOutput');
+      const token = localStorage.getItem('cb_admin_token');
+
+      try {
+        const res = await fetch(`${API_URL}/admin/members/${userId}/override`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ action })
+        });
+        const data = await res.json();
+        output.style.display = 'block';
+        output.innerHTML = `Member Override Applied:<br>${JSON.stringify(data, null, 2)}`;
+      } catch (err) {
+        output.style.display = 'block';
+        output.innerHTML = `Error: ${err.message}`;
+      }
+    }
+  </script>
+</body>
+</html>

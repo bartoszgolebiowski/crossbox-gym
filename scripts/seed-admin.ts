@@ -90,7 +90,19 @@ const run = async () => {
         created_at: new Date().toISOString()
       }
     }));
-    console.log(`Admin user profile written to DynamoDB (PK=USER#${sub}).`);
+    await ddb.send(new PutCommand({
+      TableName: mainTableName,
+      Item: {
+        PK: `USER#${sub}`,
+        SK: 'SUB#sub_admin_active',
+        stripe_subscription_id: 'sub_admin_active',
+        stripe_customer_id: 'cus_admin_active',
+        status: 'ACTIVE',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      }
+    }));
+    console.log(`Admin user profile & active subscription written to DynamoDB (PK=USER#${sub}).`);
   }
 
   // Seed HMAC keys if not existing
