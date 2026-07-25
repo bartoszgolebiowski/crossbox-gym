@@ -11,6 +11,7 @@ export interface IntegrationTestContext {
   auditLogsTableName: string;
   unlockQueueUrl: string;
   staticBucketName: string;
+  stripeEventBusName?: string;
   region: string;
 }
 

@@ -7,7 +7,7 @@
   "context": {
     "isTestEnvironment": "false",
     "sesSenderEmail": "no-reply@crossbox.com",
-    "frontendUrl": "http://localhost:5173",
-    "corsOrigins": "http://localhost:5173,http://localhost:3000"
+    "frontendUrl": "https://d3klturtfk9dxr.cloudfront.net",
+    "corsOrigins": "https://d3klturtfk9dxr.cloudfront.net,http://localhost:5173,http://localhost:3000"
   }
 }

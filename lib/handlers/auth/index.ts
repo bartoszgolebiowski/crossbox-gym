@@ -16,7 +16,7 @@ const cognito = new CognitoIdentityProviderClient({});
 const MAIN_TABLE_NAME = process.env.MAIN_TABLE_NAME!;
 const USER_POOL_ID = process.env.USER_POOL_ID!;
 const CLIENT_ID = process.env.USER_POOL_CLIENT_ID!;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+const FRONTEND_URL = process.env.FRONTEND_URL || 'https://d3klturtfk9dxr.cloudfront.net';
 
 export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
   const method = event.requestContext.http.method;
@@ -168,6 +168,57 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     }));
 
     return { message: 'Password updated successfully' };
+  }
+
+  if (method === 'POST' && path === '/auth/register') {
+    const { email, password } = parseJsonBody(event);
+    if (!email) {
+      throw new ValidationError('Email is required');
+    }
+    const userPassword = password || 'Member123!';
+
+    let sub = '';
+    try {
+      const userRes = await cognito.send(new AdminCreateUserCommand({
+        UserPoolId: USER_POOL_ID,
+        Username: email,
+        UserAttributes: [
+          { Name: 'email', Value: email },
+          { Name: 'email_verified', Value: 'true' }
+        ],
+        MessageAction: 'SUPPRESS'
+      }));
+      sub = userRes.User?.Attributes?.find(a => a.Name === 'sub')?.Value || '';
+    } catch (e: any) {
+      if (e.name !== 'UsernameExistsException') throw e;
+    }
+
+    await cognito.send(new AdminSetUserPasswordCommand({
+      UserPoolId: USER_POOL_ID,
+      Username: email,
+      Password: userPassword,
+      Permanent: true
+    }));
+
+    if (sub) {
+      await ddb.send(new PutCommand({
+        TableName: MAIN_TABLE_NAME,
+        Item: {
+          PK: `USER#${sub}`,
+          SK: 'PROFILE',
+          email,
+          role: 'member',
+          password_set: true,
+          created_at: new Date().toISOString()
+        }
+      }));
+    }
+
+    return {
+      message: `Member ${email} created successfully!`,
+      email,
+      password: userPassword
+    };
   }
 
   throw new NotFoundError('Route not found');

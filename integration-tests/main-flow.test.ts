@@ -34,30 +34,26 @@ describe("CrossBox Gym Integration Tests", () => {
       assert.ok(data.url, "Expected checkout URL in response");
     });
 
-    test("POST /webhook/stripe processes checkout completed (mock mode)", async () => {
+    test("EventBridge checkout.session.completed processes checkout completed (mock mode)", async () => {
+      const { handler: stripeEventHandler } = await import("../lib/handlers/stripe-webhook/index.ts");
       const testEmail = `test-user-${Date.now()}@example.com`;
-      const webhookPayload = {
-        type: "checkout.session.completed",
-        data: {
-          object: {
-            customer_details: { email: testEmail },
-            subscription: `sub_test_${Date.now()}`,
-            customer: `cus_test_${Date.now()}`,
+      const eventBridgeEnvelope = {
+        source: "aws.partner/stripe.com",
+        "detail-type": "checkout.session.completed",
+        detail: {
+          type: "checkout.session.completed",
+          data: {
+            object: {
+              customer_details: { email: testEmail },
+              subscription: `sub_test_${Date.now()}`,
+              customer: `cus_test_${Date.now()}`,
+            },
           },
         },
       };
 
-      const res = await fetch(`${apiUrl}/webhook/stripe`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "stripe-signature": "mock_sig",
-        },
-        body: JSON.stringify(webhookPayload),
-      });
-      assert.equal(res.status, 200);
-      const data = (await res.json()) as { received: boolean };
-      assert.equal(data.received, true);
+      const res = await stripeEventHandler(eventBridgeEnvelope);
+      assert.equal(res.received, true);
     });
   });
 
@@ -95,7 +91,7 @@ describe("CrossBox Gym Integration Tests", () => {
       const res = await fetch(`${apiUrl}/auth/magic-link`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: "test-auth@example.com" }),
+        body: JSON.stringify({ email: `test-auth-${Date.now()}@example.com` }),
       });
       assert.equal(res.status, 200);
       const data = (await res.json()) as { message: string };

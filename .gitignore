@@ -4,3 +4,5 @@ cdk.out
 *.d.ts
 !jest.config.js
 cdk-outputs.json
+.env
+

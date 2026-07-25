@@ -357,11 +357,25 @@
         <div class="card">
           <div class="card-title">💳 Subscription & Billing</div>
           <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
-            Manage customer portal or test instant subscription webhook events.
+            Manage self-service subscription, tax details, or initiate new Stripe Checkout session.
           </p>
-          <button class="btn btn-primary" style="width: 100%; margin-bottom: 12px;" onclick="openPortal()">Manage Stripe Billing Portal</button>
-          <button class="btn btn-secondary" style="width: 100%;" onclick="simulateWebhook()">Simulate Active Webhook Event</button>
+          <button class="btn btn-primary" style="width: 100%; margin-bottom: 12px;" onclick="createCheckoutSession()">⚡ Subscribe via Stripe Checkout</button>
+          <button class="btn btn-secondary" style="width: 100%;" onclick="openPortal()">Manage Billing Portal & Cancel</button>
           <div id="billingOutput" class="response-box" style="display: none;"></div>
+        </div>
+      </div>
+
+      <!-- Tax Invoices & Receipts -->
+      <div class="card" style="margin-top: 24px;">
+        <div class="card-title" style="justify-content: space-between;">
+          <span>📄 Tax Invoices & Receipts</span>
+          <button class="btn btn-secondary" style="padding: 6px 14px; font-size: 13px;" onclick="loadInvoices()">🔄 Load Invoices</button>
+        </div>
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+          View tax receipts, invoice PDFs, and automatic tax calculations for your membership renewals.
+        </p>
+        <div id="invoicesContainer">
+          <p style="color: var(--text-muted); font-size: 14px;">Click 'Load Invoices' to view tax receipts.</p>
         </div>
       </div>
 
@@ -373,15 +387,33 @@
   </footer>
 
   <script>
-    const API_URL = "https://vk3p7x4dt2.execute-api.eu-central-1.amazonaws.com";
+    let API_URL = "https://jolq94afa8.execute-api.eu-central-1.amazonaws.com";
 
-    // Check stored session on load
-    window.onload = () => {
+    // Check stored session and load dynamic API URL on load
+    window.onload = async () => {
+      try {
+        const cfgRes = await fetch('/config.json');
+        if (cfgRes.ok) {
+          const cfg = await cfgRes.json();
+          if (cfg.ApiUrl) API_URL = cfg.ApiUrl;
+        }
+      } catch (e) {}
+
       const token = localStorage.getItem('cb_member_token');
       const email = localStorage.getItem('cb_member_email');
       if (token) {
         showDashboard(email || 'Member');
       }
+
+      // Auto-refresh member data when returning to tab from Stripe Sandbox Checkout
+      window.addEventListener('focus', () => {
+        const activeToken = localStorage.getItem('cb_member_token');
+        if (activeToken) {
+          loadDashboard();
+          generateQR();
+          loadInvoices();
+        }
+      });
     };
 
     async function login() {
@@ -411,25 +443,26 @@
     }
 
     async function quickRegister() {
-      const email = prompt("Enter email for new member setup:", "newmember@example.com");
+      const defaultEmail = `member-${Date.now().toString().slice(-4)}@example.com`;
+      const email = prompt("Enter email for instant member account setup in Cognito UserPool:", defaultEmail);
       if (!email) return;
 
       try {
-        await fetch(`${API_URL}/webhook/stripe`, {
+        const res = await fetch(`${API_URL}/auth/register`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'stripe-signature': 'mock_sig'
-          },
-          body: JSON.stringify({
-            type: 'checkout.session.completed',
-            data: { object: { customer_details: { email }, subscription: 'sub_demo_123', customer: 'cus_demo_123' } }
-          })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password: 'Member123!' })
         });
-        alert(`Member ${email} provisioned! Now click Log In.`);
-        document.getElementById('loginEmail').value = email;
+        const data = await res.json();
+        if (res.ok) {
+          document.getElementById('loginEmail').value = email;
+          document.getElementById('loginPassword').value = 'Member123!';
+          alert(`✅ Member created in Cognito UserPool!\n\nEmail: ${email}\nPassword: Member123!\n\nClick "Log In to Member Portal" to sign in.`);
+        } else {
+          alert(`Registration Failed: ${data.message || JSON.stringify(data)}`);
+        }
       } catch (e) {
-        alert('Provisioning failed: ' + e.message);
+        alert('Registration failed: ' + e.message);
       }
     }
 
@@ -441,6 +474,7 @@
       
       loadDashboard();
       generateQR();
+      loadInvoices();
     }
 
     function logout() {
@@ -472,7 +506,7 @@
           qrImg.src = qrUrl;
           qrInfo.innerHTML = `✅ Signed HMAC Pass Valid (Expires in ${data.expires_in}s)`;
         } else {
-          qrInfo.innerHTML = `⚠️ ${data.message || 'Active subscription required'}`;
+          qrInfo.innerHTML = `⚠️ ${data.message || 'Active subscription required for turnstile access'}`;
         }
       } catch (err) {
         qrInfo.innerHTML = `Error: ${err.message}`;
@@ -489,15 +523,93 @@
         });
         const data = await res.json();
         if (res.ok) {
+          const subStatus = data.subscription?.status || 'INACTIVE';
+          let statusBadge = '<span class="status-badge status-suspended">INACTIVE</span>';
+          if (subStatus === 'ACTIVE') {
+            statusBadge = '<span class="status-badge status-active">ACTIVE</span>';
+          } else if (subStatus === 'PAST_DUE') {
+            statusBadge = '<span class="status-badge" style="background: rgba(255, 211, 105, 0.2); color: #FFD369;">PAST DUE</span>';
+          } else if (subStatus === 'CANCELED') {
+            statusBadge = '<span class="status-badge status-suspended">CANCELED</span>';
+          }
+
           container.innerHTML = `
             <div style="font-size: 15px;">
               <p style="margin-bottom: 8px;"><strong>Email:</strong> ${data.user?.email || 'N/A'}</p>
-              <p style="margin-bottom: 8px;"><strong>Subscription:</strong> <span class="status-badge status-active">${data.subscription?.status || 'ACTIVE'}</span></p>
-              <p style="margin-bottom: 8px;"><strong>Available Gyms:</strong> ${data.locations?.length || 1} Location(s)</p>
+              <p style="margin-bottom: 8px;"><strong>Subscription Status:</strong> ${statusBadge}</p>
+              <p style="margin-bottom: 8px;"><strong>Available Gyms:</strong> ${data.locations?.length || 0} Location(s)</p>
+              ${subStatus !== 'ACTIVE' ? '<p style="color: #FFD369; font-size: 13px; margin-top: 10px;">⚠️ Active subscription required for gym turnstile access. Click "Subscribe via Stripe Checkout" below to activate.</p>' : ''}
             </div>
           `;
         } else {
           container.innerHTML = `<p style="color: var(--primary);">Failed to load profile: ${data.message}</p>`;
+        }
+      } catch (e) {
+        container.innerHTML = `<p style="color: var(--primary);">Network Error: ${e.message}</p>`;
+      }
+    }
+
+    async function createCheckoutSession() {
+      const email = localStorage.getItem('cb_member_email') || 'member@example.com';
+      const output = document.getElementById('billingOutput');
+      output.style.display = 'block';
+      output.innerHTML = `<p style="color: var(--text-muted);">Generating Stripe Sandbox Checkout Session...</p>`;
+
+      try {
+        const res = await fetch(`${API_URL}/checkout/session`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customerEmail: email })
+        });
+        const data = await res.json();
+        if (res.ok && data.url) {
+          output.innerHTML = `Stripe Checkout Session Created!<br><a href="${data.url}" target="_blank" class="btn btn-primary" style="margin-top: 10px; display: inline-block; text-decoration: none;">Proceed to Stripe Checkout &rarr;</a>`;
+          window.open(data.url, '_blank');
+        } else {
+          output.innerHTML = `<p style="color: var(--primary);">Checkout Error: ${data.message || JSON.stringify(data)}</p>`;
+        }
+      } catch (e) {
+        output.innerHTML = `<p style="color: var(--primary);">Checkout Error: ${e.message}</p>`;
+      }
+    }
+
+    async function loadInvoices() {
+      const token = localStorage.getItem('cb_member_token');
+      const container = document.getElementById('invoicesContainer');
+      if (!token) return;
+
+      try {
+        container.innerHTML = `<p style="color: var(--text-muted);">Fetching tax invoices...</p>`;
+        const res = await fetch(`${API_URL}/member/invoices`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await res.json();
+        if (res.ok && data.invoices) {
+          if (data.invoices.length === 0) {
+            container.innerHTML = `<p style="color: var(--text-muted);">No invoices found yet.</p>`;
+            return;
+          }
+          let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
+          data.invoices.forEach(inv => {
+            const formattedTotal = (inv.total / 100).toFixed(2);
+            const formattedTax = (inv.tax / 100).toFixed(2);
+            html += `
+              <div style="background: var(--bg-dark); padding: 14px 18px; border-radius: 10px; border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                  <div style="font-weight: 700; color: var(--text-main);">${inv.number || inv.id}</div>
+                  <div style="font-size: 13px; color: var(--text-muted);">Date: ${new Date(inv.createdAt).toLocaleDateString()} | Tax Included: $${formattedTax} (${inv.currency.toUpperCase()})</div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                  <span class="status-badge status-active" style="font-size: 11px;">$${formattedTotal} ${inv.status ? inv.status.toUpperCase() : ''}</span>
+                  ${inv.pdfUrl ? `<a href="${inv.pdfUrl}" target="_blank" class="btn btn-secondary" style="padding: 6px 12px; font-size: 12px; text-decoration: none;">Download PDF</a>` : ''}
+                </div>
+              </div>
+            `;
+          });
+          html += '</div>';
+          container.innerHTML = html;
+        } else {
+          container.innerHTML = `<p style="color: var(--primary);">Failed to load invoices: ${data.message}</p>`;
         }
       } catch (e) {
         container.innerHTML = `<p style="color: var(--primary);">Network Error: ${e.message}</p>`;
@@ -513,37 +625,17 @@
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
-        output.style.display = 'block';
-        output.innerHTML = `Stripe Customer Portal:<br><a href="${data.url}" target="_blank" style="color: var(--secondary);">${data.url}</a>`;
+        if (res.ok && data.url) {
+          output.style.display = 'block';
+          output.innerHTML = `Stripe Customer Portal:<br><a href="${data.url}" target="_blank" style="color: var(--secondary);">${data.url}</a>`;
+          window.open(data.url, '_blank');
+        } else {
+          output.style.display = 'block';
+          output.innerHTML = `Portal Error: ${data.message || JSON.stringify(data)}`;
+        }
       } catch (e) {
         output.style.display = 'block';
         output.innerHTML = `Error: ${e.message}`;
-      }
-    }
-
-    async function simulateWebhook() {
-      const email = localStorage.getItem('cb_member_email') || 'member@example.com';
-      const output = document.getElementById('billingOutput');
-
-      try {
-        const res = await fetch(`${API_URL}/webhook/stripe`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'stripe-signature': 'mock_sig'
-          },
-          body: JSON.stringify({
-            type: 'checkout.session.completed',
-            data: { object: { customer_details: { email }, subscription: 'sub_demo_123', customer: 'cus_demo_123' } }
-          })
-        });
-        const data = await res.json();
-        output.style.display = 'block';
-        output.innerHTML = `Webhook Triggered:<br>${JSON.stringify(data)}`;
-        loadDashboard();
-      } catch (err) {
-        output.style.display = 'block';
-        output.innerHTML = `Webhook Error: ${err.message}`;
       }
     }
   </script>

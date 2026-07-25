@@ -412,10 +412,18 @@
   </footer>
 
   <script>
-    const API_URL = "https://vk3p7x4dt2.execute-api.eu-central-1.amazonaws.com";
+    let API_URL = "https://jolq94afa8.execute-api.eu-central-1.amazonaws.com";
 
-    // Check stored admin session on load
-    window.onload = () => {
+    // Check stored admin session and load dynamic API URL on load
+    window.onload = async () => {
+      try {
+        const cfgRes = await fetch('/config.json');
+        if (cfgRes.ok) {
+          const cfg = await cfgRes.json();
+          if (cfg.ApiUrl) API_URL = cfg.ApiUrl;
+        }
+      } catch (e) {}
+
       const token = localStorage.getItem('cb_admin_token');
       const email = localStorage.getItem('cb_admin_email');
       if (token) {

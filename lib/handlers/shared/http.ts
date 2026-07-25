@@ -66,7 +66,7 @@ export function parseJsonBody(event: APIGatewayProxyEventV2): Record<string, any
 
 /** Extracts JWT claims from API Gateway authorizer context */
 export function extractJwtClaims(event: APIGatewayProxyEventV2): Record<string, any> | undefined {
-  return event.requestContext.authorizer?.jwt?.claims;
+  return (event.requestContext as any).authorizer?.jwt?.claims;
 }
 
 /** Asserts caller is an authenticated admin user, returning admin user ID */

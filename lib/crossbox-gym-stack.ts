@@ -16,6 +16,7 @@ import * as targets from 'aws-cdk-lib/aws-events-targets';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as lambdaEventSources from 'aws-cdk-lib/aws-lambda-event-sources';
 import * as logs from 'aws-cdk-lib/aws-logs';
+import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
 import * as path from 'path';
 
 export interface CrossboxGymStackProps extends cdk.StackProps {
@@ -163,6 +164,11 @@ export class CrossboxGymStack extends cdk.Stack {
       priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
     });
 
+    new s3deploy.BucketDeployment(this, 'DeployStaticAssets', {
+      sources: [s3deploy.Source.asset(path.join(__dirname, '..', 'public'))],
+      destinationBucket: staticBucket,
+    });
+
 
     // --- 6. API Gateway (HTTP) ---
 
@@ -188,11 +194,15 @@ export class CrossboxGymStack extends cdk.Stack {
 
     // --- 7. Lambda Functions ---
 
-    const paymentProvider = isTest ? 'mock' : 'stripe';
+    const stripeTestSecretKey = process.env.STRIPE_TEST_SECRET_KEY || process.env.STRIPE_SECRET_KEY || '';
+    const paymentProvider = (stripeTestSecretKey || !isTest) ? 'stripe' : 'mock';
     const emailProvider = isTest ? 'mock' : 'ses';
     const lockProvider = isTest ? 'mock' : 'http';
     const sesSenderEmail = this.node.tryGetContext('sesSenderEmail') || 'no-reply@crossbox.com';
-    const frontendUrl = this.node.tryGetContext('frontendUrl') || `https://${distribution.distributionDomainName}`;
+    const contextFrontendUrl = this.node.tryGetContext('frontendUrl');
+    const frontendUrl = (contextFrontendUrl && !contextFrontendUrl.includes('localhost')) 
+      ? contextFrontendUrl 
+      : `https://${distribution.distributionDomainName}`;
 
     const commonEnv = {
       MAIN_TABLE_NAME: mainTable.tableName,
@@ -203,6 +213,7 @@ export class CrossboxGymStack extends cdk.Stack {
       LOCK_PROVIDER: lockProvider,
       SES_SENDER_EMAIL: sesSenderEmail,
       FRONTEND_URL: frontendUrl,
+      STRIPE_TEST_SECRET_KEY: stripeTestSecretKey,
     };
 
     const defaultNodejsFunctionProps = {
@@ -245,6 +256,7 @@ export class CrossboxGymStack extends cdk.Stack {
     }
     const authIntegration = new HttpLambdaIntegration('AuthIntegration', authHandler);
     httpApi.addRoutes({ path: '/auth/login', methods: [apigw.HttpMethod.POST], integration: authIntegration });
+    httpApi.addRoutes({ path: '/auth/register', methods: [apigw.HttpMethod.POST], integration: authIntegration });
     httpApi.addRoutes({ path: '/auth/magic-link', methods: [apigw.HttpMethod.POST], integration: authIntegration });
     httpApi.addRoutes({ path: '/auth/magic-link/verify', methods: [apigw.HttpMethod.GET], integration: authIntegration });
     httpApi.addRoutes({ path: '/auth/set-password', methods: [apigw.HttpMethod.POST], integration: authIntegration, authorizer: jwtAuthorizer });
@@ -257,6 +269,7 @@ export class CrossboxGymStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30),
       environment: {
         PAYMENT_PROVIDER: paymentProvider,
+        STRIPE_TEST_SECRET_KEY: stripeTestSecretKey,
         STRIPE_SECRET_KEY_SSM_PATH: '/crossbox/stripe/secret-key',
       },
     });
@@ -279,20 +292,40 @@ export class CrossboxGymStack extends cdk.Stack {
         EMAIL_PROVIDER: emailProvider,
         SES_SENDER_EMAIL: sesSenderEmail,
         STRIPE_SECRET_KEY_SSM_PATH: '/crossbox/stripe/secret-key',
-        STRIPE_WEBHOOK_SECRET_SSM_PATH: '/crossbox/stripe/webhook-secret',
       },
     });
     mainTable.grantReadWriteData(stripeWebhookHandler);
     stripeWebhookHandler.addToRolePolicy(new iam.PolicyStatement({
-      actions: ['cognito-idp:AdminCreateUser', 'cognito-idp:AdminAddUserToGroup'],
+      actions: ['cognito-idp:AdminCreateUser', 'cognito-idp:AdminGetUser', 'cognito-idp:AdminAddUserToGroup', 'cognito-idp:AdminSetUserPassword'],
       resources: [userPool.userPoolArn],
     }));
     if (!isTest) {
       stripeWebhookHandler.addToRolePolicy(sesPolicy);
       stripeWebhookHandler.addToRolePolicy(ssmPolicy);
     }
-    const webhookIntegration = new HttpLambdaIntegration('WebhookIntegration', stripeWebhookHandler);
-    httpApi.addRoutes({ path: '/webhook/stripe', methods: [apigw.HttpMethod.POST], integration: webhookIntegration });
+
+    // EventBridge Bus & Rule for Stripe Events
+    const partnerBusName = this.node.tryGetContext('stripePartnerBusName') || process.env.STRIPE_PARTNER_BUS_NAME;
+
+    const stripeEventBus = partnerBusName
+      ? events.EventBus.fromEventBusName(this, 'StripeEventBus', partnerBusName)
+      : new events.EventBus(this, 'StripeEventBus', {
+          eventBusName: isTest ? `${this.stackName}-StripeBus` : 'stripe-events-bus',
+        });
+
+    const stripeEventRule = new events.Rule(this, 'StripeEventRule', {
+      eventBus: stripeEventBus,
+      eventPattern: {
+        detailType: [
+          'checkout.session.completed',
+          'customer.subscription.updated',
+          'customer.subscription.deleted',
+          'invoice.paid',
+          'invoice.payment_failed',
+        ],
+      },
+    });
+    stripeEventRule.addTarget(new targets.LambdaFunction(stripeWebhookHandler));
 
     // MemberHandler
     const memberHandler = new nodejs.NodejsFunction(this, 'MemberHandler', {
@@ -317,6 +350,7 @@ export class CrossboxGymStack extends cdk.Stack {
     httpApi.addRoutes({ path: '/member/consent', methods: [apigw.HttpMethod.POST], integration: memberIntegration, authorizer: jwtAuthorizer });
     httpApi.addRoutes({ path: '/member/qr', methods: [apigw.HttpMethod.POST], integration: memberIntegration, authorizer: jwtAuthorizer });
     httpApi.addRoutes({ path: '/member/portal-session', methods: [apigw.HttpMethod.POST], integration: memberIntegration, authorizer: jwtAuthorizer });
+    httpApi.addRoutes({ path: '/member/invoices', methods: [apigw.HttpMethod.GET], integration: memberIntegration, authorizer: jwtAuthorizer });
 
     // VerifyEntry
     const verifyEntryHandler = new nodejs.NodejsFunction(this, 'VerifyEntry', {
@@ -424,5 +458,6 @@ export class CrossboxGymStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'UnlockQueueUrl', { value: unlockQueue.queueUrl });
     new cdk.CfnOutput(this, 'StaticBucketName', { value: staticBucket.bucketName });
     new cdk.CfnOutput(this, 'CloudFrontUrl', { value: distribution.distributionDomainName });
+    new cdk.CfnOutput(this, 'StripeEventBusName', { value: stripeEventBus.eventBusName });
   }
 }

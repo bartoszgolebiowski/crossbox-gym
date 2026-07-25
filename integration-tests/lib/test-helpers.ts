@@ -31,6 +31,7 @@ export async function getTestContext(): Promise<IntegrationTestContext> {
   const auditLogsTableName = await requireOutput('AuditLogsTableName');
   const unlockQueueUrl = await requireOutput('UnlockQueueUrl');
   const staticBucketName = await requireOutput('StaticBucketName');
+  const stripeEventBusName = await requireOutput('StripeEventBusName').catch(() => undefined);
   const region = process.env.AWS_REGION || 'eu-central-1';
 
   cachedContext = {
@@ -42,6 +43,7 @@ export async function getTestContext(): Promise<IntegrationTestContext> {
     auditLogsTableName,
     unlockQueueUrl,
     staticBucketName,
+    stripeEventBusName,
     region
   };
 
