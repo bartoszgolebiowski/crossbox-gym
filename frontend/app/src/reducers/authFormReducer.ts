@@ -6,11 +6,14 @@ export interface AuthFormState {
   inputPassword: string;
   inputCode: string;
   newPassword: string;
+  confirmPassword: string;
+  error: string | null;
 }
 
 export type AuthFormAction =
   | { type: 'SET_AUTH_MODE'; payload: AuthMode }
-  | { type: 'CHANGE_FIELD'; payload: { field: keyof Omit<AuthFormState, 'authMode'>; value: string } }
+  | { type: 'CHANGE_FIELD'; payload: { field: keyof Omit<AuthFormState, 'authMode' | 'error'>; value: string } }
+  | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'RESET_FORM' };
 
 export const initialAuthFormState: AuthFormState = {
@@ -19,6 +22,8 @@ export const initialAuthFormState: AuthFormState = {
   inputPassword: '',
   inputCode: '',
   newPassword: '',
+  confirmPassword: '',
+  error: null,
 };
 
 export function authFormReducer(state: AuthFormState, action: AuthFormAction): AuthFormState {
@@ -32,6 +37,12 @@ export function authFormReducer(state: AuthFormState, action: AuthFormAction): A
       return {
         ...state,
         [action.payload.field]: action.payload.value,
+        error: null,
+      };
+    case 'SET_ERROR':
+      return {
+        ...state,
+        error: action.payload,
       };
     case 'RESET_FORM':
       return initialAuthFormState;
@@ -46,9 +57,14 @@ export const setAuthMode = (mode: AuthMode): AuthFormAction => ({
   payload: mode,
 });
 
-export const changeAuthFormField = (field: keyof Omit<AuthFormState, 'authMode'>, value: string): AuthFormAction => ({
+export const changeAuthFormField = (field: keyof Omit<AuthFormState, 'authMode' | 'error'>, value: string): AuthFormAction => ({
   type: 'CHANGE_FIELD',
   payload: { field, value },
+});
+
+export const setAuthFormError = (error: string | null): AuthFormAction => ({
+  type: 'SET_ERROR',
+  payload: error,
 });
 
 export const resetAuthForm = (): AuthFormAction => ({

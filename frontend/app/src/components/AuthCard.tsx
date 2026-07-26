@@ -1,5 +1,5 @@
 import React, { useReducer } from 'react';
-import { authFormReducer, AuthMode, changeAuthFormField, initialAuthFormState, setAuthMode } from '../reducers/authFormReducer';
+import { authFormReducer, AuthMode, changeAuthFormField, initialAuthFormState, setAuthFormError, setAuthMode } from '../reducers/authFormReducer';
 import { useAppDispatch, useAppSelector } from '../store';
 import { clearAuthMessages, confirmForgotPasswordThunk, forgotPasswordThunk, loginThunk, registerThunk, selectAuth } from '../store/authSlice';
 import { fetchDashboardThunk, fetchInvoicesThunk } from '../store/memberSlice';
@@ -13,14 +13,14 @@ export const AuthCard: React.FC = () => {
   const { loading, error, successMessage } = useAppSelector(selectAuth);
 
   const [formState, dispatchForm] = useReducer(authFormReducer, initialAuthFormState);
-  const { authMode, inputEmail, inputPassword, inputCode, newPassword } = formState;
+  const { authMode, inputEmail, inputPassword, inputCode, newPassword, confirmPassword, error: formError } = formState;
 
   const switchTab = (mode: AuthMode) => {
     dispatch(clearAuthMessages());
     dispatchForm(setAuthMode(mode));
   };
 
-  const handleFieldChange = (field: 'inputEmail' | 'inputPassword' | 'inputCode' | 'newPassword', value: string) => {
+  const handleFieldChange = (field: 'inputEmail' | 'inputPassword' | 'inputCode' | 'newPassword' | 'confirmPassword', value: string) => {
     dispatchForm(changeAuthFormField(field, value));
   };
 
@@ -35,6 +35,10 @@ export const AuthCard: React.FC = () => {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (inputPassword !== confirmPassword) {
+      dispatchForm(setAuthFormError('Passwords do not match.'));
+      return;
+    }
     const result = await dispatch(registerThunk({ email: inputEmail, password: inputPassword }));
     if (registerThunk.fulfilled.match(result)) {
       dispatch(fetchDashboardThunk());
@@ -52,6 +56,10 @@ export const AuthCard: React.FC = () => {
 
   const handleResetPassword = (e: React.FormEvent) => {
     e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      dispatchForm(setAuthFormError('Passwords do not match.'));
+      return;
+    }
     dispatch(confirmForgotPasswordThunk({ email: inputEmail, code: inputCode, newPassword }));
   };
 
@@ -117,9 +125,9 @@ export const AuthCard: React.FC = () => {
         </div>
 
         {/* Error / Success Notifications */}
-        {error && (
+        {(error || formError) && (
           <div className="mb-5 rounded-md border border-red-200 bg-red-50 p-3 text-sm leading-relaxed text-red-800">
-            {error}
+            {formError || error}
           </div>
         )}
         {successMessage && (
@@ -194,6 +202,20 @@ export const AuthCard: React.FC = () => {
                 placeholder="Minimum 8 characters"
                 value={inputPassword}
                 onChange={(e) => handleFieldChange('inputPassword', e.target.value)}
+                autoComplete="new-password"
+                required
+              />
+            </div>
+
+            <div>
+              <label className={fieldLabelClass} htmlFor="register-confirm-password">Confirm Password</label>
+              <input
+                id="register-confirm-password"
+                type="password"
+                className={fieldClass}
+                placeholder="Re-enter your password"
+                value={confirmPassword}
+                onChange={(e) => handleFieldChange('confirmPassword', e.target.value)}
                 autoComplete="new-password"
                 required
               />
@@ -278,6 +300,19 @@ export const AuthCard: React.FC = () => {
                 placeholder="••••••••"
                 value={newPassword}
                 onChange={(e) => handleFieldChange('newPassword', e.target.value)}
+                autoComplete="new-password"
+                required
+              />
+            </div>
+            <div>
+              <label className={fieldLabelClass} htmlFor="reset-confirm-password">Confirm New Password</label>
+              <input
+                id="reset-confirm-password"
+                type="password"
+                className={fieldClass}
+                placeholder="Re-enter your new password"
+                value={confirmPassword}
+                onChange={(e) => handleFieldChange('confirmPassword', e.target.value)}
                 autoComplete="new-password"
                 required
               />

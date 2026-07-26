@@ -1,8 +1,8 @@
 import {
-  CognitoIdentityProviderClient,
   AdminCreateUserCommand,
   AdminGetUserCommand,
   AdminResetUserPasswordCommand,
+  CognitoIdentityProviderClient,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { randomBytes } from 'crypto';
 import { IdentityProvider } from './types';
