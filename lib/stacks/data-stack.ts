@@ -3,6 +3,10 @@ import { Construct } from 'constructs';
 import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as sqs from 'aws-cdk-lib/aws-sqs';
 import * as cognito from 'aws-cdk-lib/aws-cognito';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
+import * as logs from 'aws-cdk-lib/aws-logs';
+import * as path from 'path';
 
 export interface CrossboxDataStackProps extends cdk.StackProps {
   isTest: boolean;
@@ -108,6 +112,19 @@ export class CrossboxDataStack extends cdk.Stack {
       accountRecovery: cognito.AccountRecovery.EMAIL_ONLY,
       removalPolicy,
     });
+
+    const customMessageHandler = new nodejs.NodejsFunction(this, 'CustomMessageHandler', {
+      runtime: lambda.Runtime.NODEJS_22_X,
+      entry: path.join(__dirname, '..', 'handlers', 'custom-message', 'index.ts'),
+      memorySize: 128,
+      timeout: cdk.Duration.seconds(5),
+      logRetention: logs.RetentionDays.ONE_WEEK,
+      bundling: {
+        minify: true,
+        sourceMap: true,
+      },
+    });
+    this.userPool.addTrigger(cognito.UserPoolOperation.CUSTOM_MESSAGE, customMessageHandler);
 
     new cognito.CfnUserPoolGroup(this, 'AdminsGroup', {
       userPoolId: this.userPool.userPoolId,

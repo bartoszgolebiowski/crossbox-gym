@@ -1,7 +1,8 @@
 import {
   CognitoIdentityProviderClient,
   AdminCreateUserCommand,
-  AdminGetUserCommand
+  AdminGetUserCommand,
+  AdminResetUserPasswordCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { randomBytes } from 'crypto';
 import { IdentityProvider } from './types';
@@ -31,6 +32,10 @@ export class CognitoIdentityProvider implements IdentityProvider {
         TemporaryPassword: tempPassword,
         MessageAction: 'SUPPRESS',
         UserAttributes: [{ Name: 'email', Value: email }, { Name: 'email_verified', Value: 'true' }]
+      }));
+      await this.cognito.send(new AdminResetUserPasswordCommand({
+        UserPoolId: userPoolId,
+        Username: email,
       }));
       return createRes.User?.Attributes?.find(a => a.Name === 'sub')?.Value || '';
     } catch (e: any) {

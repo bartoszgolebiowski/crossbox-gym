@@ -42,9 +42,12 @@ export const AuthCard: React.FC = () => {
     }
   };
 
-  const handleForgotPassword = (e: React.FormEvent) => {
+  const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(forgotPasswordThunk({ email: inputEmail }));
+    const result = await dispatch(forgotPasswordThunk({ email: inputEmail }));
+    if (forgotPasswordThunk.fulfilled.match(result)) {
+      dispatchForm(setAuthMode('reset'));
+    }
   };
 
   const handleResetPassword = (e: React.FormEvent) => {
@@ -228,6 +231,13 @@ export const AuthCard: React.FC = () => {
               className={submitButtonClass}
             >
               {loading ? 'Sending Reset Code...' : 'Send Verification Code'}
+            </button>
+            <button
+              type="button"
+              className="w-full cursor-pointer text-center text-sm font-medium text-rose-800 hover:text-rose-700"
+              onClick={() => switchTab('reset')}
+            >
+              I already have a code
             </button>
           </form>
         )}

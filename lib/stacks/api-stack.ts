@@ -140,7 +140,7 @@ export class CrossboxApiStack extends cdk.Stack {
     });
     mainTable.grantReadWriteData(stripeWebhookHandler);
     stripeWebhookHandler.addToRolePolicy(new iam.PolicyStatement({
-      actions: ['cognito-idp:AdminCreateUser', 'cognito-idp:AdminGetUser', 'cognito-idp:AdminAddUserToGroup', 'cognito-idp:AdminSetUserPassword'],
+      actions: ['cognito-idp:AdminCreateUser', 'cognito-idp:AdminGetUser', 'cognito-idp:AdminResetUserPassword'],
       resources: [userPool.userPoolArn],
     }));
     if (!isTest) {
