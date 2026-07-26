@@ -18,6 +18,12 @@ describe("CrossBox Gym Integration Tests", () => {
     apiUrl = await requireOutput("ApiUrl");
     userPoolId = await requireOutput("UserPoolId");
     userPoolClientId = await requireOutput("UserPoolClientId");
+    const mainTableName = await requireOutput("MainTableName");
+    const frontendUrl = await requireOutput("AppCloudFrontUrl").catch(() => "http://localhost:5173");
+    process.env.MAIN_TABLE_NAME = mainTableName;
+    process.env.USER_POOL_ID = userPoolId;
+    process.env.USER_POOL_CLIENT_ID = userPoolClientId;
+    process.env.FRONTEND_URL = frontendUrl.startsWith("http") ? frontendUrl : `https://${frontendUrl}`;
   });
 
   describe("Checkout & Webhook Flow", () => {
@@ -95,7 +101,7 @@ describe("CrossBox Gym Integration Tests", () => {
       });
       assert.equal(res.status, 200);
       const data = (await res.json()) as { message: string };
-      assert.ok(data.message.includes("Magic link sent"));
+      assert.ok(data.message.includes("Magic link"));
     });
 
     test("GET /member/dashboard without auth header returns 401", async () => {

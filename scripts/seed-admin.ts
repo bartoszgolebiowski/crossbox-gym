@@ -16,8 +16,11 @@ const readOutputs = () => {
     const outputsPath = path.join(__dirname, '../cdk-outputs.json');
     if (fs.existsSync(outputsPath)) {
       const data = JSON.parse(fs.readFileSync(outputsPath, 'utf8'));
-      const stack = Object.keys(data)[0];
-      return data[stack];
+      let merged: Record<string, any> = {};
+      for (const stackKey of Object.keys(data)) {
+        merged = { ...merged, ...data[stackKey] };
+      }
+      return merged;
     }
   } catch (e) {
     // Ignore

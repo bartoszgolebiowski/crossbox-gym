@@ -43,11 +43,14 @@ export interface HandlerResult {
 
 type BusinessHandler = (event: APIGatewayProxyEventV2) => Promise<HandlerResult | unknown>;
 
-function corsHeaders(): Record<string, string> {
+function corsHeaders(event?: APIGatewayProxyEventV2): Record<string, string> {
+  const requestOrigin = event?.headers?.origin || event?.headers?.Origin;
   return {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': '*',
+    'Access-Control-Allow-Origin': requestOrigin || '*',
+    'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
     'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+    'Access-Control-Allow-Credentials': 'true',
+    'Vary': 'Origin',
   };
 }
 
@@ -109,7 +112,7 @@ export function withHandler(handler: BusinessHandler) {
         const hResult = res as HandlerResult;
         return {
           statusCode: hResult.statusCode,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+          headers: { 'Content-Type': 'application/json', ...corsHeaders(event) },
           body: typeof hResult.body === 'string' ? hResult.body : JSON.stringify(hResult.body),
         };
       }
@@ -117,7 +120,7 @@ export function withHandler(handler: BusinessHandler) {
       // Default: assume res is the body, return 200 OK
       return {
         statusCode: 200,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders(event) },
         body: JSON.stringify(res),
       };
     } catch (err) {
@@ -131,7 +134,7 @@ export function withHandler(handler: BusinessHandler) {
         }));
         return {
           statusCode: err.statusCode,
-          headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+          headers: { 'Content-Type': 'application/json', ...corsHeaders(event) },
           body: JSON.stringify({ message: err.message }),
         };
       }
@@ -147,7 +150,7 @@ export function withHandler(handler: BusinessHandler) {
 
       return {
         statusCode: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders() },
+        headers: { 'Content-Type': 'application/json', ...corsHeaders(event) },
         body: JSON.stringify({ message: 'Internal server error' }),
       };
     }

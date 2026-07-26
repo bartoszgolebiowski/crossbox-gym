@@ -1,9 +1,11 @@
 node_modules
 cdk.out
 cdk.out.*
-*.js
-*.d.ts
-!jest.config.js
 cdk-outputs.json
 .env
-
+dist
+dist/
+frontend/*/dist
+frontend/**/dist
+frontend/*/node_modules
+*.tsbuildinfo

@@ -11,7 +11,7 @@ import {
 } from '@aws-sdk/client-cognito-identity-provider';
 import { PutCommand, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { randomBytes, createHash } from 'crypto';
-import { withHandler, parseJsonBody, extractJwtClaims, ValidationError, NotFoundError, UnauthorizedError } from '../shared/http';
+import { withHandler, parseJsonBody, extractJwtClaims, HttpError, ValidationError, NotFoundError, UnauthorizedError } from '../shared/http';
 import { ddb } from '../shared/ddb-client';
 import { MagicLinkToken, MagicLinkRateLimit } from '../shared/types';
 import { getMainTableName, getFrontendUrl, getUserPoolId, getUserPoolClientId } from '../shared/env';
@@ -57,7 +57,7 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
         expiresIn: authResult.ExpiresIn,
       };
     } catch (err: any) {
-      if (err instanceof UnauthorizedError || err instanceof ValidationError) {
+      if (err instanceof HttpError) {
         throw err;
       }
       if (
@@ -68,7 +68,7 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
         throw new UnauthorizedError('Your account requires password setup. Please use the Magic Link or Password Reset flow to set your permanent password.');
       }
       console.error('Login error:', err);
-      throw new UnauthorizedError('Invalid email or password');
+      throw new UnauthorizedError(err.message || 'Invalid email or password');
     }
   }
 
@@ -161,12 +161,17 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
       throw new ValidationError('Password must be at least 8 characters long');
     }
 
-    await cognito.send(new AdminSetUserPasswordCommand({
-      UserPoolId: userPoolId,
-      Username: email,
-      Password: newPassword,
-      Permanent: true
-    }));
+    try {
+      await cognito.send(new AdminSetUserPasswordCommand({
+        UserPoolId: userPoolId,
+        Username: email,
+        Password: newPassword,
+        Permanent: true
+      }));
+    } catch (e: any) {
+      if (e instanceof HttpError) throw e;
+      throw new ValidationError(e.message || 'Failed to update password');
+    }
 
     await ddb.send(new UpdateCommand({
       TableName: getMainTableName(),
@@ -211,12 +216,17 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
       throw new ValidationError('Password must be at least 8 characters long');
     }
 
-    await cognito.send(new ConfirmForgotPasswordCommand({
-      ClientId: clientId,
-      Username: email,
-      ConfirmationCode: code,
-      Password: newPassword,
-    }));
+    try {
+      await cognito.send(new ConfirmForgotPasswordCommand({
+        ClientId: clientId,
+        Username: email,
+        ConfirmationCode: code,
+        Password: newPassword,
+      }));
+    } catch (e: any) {
+      if (e instanceof HttpError) throw e;
+      throw new ValidationError(e.message || 'Confirmation failed');
+    }
 
     const userRes = await cognito.send(new AdminGetUserCommand({
       UserPoolId: userPoolId,
@@ -258,12 +268,17 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
       }
     }
 
-    await cognito.send(new AdminSetUserPasswordCommand({
-      UserPoolId: userPoolId,
-      Username: email,
-      Password: newPassword,
-      Permanent: true
-    }));
+    try {
+      await cognito.send(new AdminSetUserPasswordCommand({
+        UserPoolId: userPoolId,
+        Username: email,
+        Password: newPassword,
+        Permanent: true
+      }));
+    } catch (e: any) {
+      if (e instanceof HttpError) throw e;
+      throw new ValidationError(e.message || 'Failed to reset password');
+    }
 
     const userRes = await cognito.send(new AdminGetUserCommand({
       UserPoolId: userPoolId,
@@ -301,16 +316,27 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
         MessageAction: 'SUPPRESS'
       }));
       sub = userRes.User?.Attributes?.find(a => a.Name === 'sub')?.Value || '';
-    } catch (e: any) {
-      if (e.name !== 'UsernameExistsException') throw e;
-    }
 
-    await cognito.send(new AdminSetUserPasswordCommand({
-      UserPoolId: userPoolId,
-      Username: email,
-      Password: password,
-      Permanent: true
-    }));
+      await cognito.send(new AdminSetUserPasswordCommand({
+        UserPoolId: userPoolId,
+        Username: email,
+        Password: password,
+        Permanent: true
+      }));
+    } catch (e: any) {
+      if (e instanceof HttpError) throw e;
+      if (e.name === 'UsernameExistsException') {
+        throw new ValidationError('An account with this email address already exists.');
+      }
+      if (e.name === 'InvalidPasswordException') {
+        throw new ValidationError(e.message || 'Password does not conform to security policy (must contain uppercase letters and numbers).');
+      }
+      if (e.name === 'InvalidParameterException') {
+        throw new ValidationError(e.message || 'Invalid parameters provided.');
+      }
+      console.error('Registration error:', e);
+      throw new ValidationError(e.message || 'Registration failed.');
+    }
 
     if (sub) {
       await ddb.send(new PutCommand({

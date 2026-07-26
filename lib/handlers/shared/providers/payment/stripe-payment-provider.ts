@@ -16,11 +16,13 @@ export class StripePaymentProvider implements PaymentProvider {
     // Generate random 8-character suffix for integration_identifier tracking
     const randomSuffix = Math.random().toString(36).substring(2, 10);
 
+    const isExplicitStripePrice = params.priceId && params.priceId.startsWith('price_') && params.priceId !== 'price_monthly';
+
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       mode: 'subscription',
       success_url: params.successUrl,
       cancel_url: params.cancelUrl,
-      line_items: params.priceId
+      line_items: isExplicitStripePrice
         ? [{ price: params.priceId, quantity: 1 }]
         : [{
             price_data: {
@@ -48,6 +50,23 @@ export class StripePaymentProvider implements PaymentProvider {
       const session = await stripe.checkout.sessions.create(sessionParams);
       return { url: session.url! };
     } catch (err: any) {
+      if (err.message?.includes('No such price') || err.message?.includes('resource_missing')) {
+        sessionParams.line_items = [{
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: 'CrossBox Gym Monthly All-Access Membership',
+              description: 'Unlimited access to all CrossBox Gym locations, turnstile keycard, and mobile app.',
+            },
+            recurring: { interval: 'month' },
+            unit_amount: 4900,
+            tax_behavior: 'exclusive',
+          },
+          quantity: 1,
+        }];
+        const session = await stripe.checkout.sessions.create(sessionParams);
+        return { url: session.url! };
+      }
       if (err.message?.includes('tax') || err.message?.includes('head office address') || err.message?.includes('automatic_tax')) {
         delete sessionParams.automatic_tax;
         const session = await stripe.checkout.sessions.create(sessionParams);

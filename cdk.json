@@ -3,11 +3,5 @@
   "watch": {
     "include": ["**"],
     "exclude": ["README.md", "cdk*.json", "**/*.d.ts", "**/*.js", "tsconfig.json", "package*.json", "yarn.lock", "node_modules", ".git", "integration-tests"]
-  },
-  "context": {
-    "isTestEnvironment": "false",
-    "sesSenderEmail": "no-reply@crossbox.com",
-    "frontendUrl": "https://d3klturtfk9dxr.cloudfront.net",
-    "corsOrigins": "https://d3klturtfk9dxr.cloudfront.net,http://localhost:5173,http://localhost:3000"
   }
 }

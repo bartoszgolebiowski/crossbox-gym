@@ -2,22 +2,32 @@
   "name": "crossbox-gym",
   "version": "0.1.0",
   "scripts": {
-    "build": "tsc",
+    "build": "npm run build:ui && tsc",
+    "build:ui": "node scripts/build-ui.mjs",
+    "deploy:ui": "node scripts/deploy-ui.mjs",
+    "deploy": "node scripts/deploy.mjs",
+    "destroy": "node scripts/destroy.mjs",
     "cdk": "cdk",
     "test": "tsx --test test/**/*.test.ts",
-    "test:integration": "node scripts/run-integration-tests.mjs --mode fast",
-    "test:integration:fast": "node scripts/run-integration-tests.mjs --mode fast",
-    "test:integration:full": "node scripts/run-integration-tests.mjs --mode full",
+    "test:integration": "node scripts/run-integration-tests.mjs",
+    "test:integration:fast": "node scripts/run-integration-tests.mjs",
+    "test:integration:full": "npm run deploy && node scripts/run-integration-tests.mjs",
     "seed": "tsx scripts/seed-admin.ts"
   },
   "devDependencies": {
+    "@tailwindcss/vite": "^4.0.0",
     "@types/aws-lambda": "^8.10.147",
     "@types/node": "^22.0.0",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
     "aws-cdk": "^2.1000.0",
     "esbuild": "^0.24.0",
+    "tailwindcss": "^4.0.0",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.2",
-    "typescript": "~5.9.3"
+    "typescript": "~5.9.3",
+    "vite": "^6.0.7"
   },
   "dependencies": {
     "@aws-sdk/client-cloudformation": "^3.731.0",
@@ -27,8 +37,12 @@
     "@aws-sdk/client-sqs": "^3.731.0",
     "@aws-sdk/client-ssm": "^3.731.0",
     "@aws-sdk/lib-dynamodb": "^3.731.0",
+    "@reduxjs/toolkit": "^2.5.0",
     "aws-cdk-lib": "^2.261.0",
     "constructs": "^10.5.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-redux": "^9.2.0",
     "stripe": "latest"
   }
 }

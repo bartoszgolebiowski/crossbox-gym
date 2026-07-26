@@ -1,20 +1,26 @@
 #!/usr/bin/env node
 
-// Integration Test Orchestrator (FULL & FAST modes)
+// Integration Test Suite Runner
+// Assumes the CDK stack is ALREADY deployed (via `npm run deploy`).
 // Usage:
-//   npm run test:integration:fast  (reuses stack, incremental deploy, leaves stack up)
-//   npm run test:integration:full  (clean destroy -> deploy -> seed -> test -> destroy)
+//   npm run test:integration
 
 import { execSync } from "node:child_process";
 import { parseArgs } from "node:util";
 import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-if (fs.existsSync(".env")) {
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const rootDir = path.resolve(__dirname, "..");
+
+if (fs.existsSync(path.join(rootDir, ".env"))) {
   try {
     if (typeof process.loadEnvFile === "function") {
-      process.loadEnvFile(".env");
+      process.loadEnvFile(path.join(rootDir, ".env"));
     } else {
-      const lines = fs.readFileSync(".env", "utf8").split(/\r?\n/);
+      const lines = fs.readFileSync(path.join(rootDir, ".env"), "utf8").split(/\r?\n/);
       for (const line of lines) {
         const trimmed = line.trim();
         if (trimmed && !trimmed.startsWith("#")) {
@@ -34,66 +40,44 @@ const { values } = parseArgs({
   options: {
     stack: { type: "string" },
     region: { type: "string" },
-    mode: { type: "string" },
   },
   strict: false,
 });
 
-const MODE = values.mode ?? process.env.TEST_MODE ?? "fast";
-const STACK = values.stack ?? process.env.STACK_NAME ?? (MODE === "full" ? "CrossboxGymTestStack" : "CrossboxGymDevStack");
+const STACK = values.stack ?? process.env.STACK_NAME ?? "CrossboxGymDev";
+const prefix = STACK.replace(/Stack$/, "");
 const REGION = values.region ?? process.env.AWS_REGION ?? "eu-central-1";
+
+const outputsPath = path.join(rootDir, "cdk-outputs.json");
+if (!fs.existsSync(outputsPath)) {
+  console.error(`\n❌ Error: cdk-outputs.json not found in ${rootDir}.`);
+  console.error(`Please run 'npm run deploy' first to deploy your stack before running integration tests.\n`);
+  process.exit(1);
+}
 
 const run = (cmd) => {
   console.log(`\n▶  ${cmd}\n`);
-  execSync(cmd, { stdio: "inherit", env: { ...process.env, AWS_REGION: REGION, STACK_NAME: STACK } });
+  execSync(cmd, { cwd: rootDir, stdio: "inherit", env: { ...process.env, AWS_REGION: REGION, STACK_NAME: prefix } });
 };
 
-let testExitCode = 1;
+console.log(`\n🚀 Executing Integration Tests against Deployed Stack: [${prefix}]\n`);
 
-console.log(`\n🚀 Running Integration Tests in [${MODE.toUpperCase()}] Mode for Stack: ${STACK}\n`);
-
+// 1. Ensure admin user and HMAC keys are seeded
+console.log(`⚡ Seeding admin user & security HMAC keys...`);
 try {
-  if (MODE === "full") {
-    // FULL MODE: Wipe existing stack first for 100% clean environment
-    console.log("🧹 [FULL MODE] Wiping existing stack before clean build...");
-    try {
-      run(`npx cdk destroy ${STACK} -c stackName=${STACK} --force`);
-    } catch {
-      // Ignore if stack doesn't exist
-    }
-  }
+  run(`npx tsx scripts/seed-admin.ts`);
+} catch (e) {
+  console.warn("⚠ Seeding step emitted a warning:", e.message);
+}
 
-  // 1. Deploy (Incremental update in FAST mode, fresh deploy in FULL mode)
-  console.log(`⚡ Deploying ${MODE === "fast" ? "incremental updates" : "fresh stack"}...`);
-  run(`npx cdk deploy ${STACK} -c isTestEnvironment=true -c stackName=${STACK} --require-approval never --outputs-file cdk-outputs.json`);
-
-  // 2. Seed admin user and HMAC keys
-  try {
-    run(`npx tsx scripts/seed-admin.ts`);
-  } catch (e) {
-    console.error("⚠ Seeding failed:", e.message);
-  }
-
-  // 3. Run integration test suite
-  try {
-    run(`node --import tsx --test "integration-tests/*.test.ts" -- --stack ${STACK} --region ${REGION}`);
-    testExitCode = 0;
-  } catch {
-    testExitCode = 1;
-  }
-} finally {
-  if (MODE === "full") {
-    // FULL MODE: Always destroy stack afterward
-    console.log("\n🧹 [FULL MODE] Destroying stack after test run...\n");
-    try {
-      run(`npx cdk destroy ${STACK} -c stackName=${STACK} --force`);
-    } catch (e) {
-      console.error("⚠ cdk destroy failed:", e.message);
-    }
-  } else {
-    console.log(`\n✅ [FAST MODE] Stack ${STACK} kept active for fast iterative testing.\n`);
-  }
+// 2. Execute live integration test suite
+let testExitCode = 0;
+try {
+  run(`node --import tsx --test "integration-tests/*.test.ts" -- --stack ${prefix} --region ${REGION}`);
+  console.log(`\n✅ Integration tests completed successfully!\n`);
+} catch {
+  testExitCode = 1;
+  console.error(`\n❌ Integration test execution failed.\n`);
 }
 
 process.exit(testExitCode);
-

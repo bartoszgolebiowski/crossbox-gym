@@ -97,15 +97,22 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
   }
 
   if (method === 'POST' && path === '/member/portal-session') {
+    const body = parseJsonBody(event);
+    const query = event.queryStringParameters || {};
+    const returnUrlParam = body.returnUrl || query.returnUrl || body.redirectUrl || query.redirectUrl;
+
     const sub = await getUserSubscription(getMainTableName(), userId);
     if (!sub || !sub.stripe_customer_id) {
       throw new ValidationError('No Stripe customer ID found for member');
     }
 
+    const frontendUrl = process.env.FRONTEND_URL || '';
+    const returnUrl = returnUrlParam || (frontendUrl ? `${frontendUrl.replace(/\/$/, '')}/member/dashboard` : 'http://localhost:5173/member/dashboard');
+
     const paymentProvider = createPaymentProvider(getPaymentProvider());
     const session = await paymentProvider.createPortalSession({
       customerId: sub.stripe_customer_id,
-      returnUrl: `${getFrontendUrl()}/member/dashboard`
+      returnUrl
     });
 
     return { url: session.url };

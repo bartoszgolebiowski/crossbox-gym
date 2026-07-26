@@ -1,6 +1,8 @@
 import * as cdk from 'aws-cdk-lib';
 import * as fs from 'fs';
-import { CrossboxGymStack } from '../lib/crossbox-gym-stack';
+import { CrossboxDataStack } from '../lib/stacks/data-stack';
+import { CrossboxApiStack } from '../lib/stacks/api-stack';
+import { CrossboxFrontendStack } from '../lib/stacks/frontend-stack';
 
 if (fs.existsSync('.env')) {
   try {
@@ -24,17 +26,37 @@ if (fs.existsSync('.env')) {
 }
 
 const app = new cdk.App();
-const stackName = app.node.tryGetContext('stackName') || 
-                  (app.node.tryGetContext('stackPrefix') ? `${app.node.tryGetContext('stackPrefix')}Stack` : null) || 
-                  process.env.STACK_NAME || 
-                  'CrossboxGymStack';
 
-const isTest = app.node.tryGetContext('isTestEnvironment') === 'true';
+const rawStackName = app.node.tryGetContext('stackName') || 
+                   (app.node.tryGetContext('stackPrefix') ? `${app.node.tryGetContext('stackPrefix')}Stack` : null) || 
+                   process.env.STACK_NAME || 
+                   'CrossboxGymDevStack';
 
-new CrossboxGymStack(app, stackName, { 
+const prefix = rawStackName.replace(/Stack$/, '');
+const isTest = app.node.tryGetContext('isTestEnvironment') === 'true' || process.env.IS_TEST === 'true';
+
+const env = {
+  account: process.env.CDK_DEFAULT_ACCOUNT || process.env.AWS_ACCOUNT_ID,
+  region: process.env.CDK_DEFAULT_REGION || process.env.AWS_REGION || 'eu-central-1',
+};
+
+// 1. Data Stack (Tables, Cognito, SQS)
+const dataStack = new CrossboxDataStack(app, `${prefix}DataStack`, {
   isTest,
-  env: {
-    account: process.env.CDK_DEFAULT_ACCOUNT || process.env.AWS_ACCOUNT_ID,
-    region: process.env.CDK_DEFAULT_REGION || process.env.AWS_REGION || 'eu-central-1',
-  }
+  env,
+});
+
+// 2. API Stack (API Gateway, Lambdas, EventBridge)
+const apiStack = new CrossboxApiStack(app, `${prefix}ApiStack`, {
+  isTest,
+  dataStack,
+  env,
+});
+
+// 3. Frontend Stack (S3 Buckets, CloudFront, Deployments)
+new CrossboxFrontendStack(app, `${prefix}FrontendStack`, {
+  isTest,
+  dataStack,
+  apiStack,
+  env,
 });
