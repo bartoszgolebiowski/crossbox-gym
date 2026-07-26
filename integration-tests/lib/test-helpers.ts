@@ -3,10 +3,12 @@ import {
   AdminCreateUserCommand, 
   AdminSetUserPasswordCommand, 
   AdminAddUserToGroupCommand,
+  AdminDeleteUserCommand,
+  AdminGetUserCommand,
   AdminInitiateAuthCommand
 } from '@aws-sdk/client-cognito-identity-provider';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { BatchWriteCommand, DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { createHmac, randomBytes } from 'crypto';
 import { requireOutput } from './stack-outputs.ts';
 import {
@@ -207,7 +209,14 @@ export async function createTestLocation(
     throw new Error(`Failed to create test location (${res.status}): ${text}`);
   }
 
-  return (await res.json()) as TestLocationRecord;
+  const location = (await res.json()) as Omit<TestLocationRecord, 'locationId'> & { locationId?: string };
+  const locationId = location.locationId || location.PK?.replace(/^LOC#/, '');
+
+  if (!locationId) {
+    throw new Error('Created test location response does not contain a location identifier');
+  }
+
+  return { ...location, locationId };
 }
 
 export async function createTestDevice(
@@ -298,4 +307,52 @@ export async function cleanupTestLocation(
     method: 'DELETE',
     headers: { 'Authorization': `Bearer ${adminToken}` }
   });
+}
+
+export async function cleanupTestUser(
+  context: IntegrationTestContext,
+  user: TestUserSession,
+): Promise<void> {
+  await cleanupTestUserByEmail(context, user.email);
+}
+
+export async function cleanupTestUserByEmail(
+  context: IntegrationTestContext,
+  email: string,
+): Promise<void> {
+  const cognito = new CognitoIdentityProviderClient({ region: context.region });
+  const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({ region: context.region }));
+  const userResponse = await cognito.send(new AdminGetUserCommand({
+    UserPoolId: context.userPoolId,
+    Username: email,
+  })).catch(() => undefined);
+  const userId = userResponse?.UserAttributes?.find((attribute) => attribute.Name === 'sub')?.Value;
+
+  if (!userId) {
+    return;
+  }
+
+  const records = await ddb.send(new QueryCommand({
+    TableName: context.mainTableName,
+    KeyConditionExpression: 'PK = :pk',
+    ExpressionAttributeValues: { ':pk': `USER#${userId}` },
+    ProjectionExpression: 'PK, SK',
+  }));
+
+  const deleteRequests = (records.Items ?? []).map((item) => ({
+    DeleteRequest: { Key: { PK: item.PK, SK: item.SK } },
+  }));
+
+  for (let index = 0; index < deleteRequests.length; index += 25) {
+    await ddb.send(new BatchWriteCommand({
+      RequestItems: {
+        [context.mainTableName]: deleteRequests.slice(index, index + 25),
+      },
+    }));
+  }
+
+  await cognito.send(new AdminDeleteUserCommand({
+    UserPoolId: context.userPoolId,
+    Username: email,
+  }));
 }

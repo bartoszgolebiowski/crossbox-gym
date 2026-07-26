@@ -85,11 +85,18 @@ export const fetchInvoicesThunk = createAsyncThunk(
   }
 );
 
+export interface CreateCheckoutSessionInput {
+  customerEmail: string;
+  successUrl: string;
+  cancelUrl: string;
+  redirectUrl: string;
+}
+
 export const createCheckoutSessionThunk = createAsyncThunk(
   'member/createCheckoutSession',
-  async (customerEmail: string, { rejectWithValue }) => {
+  async (input: CreateCheckoutSessionInput, { rejectWithValue }) => {
     try {
-      const data = await apiClient.post<{ url: string; message?: string }>('/checkout/session', { customerEmail });
+      const data = await apiClient.post<{ url: string; message?: string }>('/checkout/session', input);
       if (data.url) {
         window.open(data.url, '_blank');
         return 'Checkout Session Created! Redirecting to Stripe...';
