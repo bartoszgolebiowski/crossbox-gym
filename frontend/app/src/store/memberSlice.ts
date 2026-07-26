@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { apiClient } from '../services/apiClient';
 
 export interface Invoice {
@@ -28,6 +28,9 @@ export interface MemberState {
   invoicesLoading: boolean;
   checkoutStatus: string | null;
 }
+
+export const isMembershipActive = (dashboard: DashboardData | null | undefined): boolean =>
+  dashboard?.subscription?.status === 'ACTIVE';
 
 const initialState: MemberState = {
   dashboard: null,
@@ -134,6 +137,10 @@ const memberSlice = createSlice({
       .addCase(fetchDashboardThunk.fulfilled, (state, action) => {
         state.dashboardLoading = false;
         state.dashboard = action.payload;
+        if (!isMembershipActive(action.payload)) {
+          state.qrUrl = null;
+          state.qrInfo = 'An active paid membership is required for turnstile access.';
+        }
       })
       .addCase(fetchDashboardThunk.rejected, (state) => {
         state.dashboardLoading = false;
@@ -171,7 +178,9 @@ export const { clearMemberData } = memberSlice.actions;
 
 export const selectMember = (state: { member: MemberState }) => state.member;
 export const selectDashboard = (state: { member: MemberState }) => state.member.dashboard;
-export const selectQrPass = (state: { member: MemberState }) => ({ qrUrl: state.member.qrUrl, qrInfo: state.member.qrInfo });
+export const selectDashboardLoading = (state: { member: MemberState }) => state.member.dashboardLoading;
+export const selectQrUrl = (state: { member: MemberState }) => state.member.qrUrl;
+export const selectQrInfo = (state: { member: MemberState }) => state.member.qrInfo;
 export const selectInvoices = (state: { member: MemberState }) => state.member.invoices;
 export const selectInvoicesLoading = (state: { member: MemberState }) => state.member.invoicesLoading;
 export const selectCheckoutStatus = (state: { member: MemberState }) => state.member.checkoutStatus;

@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { adminApiClient } from '../services/apiClient';
 
 export interface AdminOpsState {
@@ -40,8 +40,13 @@ export const listLocationsThunk = createAsyncThunk(
 export const remoteUnlockThunk = createAsyncThunk(
   'adminOps/remoteUnlock',
   async (payload: { deviceId: string; locationId?: string; reason?: string }, { rejectWithValue }) => {
+    const deviceId = payload.deviceId.trim();
+    if (!deviceId) {
+      return rejectWithValue('Device ID is required.');
+    }
+
     try {
-      const data = await adminApiClient.post(`/admin/devices/${payload.deviceId}/unlock`, {
+      const data = await adminApiClient.post(`/admin/devices/${deviceId}/unlock`, {
         location_id: payload.locationId || 'loc_01',
         reason: payload.reason || 'Console Remote Unlock',
       });
@@ -67,8 +72,13 @@ export const rotateHMACThunk = createAsyncThunk(
 export const memberOverrideThunk = createAsyncThunk(
   'adminOps/memberOverride',
   async (payload: { userId: string; action: string }, { rejectWithValue }) => {
+    const userId = payload.userId.trim();
+    if (!userId) {
+      return rejectWithValue('Member ID is required.');
+    }
+
     try {
-      const data = await adminApiClient.post(`/admin/members/${payload.userId}/override`, { action: payload.action });
+      const data = await adminApiClient.post(`/admin/members/${userId}/override`, { action: payload.action });
       return JSON.stringify(data, null, 2);
     } catch (err: any) {
       return rejectWithValue(`Error: ${err.message}`);

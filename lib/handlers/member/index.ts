@@ -1,13 +1,13 @@
+import { PutCommand, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
-import { GetCommand, QueryCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
-import { withHandler, parseJsonBody, extractJwtClaims, ValidationError, NotFoundError, UnauthorizedError } from '../shared/http';
+import { getConfigItem, getUserProfile, getUserSubscription } from '../shared/db-helpers';
 import { ddb } from '../shared/ddb-client';
-import { createPaymentProvider } from '../shared/providers';
-import { getUserProfile, getUserSubscription, getConfigItem } from '../shared/db-helpers';
 import { signQrPayload } from '../shared/hash-helpers';
+import { extractJwtClaims, NotFoundError, parseJsonBody, UnauthorizedError, ValidationError, withHandler } from '../shared/http';
+import { createPaymentProvider } from '../shared/providers';
 import { ConsentRecord } from '../shared/types';
 
-import { getMainTableName, getFrontendUrl, getPaymentProvider } from '../shared/env';
+import { getMainTableName, getPaymentProvider } from '../shared/env';
 
 export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
   const method = event.requestContext.http.method;
@@ -153,12 +153,12 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
         const ddbInvoices = invQueryRes.Items.map(item => ({
           id: item.invoice_id,
           number: item.invoice_number || item.invoice_id,
-          total: item.total || 4900,
-          tax: item.tax || 405,
-          currency: item.currency || 'usd',
-          status: item.status || 'paid',
+          total: item.total ?? 0,
+          tax: item.tax_amount ?? item.tax ?? 0,
+          currency: item.currency || '',
+          status: item.status || '',
           pdfUrl: item.pdf_url || null,
-          createdAt: item.created_at || new Date().toISOString()
+          createdAt: item.created_at || item.paid_at || null
         }));
         return { invoices: ddbInvoices };
       }
@@ -172,33 +172,10 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
         }
       }
 
-      // 3. Fallback invoice receipt for active/registered members
-      return {
-        invoices: [{
-          id: `in_sandbox_${Date.now().toString().slice(-6)}`,
-          number: `INV-${new Date().getFullYear()}-001`,
-          total: 4900,
-          tax: 405,
-          currency: 'usd',
-          status: 'paid',
-          pdfUrl: null,
-          createdAt: new Date().toISOString()
-        }]
-      };
+      return { invoices: [] };
     } catch (err) {
       console.error('Invoice retrieval error:', err);
-      return {
-        invoices: [{
-          id: `in_sandbox_${Date.now().toString().slice(-6)}`,
-          number: `INV-${new Date().getFullYear()}-001`,
-          total: 4900,
-          tax: 405,
-          currency: 'usd',
-          status: 'paid',
-          pdfUrl: null,
-          createdAt: new Date().toISOString()
-        }]
-      };
+      return { invoices: [] };
     }
   }
 

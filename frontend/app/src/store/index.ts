@@ -2,7 +2,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 import authReducer from './authSlice';
 import configReducer, { bootstrapConfigThunk } from './configSlice';
-import memberReducer, { fetchDashboardThunk, fetchInvoicesThunk, generateQRThunk } from './memberSlice';
+import memberReducer, { fetchDashboardThunk, fetchInvoicesThunk } from './memberSlice';
 
 export const store = configureStore({
   reducer: {
@@ -24,7 +24,6 @@ export const bootstrapApp = () => {
     const token = store.getState().auth.token;
     if (token) {
       store.dispatch(fetchDashboardThunk());
-      store.dispatch(generateQRThunk());
       store.dispatch(fetchInvoicesThunk());
     }
   });

@@ -7,7 +7,7 @@ import { QrPassCard } from './components/QrPassCard';
 import { useAppDispatch, useAppSelector } from './store';
 import { logout, selectAuthEmail, selectAuthToken } from './store/authSlice';
 import { retryConfigThunk, selectConfig } from './store/configSlice';
-import { clearMemberData, selectDashboard } from './store/memberSlice';
+import { clearMemberData, isMembershipActive, selectDashboard } from './store/memberSlice';
 
 export default function App() {
   const dispatch = useAppDispatch();
@@ -15,6 +15,8 @@ export default function App() {
   const token = useAppSelector(selectAuthToken);
   const email = useAppSelector(selectAuthEmail);
   const dashboard = useAppSelector(selectDashboard);
+  const membershipActive = isMembershipActive(dashboard);
+  const membershipStatus = membershipActive ? 'Active' : dashboard ? 'Inactive' : 'Checking membership';
 
   const handleLogout = () => {
     dispatch(logout());
@@ -84,20 +86,22 @@ export default function App() {
                 </div>
                 <div>
                   <div className="text-xs text-stone-500 font-medium">Turnstile pass</div>
-                  <div className="text-sm font-semibold text-stone-900 mt-0.5">Active & ready</div>
+                  <div className={`text-sm font-semibold mt-0.5 ${membershipActive ? 'text-emerald-700' : 'text-stone-700'}`}>
+                    {membershipActive ? 'Active & ready' : 'Membership required'}
+                  </div>
                 </div>
               </div>
 
               <div className="bg-[#fffdf8] p-5 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-md bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0">
+                <div className={`w-10 h-10 rounded-md flex items-center justify-center shrink-0 ${membershipActive ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-600'}`}>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
                 </div>
                 <div>
                   <div className="text-xs text-stone-500 font-medium">Membership status</div>
-                  <div className="text-sm font-semibold text-emerald-700 mt-0.5">
-                    {dashboard?.subscription?.status || 'Active Member'}
+                  <div className={`text-sm font-semibold mt-0.5 ${membershipActive ? 'text-emerald-700' : 'text-stone-700'}`}>
+                    {membershipStatus}
                   </div>
                 </div>
               </div>

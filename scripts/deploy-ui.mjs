@@ -41,7 +41,7 @@ function writeRuntimeConfig(distDir, config) {
 }
 
 console.log('\nPublishing Crossbox Gym UI assets...');
-run('npm', ['run', 'build:ui']);
+run(process.execPath, ['scripts/build-ui.mjs']);
 
 const frontend = getFrontendOutputs();
 const config = {

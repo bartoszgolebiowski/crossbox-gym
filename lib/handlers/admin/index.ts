@@ -1,24 +1,26 @@
+import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
+import { DeleteCommand, GetCommand, PutCommand, QueryCommand, ScanCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
-import { QueryCommand, PutCommand, UpdateCommand, DeleteCommand, ScanCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
-import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import { randomBytes } from 'crypto';
 import { ddb } from '../shared/ddb-client';
-import { withHandler, parseJsonBody, assertAdmin, NotFoundError } from '../shared/http';
 import { hashApiKey } from '../shared/hash-helpers';
+import { assertAdmin, NotFoundError, parseJsonBody, withHandler } from '../shared/http';
 import { ConfigItem } from '../shared/types';
 
 const s3 = new S3Client({});
 const sqs = new SQSClient({});
 
-import { getMainTableName, getAuditLogsTableName, getStaticAssetsBucketName, getUnlockQueueUrl } from '../shared/env';
+import { getAuditLogsTableName, getMainTableName, getUnlockQueueUrl } from '../shared/env';
 
 const MAIN_TABLE = getMainTableName();
 const AUDIT_LOGS_TABLE = getAuditLogsTableName();
-const ASSETS_BUCKET = getStaticAssetsBucketName();
 const UNLOCK_QUEUE = getUnlockQueueUrl();
 
 const syncLocationsToS3 = async () => {
+  const assetsBucket = process.env.STATIC_ASSETS_BUCKET_NAME;
+  if (!assetsBucket) return;
+
   const result = await ddb.send(new QueryCommand({
     TableName: MAIN_TABLE,
     IndexName: 'GSI1',
@@ -28,7 +30,7 @@ const syncLocationsToS3 = async () => {
 
   const locations = result.Items || [];
   await s3.send(new PutObjectCommand({
-    Bucket: ASSETS_BUCKET,
+    Bucket: assetsBucket,
     Key: 'public/locations.json',
     Body: JSON.stringify(locations),
     ContentType: 'application/json'

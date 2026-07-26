@@ -12,6 +12,7 @@ export const MemberOverrideCard: React.FC = () => {
 
   const [formState, dispatchForm] = useReducer(memberOverrideFormReducer, initialMemberOverrideFormState);
   const { overrideUserId, overrideAction } = formState;
+  const canApplyOverride = overrideUserId.trim().length > 0;
 
   const handleFieldChange = (field: 'overrideUserId' | 'overrideAction', value: string) => {
     dispatchForm(changeMemberOverrideFormField(field, value));
@@ -70,12 +71,13 @@ export const MemberOverrideCard: React.FC = () => {
 
         {/* Action Button */}
         <button
-          className={`mb-2 flex w-full cursor-pointer items-center justify-center gap-2 rounded-md px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors ${
+          className={`mb-2 flex w-full items-center justify-center gap-2 rounded-md px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors disabled:cursor-not-allowed disabled:bg-slate-300 ${
             overrideAction === 'suspend'
               ? 'bg-rose-600 hover:bg-rose-500'
               : 'bg-emerald-600 hover:bg-emerald-500'
           }`}
           onClick={handleApplyOverride}
+          disabled={!canApplyOverride}
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />

@@ -12,6 +12,7 @@ export const RemoteOpsCard: React.FC = () => {
 
   const [formState, dispatchForm] = useReducer(remoteOpsFormReducer, initialRemoteOpsFormState);
   const { unlockDeviceId } = formState;
+  const canUnlock = unlockDeviceId.trim().length > 0;
 
   const handleRemoteUnlock = () => {
     dispatch(remoteUnlockThunk({ deviceId: unlockDeviceId }));
@@ -55,8 +56,9 @@ export const RemoteOpsCard: React.FC = () => {
         {/* Action Triggers */}
         <div className="space-y-2.5 mb-2">
           <button
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-amber-700 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-600"
+            className="flex w-full items-center justify-center gap-2 rounded-md bg-amber-700 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-600 disabled:cursor-not-allowed disabled:bg-amber-300"
             onClick={handleRemoteUnlock}
+            disabled={!canUnlock}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
