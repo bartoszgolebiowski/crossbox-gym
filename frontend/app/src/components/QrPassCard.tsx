@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAppDispatch, useAppSelector } from '../store';
-import { selectQrPass, generateQRThunk } from '../store/memberSlice';
+import { generateQRThunk, selectQrPass } from '../store/memberSlice';
 
 export const QrPassCard: React.FC = () => {
   const dispatch = useAppDispatch();

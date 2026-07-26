@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { spawn } from 'node:child_process';
-import { parseArgs } from 'node:util';
 import fs from 'node:fs';
+import { parseArgs } from 'node:util';
 
 function run(command, args) {
   return new Promise((resolve, reject) => {

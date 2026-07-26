@@ -1,8 +1,8 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
-import configReducer, { bootstrapConfigThunk } from './configSlice';
 import authReducer from './authSlice';
-import memberReducer, { fetchDashboardThunk, generateQRThunk, fetchInvoicesThunk } from './memberSlice';
+import configReducer, { bootstrapConfigThunk } from './configSlice';
+import memberReducer, { fetchDashboardThunk, fetchInvoicesThunk, generateQRThunk } from './memberSlice';
 
 export const store = configureStore({
   reducer: {

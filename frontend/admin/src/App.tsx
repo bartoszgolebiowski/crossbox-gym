@@ -1,13 +1,12 @@
-import React from 'react';
-import { useAdminDispatch, useAdminSelector } from './store';
-import { retryAdminConfigThunk, selectAdminConfig } from './store/configSlice';
-import { selectAdminToken, selectAdminEmail, adminLogout } from './store/authSlice';
-import { Header } from './components/Header';
-import { Footer } from './components/Footer';
 import { AuthCard } from './components/AuthCard';
+import { Footer } from './components/Footer';
+import { Header } from './components/Header';
 import { LocationManagerCard } from './components/LocationManagerCard';
-import { RemoteOpsCard } from './components/RemoteOpsCard';
 import { MemberOverrideCard } from './components/MemberOverrideCard';
+import { RemoteOpsCard } from './components/RemoteOpsCard';
+import { useAdminDispatch, useAdminSelector } from './store';
+import { adminLogout, selectAdminEmail, selectAdminToken } from './store/authSlice';
+import { retryAdminConfigThunk, selectAdminConfig } from './store/configSlice';
 
 export default function App() {
   const dispatch = useAdminDispatch();

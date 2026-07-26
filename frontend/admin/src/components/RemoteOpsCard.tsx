@@ -1,7 +1,7 @@
 import React, { useReducer } from 'react';
+import { initialRemoteOpsFormState, remoteOpsFormReducer, setUnlockDeviceId } from '../reducers/remoteOpsFormReducer';
 import { useAdminDispatch, useAdminSelector } from '../store';
-import { selectRemoteOutput, remoteUnlockThunk, rotateHMACThunk } from '../store/adminSlice';
-import { remoteOpsFormReducer, initialRemoteOpsFormState, setUnlockDeviceId } from '../reducers/remoteOpsFormReducer';
+import { remoteUnlockThunk, rotateHMACThunk, selectRemoteOutput } from '../store/adminSlice';
 
 const fieldLabelClass = 'mb-2 block text-sm font-medium text-slate-700';
 const fieldClass = 'w-full rounded-md border border-slate-300 bg-white px-3.5 py-3 font-mono text-sm text-slate-900 shadow-sm placeholder:text-slate-400 transition focus:border-amber-700 focus:outline-none focus:ring-4 focus:ring-amber-700/10';

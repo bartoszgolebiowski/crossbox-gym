@@ -1,7 +1,7 @@
 import * as cdk from 'aws-cdk-lib';
 import * as fs from 'fs';
-import { CrossboxDataStack } from '../lib/stacks/data-stack';
 import { CrossboxApiStack } from '../lib/stacks/api-stack';
+import { CrossboxDataStack } from '../lib/stacks/data-stack';
 import { CrossboxFrontendStack } from '../lib/stacks/frontend-stack';
 
 if (fs.existsSync('.env')) {

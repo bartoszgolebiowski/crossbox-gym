@@ -1,7 +1,7 @@
 import React, { useReducer } from 'react';
+import { adminAuthFormReducer, changeAdminAuthFormField, initialAdminAuthFormState } from '../reducers/adminAuthFormReducer';
 import { useAdminDispatch, useAdminSelector } from '../store';
-import { selectAdminAuth, adminLoginThunk } from '../store/authSlice';
-import { adminAuthFormReducer, initialAdminAuthFormState, changeAdminAuthFormField } from '../reducers/adminAuthFormReducer';
+import { adminLoginThunk, selectAdminAuth } from '../store/authSlice';
 
 const fieldLabelClass = 'mb-2 block text-sm font-medium text-slate-700';
 const fieldClass = 'w-full rounded-md border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 transition focus:border-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-700/10';

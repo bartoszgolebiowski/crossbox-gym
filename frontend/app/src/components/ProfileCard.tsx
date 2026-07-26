@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAppDispatch, useAppSelector } from '../store';
-import { selectDashboard, selectCheckoutStatus, createCheckoutSessionThunk, createPortalSessionThunk } from '../store/memberSlice';
+import { createCheckoutSessionThunk, createPortalSessionThunk, selectCheckoutStatus, selectDashboard } from '../store/memberSlice';
 
 interface ProfileCardProps {
   email: string | null;

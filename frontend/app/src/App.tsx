@@ -1,14 +1,13 @@
-import React from 'react';
-import { useAppDispatch, useAppSelector } from './store';
-import { retryConfigThunk, selectConfig } from './store/configSlice';
-import { selectAuthToken, selectAuthEmail, logout } from './store/authSlice';
-import { clearMemberData, selectDashboard } from './store/memberSlice';
-import { Header } from './components/Header';
-import { Footer } from './components/Footer';
 import { AuthCard } from './components/AuthCard';
-import { QrPassCard } from './components/QrPassCard';
-import { ProfileCard } from './components/ProfileCard';
+import { Footer } from './components/Footer';
+import { Header } from './components/Header';
 import { InvoicesCard } from './components/InvoicesCard';
+import { ProfileCard } from './components/ProfileCard';
+import { QrPassCard } from './components/QrPassCard';
+import { useAppDispatch, useAppSelector } from './store';
+import { logout, selectAuthEmail, selectAuthToken } from './store/authSlice';
+import { retryConfigThunk, selectConfig } from './store/configSlice';
+import { clearMemberData, selectDashboard } from './store/memberSlice';
 
 export default function App() {
   const dispatch = useAppDispatch();

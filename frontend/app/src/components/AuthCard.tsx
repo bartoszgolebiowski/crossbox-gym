@@ -1,8 +1,8 @@
 import React, { useReducer } from 'react';
+import { authFormReducer, AuthMode, changeAuthFormField, initialAuthFormState, setAuthMode } from '../reducers/authFormReducer';
 import { useAppDispatch, useAppSelector } from '../store';
-import { selectAuth, loginThunk, registerThunk, forgotPasswordThunk, confirmForgotPasswordThunk, clearAuthMessages } from '../store/authSlice';
-import { fetchDashboardThunk, generateQRThunk, fetchInvoicesThunk } from '../store/memberSlice';
-import { authFormReducer, initialAuthFormState, setAuthMode, changeAuthFormField, AuthMode } from '../reducers/authFormReducer';
+import { clearAuthMessages, confirmForgotPasswordThunk, forgotPasswordThunk, loginThunk, registerThunk, selectAuth } from '../store/authSlice';
+import { fetchDashboardThunk, fetchInvoicesThunk, generateQRThunk } from '../store/memberSlice';
 
 const fieldLabelClass = 'mb-2 block text-sm font-medium text-stone-700';
 const fieldClass = 'w-full rounded-md border border-stone-300 bg-[#fffdf8] px-3.5 py-3 text-sm text-stone-900 shadow-sm placeholder:text-stone-400 transition focus:border-rose-700 focus:outline-none focus:ring-4 focus:ring-rose-800/10';

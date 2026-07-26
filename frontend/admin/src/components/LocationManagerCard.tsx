@@ -1,7 +1,7 @@
 import React, { useReducer } from 'react';
+import { changeLocationFormField, initialLocationFormState, locationFormReducer } from '../reducers/locationFormReducer';
 import { useAdminDispatch, useAdminSelector } from '../store';
-import { selectLocationOutput, createLocationThunk, listLocationsThunk } from '../store/adminSlice';
-import { locationFormReducer, initialLocationFormState, changeLocationFormField } from '../reducers/locationFormReducer';
+import { createLocationThunk, listLocationsThunk, selectLocationOutput } from '../store/adminSlice';
 
 const fieldLabelClass = 'mb-2 block text-sm font-medium text-slate-700';
 const fieldClass = 'w-full rounded-md border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 transition focus:border-cyan-700 focus:outline-none focus:ring-4 focus:ring-cyan-700/10';
