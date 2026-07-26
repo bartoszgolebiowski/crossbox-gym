@@ -9,9 +9,11 @@ import { EntryLogItem } from '../shared/types';
 
 const sqs = new SQSClient({});
 
-const MAIN_TABLE = process.env.MAIN_TABLE_NAME!;
-const ENTRY_LOGS_TABLE = process.env.ENTRY_LOGS_TABLE_NAME!;
-const UNLOCK_QUEUE_URL = process.env.UNLOCK_QUEUE_URL!;
+import { getMainTableName, getEntryLogsTableName, getUnlockQueueUrl } from '../shared/env';
+
+const MAIN_TABLE = getMainTableName();
+const ENTRY_LOGS_TABLE = getEntryLogsTableName();
+const UNLOCK_QUEUE_URL = getUnlockQueueUrl();
 
 interface QRPayload {
   user_id: string;

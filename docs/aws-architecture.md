@@ -21,14 +21,14 @@
 
 | Function | Trigger | Responsibility | Source (FR-n / flow) | Notes |
 |---|---|---|---|---|
-| `AuthHandler` | API GW: `POST /auth/*` | Routes internally: `/auth/login` (Cognito SRP auth), `/auth/magic-link` (generate token + SES email, rate-limit 3/hr), `/auth/magic-link/verify` (validate token, AdminInitiateAuth), `/auth/set-password` (first login) | FR-04, FR-05, FR-06, FR-07, FR-16 | Public routes (no Cognito auth) except set-password |
+| `AuthHandler` | API GW: `POST /auth/*` | Routes internally: `/auth/login` (Cognito SRP auth), `/auth/magic-link` (generate token + return link URL, rate-limit 3/hr), `/auth/magic-link/verify` (validate token, AdminInitiateAuth), `/auth/set-password` (first login) | FR-04, FR-05, FR-06, FR-07, FR-16 | Public routes (no Cognito auth) except set-password |
 | `MemberHandler` | API GW: `GET/POST /member/*` | Routes internally: `/member/dashboard` (return status + subscription + locations), `/member/consent` (write consent record), `/member/qr` (validate status, generate HMAC-signed QR), `/member/portal-session` (create Stripe Portal session with return_url) | FR-17, FR-18, FR-19, FR-20, FR-21, FR-26 | Cognito JWT required |
 | `CheckoutHandler` | API GW: `POST /checkout/session` | Create Stripe Checkout session with location metadata, return redirect URL | FR-01, FR-02 | Public (no auth) |
-| `StripeWebhookHandler` | API GW: `POST /webhook/stripe` | Validate Stripe signature, switch on event type: `checkout.session.completed` → create Cognito user + User item + Subscription item + send welcome email (all idempotent). `invoice.payment_failed` → set PAST_DUE + grace_period_end. `invoice.paid` → set ACTIVE. `customer.subscription.deleted` → set EXPIRED. `customer.subscription.updated` → set CANCELED if cancel_at_period_end. | FR-03, FR-09, FR-11, FR-12, FR-14 | No auth (Stripe signature). Idempotent — Stripe retries on failure (3 days). |
+| `StripeWebhookHandler` | API GW: `POST /webhook/stripe` | Validate Stripe signature, switch on event type via modular event handlers (`events/`): `checkout.session.completed` → create Cognito user + User item + Subscription item. `customer.subscription.updated` / `deleted` → update status + grace_period. `invoice.paid` → record invoice history. `invoice.payment_failed` → log warning. | FR-03, FR-09, FR-11, FR-12, FR-14 | No auth (Stripe signature). Idempotent — Stripe retries on failure (3 days). |
 | `VerifyEntry` | API GW: `POST /device/verify` | Full verification chain: lookup device by API key → validate QR (HMAC + TTL ≤ 20s) → check subscription status → check anti-passback (15 min). On success: publish to UnlockQueue, write EntryLog, set cooldown. Return sync {result, reason, feedback}. | FR-22, FR-25, Flow 2 | API key checked in Lambda. Must complete <500ms. |
 | `ExecuteUnlock` | SQS: `UnlockQueue` | Read device connection_params from DynamoDB, send HTTP POST to lock IP to release relay for 5 seconds | FR-22 (step 4), FR-34 | Async. Retries 3x. |
 | `AdminHandler` | API GW: `GET/POST/PUT/DELETE /admin/*` | Router for all admin CRUD: locations (CRUD + write locations.json to S3 on change), devices (CRUD + auto-generate API key), member search (email query), member detail, status overrides (suspend/extend grace + AuditLog), remote unlock (publish to UnlockQueue + AuditLog), HMAC key rotation. | FR-29, FR-30, FR-31, FR-32, FR-33, FR-34, FR-36 | Cognito JWT + admin group check |
-| `GraceExpiryCron` | CloudWatch Events: every 30 min | Scan Main table for items with `type=SUBSCRIPTION, status=PAST_DUE, grace_period_end < NOW()`. Transition each to SUSPENDED (conditional update). Send suspended email via SES. | FR-10, BR-01 | Safety net for grace period |
+| `GraceExpiryCron` | CloudWatch Events: every 30 min | Scan Main table for items with `type=SUBSCRIPTION, status=PAST_DUE, grace_period_end < NOW()`. Transition each to SUSPENDED (conditional update). | FR-10, BR-01 | Safety net for grace period |
 
 **Total: 8 Lambda functions**
 
@@ -199,12 +199,10 @@ One HTTP API with route groups, different auth per group:
 |---|---|---|---|---|
 | `AuthHandler` | Cognito User Pool | AdminInitiateAuth, AdminSetUserPassword, AdminCreateUser | FR-04, FR-06, FR-07 | |
 | `AuthHandler` | DynamoDB `MainTable` | GetItem, PutItem, UpdateItem, DeleteItem (tokens + rate limit + users) | FR-04, FR-07, BR-08 | Scoped to TOKEN#, RATELIMIT#, USER# prefixes |
-| `AuthHandler` | SES | SendEmail | FR-04, FR-07 | Magic link emails |
 | `MemberHandler` | DynamoDB `MainTable` | GetItem, Query, PutItem (user, subscription, consent, config, locations) | FR-17, FR-19, FR-21 | Read-heavy except consent write |
 | `CheckoutHandler` | Stripe API | External HTTPS | FR-02 | Stripe secret in env var |
 | `StripeWebhookHandler` | Cognito User Pool | AdminCreateUser | FR-03 | Account provisioning |
 | `StripeWebhookHandler` | DynamoDB `MainTable` | PutItem, UpdateItem, GetItem (users, subscriptions) | FR-03, FR-09, FR-11, FR-12, FR-14 | Conditional updates for state transitions |
-| `StripeWebhookHandler` | SES | SendEmail | FR-03, FR-09 | Welcome + payment failure emails |
 | `VerifyEntry` | DynamoDB `MainTable` | GetItem, Query (devices, subscriptions, config) | FR-22 | Read HMAC key, check status |
 | `VerifyEntry` | DynamoDB `EntryLogs` | PutItem, Query (anti-passback check + log entry) | FR-22, FR-25 | |
 | `VerifyEntry` | SQS `UnlockQueue` | SendMessage | FR-22 | On successful verification |
@@ -214,7 +212,6 @@ One HTTP API with route groups, different auth per group:
 | `AdminHandler` | SQS `UnlockQueue` | SendMessage | FR-34 | Remote unlock |
 | `AdminHandler` | S3 `StaticAssetsBucket` | PutObject (`locations.json`) | FR-01, FR-29 | Update public locations data |
 | `GraceExpiryCron` | DynamoDB `MainTable` | Query (GSI1: STATUS#PAST_DUE), UpdateItem (conditional) | FR-10 | Transition PAST_DUE → SUSPENDED |
-| `GraceExpiryCron` | SES | SendEmail | FR-10 | Suspended notification |
 
 ---
 
@@ -428,38 +425,44 @@ flowchart TB
 
 ---
 
-## 16. Provider Adapter Pattern & Automated CDK Testing Strategy
+## 16. Provider Adapter Pattern & Code Organization
 
 ### 16.1 Provider Adapter Abstraction (Dependency Injection)
 
-To ensure fast, deterministic, 100% automated integration testing (`deploy → test → destroy`) without physical hardware or external third-party network dependencies (Stripe API, SES sandbox), all external integrations use an **Adapter Pattern + Factory**:
+To ensure fast, deterministic, 100% automated integration testing (`deploy → test → destroy`) without physical hardware or external third-party network dependencies (Stripe API), external integrations use an **Adapter Pattern + Factory**:
 
 ```
                           ┌──────────────────────┐
                           │   Lambda Function    │
                           └──────────┬───────────┘
                                      │ (Factory Pattern)
-            ┌────────────────────────┼────────────────────────┐
-            ▼                        ▼                        ▼
-     PaymentProvider          LockProvider             EmailProvider
-  ├── StripePaymentProvider    ├── HttpLockProvider     ├── SesEmailProvider
-  └── MockPaymentProvider     └── MockLockProvider     └── MockEmailProvider
+                          ┌──────────┴───────────┐
+                          ▼                      ▼
+                   PaymentProvider          LockProvider
+                ├── StripePaymentProvider    ├── HttpLockProvider
+                └── MockPaymentProvider     └── MockLockProvider
 ```
 
-1. **`PaymentProvider`**:
-   - `StripePaymentProvider`: Calls live/test Stripe API (`sk_test_...` or `sk_live_...`).
-   - `MockPaymentProvider`: Generates dummy checkout URLs and processes mock webhook payloads (`x-mock-event` header) locally without external HTTP calls.
-2. **`LockProvider`**:
+1. **`PaymentProvider`** (`lib/handlers/shared/providers/payment/`):
+   - `StripePaymentProvider`: Calls live/test Stripe API (`sk_test_...` or `sk_live_...`). Managed via `stripe-client-manager.ts`.
+   - `MockPaymentProvider`: Generates dummy checkout URLs and processes mock webhook payloads locally without external HTTP calls.
+2. **`LockProvider`** (`lib/handlers/shared/providers/lock.ts`):
    - `HttpLockProvider`: Sends HTTP POST to real lock IP address.
-   - `MockLockProvider`: Logs unlock payloads to CloudWatch and records dummy entry assertions in DynamoDB for test validation.
-3. **`EmailProvider`**:
-   - `SesEmailProvider`: Invokes `ses:SendEmail`.
-   - `MockEmailProvider`: Writes outbound email text and Magic Link tokens to CloudWatch / DynamoDB without hitting SES sandbox restrictions.
+   - `MockLockProvider`: Logs unlock payloads and records entry assertions for test validation.
 
-**Environment Variable Control:**
+**Environment Variable Control (`lib/handlers/shared/env.ts`):**
+- Centralized `shared/env.ts` module with fail-fast validation (`requireEnv()`), scope-specific getters, and explicit defaults.
 - `PAYMENT_PROVIDER` = `stripe` | `mock`
 - `LOCK_PROVIDER` = `http` | `mock`
-- `EMAIL_PROVIDER` = `ses` | `mock`
+
+### 16.2 Stripe Webhook Event Handler Modularization
+
+The `StripeWebhookHandler` (`lib/handlers/stripe-webhook/`) uses a thin dispatcher pattern (`index.ts`) that delegates event handling to dedicated modules under `events/`:
+- `checkout-session-completed.ts`: Handles `checkout.session.completed` (Cognito user creation + DynamoDB profile & subscription creation).
+- `subscription-updated.ts`: Handles `customer.subscription.updated` and `deleted`.
+- `invoice-paid.ts`: Handles `invoice.paid` history recording.
+- `invoice-payment-failed.ts`: Handles `invoice.payment_failed` logging.
+- `context.ts`: Encapsulates shared invocation context (`WebhookContext`).
 
 ---
 
@@ -470,7 +473,7 @@ To enable single-command integration testing (`npm run test:e2e`), the CDK stack
 1. **CDK Parameter `isTestEnvironment=true`**:
    - Sets `RemovalPolicy.DESTROY` on all DynamoDB tables, S3 buckets, and Cognito User Pools.
    - Sets `autoDeleteObjects: true` on `StaticAssetsBucket` (ensuring non-empty bucket teardown succeeds during `cdk destroy`).
-   - Configures `PAYMENT_PROVIDER=mock`, `LOCK_PROVIDER=mock`, `EMAIL_PROVIDER=mock` on all Lambda functions.
+   - Configures `PAYMENT_PROVIDER=mock`, `LOCK_PROVIDER=mock` on all Lambda functions.
 
 2. **Required CloudFormation Stack Outputs (`CfnOutput`)**:
    - `ApiUrl`: API Gateway root endpoint URL.

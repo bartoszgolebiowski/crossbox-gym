@@ -1,8 +1,7 @@
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { withHandler, parseJsonBody, NotFoundError } from '../shared/http';
 import { createPaymentProvider } from '../shared/providers';
-
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://d3klturtfk9dxr.cloudfront.net';
+import { getFrontendUrl, getPaymentProvider } from '../shared/env';
 
 export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
   const method = event.requestContext.http.method;
@@ -11,13 +10,14 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
   if (method === 'POST' && path === '/checkout/session') {
     const { priceId, customerEmail } = parseJsonBody(event);
     
-    const paymentProvider = createPaymentProvider(process.env.PAYMENT_PROVIDER || 'mock');
+    const paymentProvider = createPaymentProvider(getPaymentProvider());
+    const frontendUrl = getFrontendUrl();
     
     const session = await paymentProvider.createCheckoutSession({
       priceId,
       customerEmail,
-      successUrl: `${FRONTEND_URL}/checkout/success`,
-      cancelUrl: `${FRONTEND_URL}/checkout/cancel`
+      successUrl: `${frontendUrl}/checkout/success`,
+      cancelUrl: `${frontendUrl}/checkout/cancel`
     });
 
     return { url: session.url };

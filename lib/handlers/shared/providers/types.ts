@@ -1,7 +1,3 @@
-export interface EmailProvider {
-  sendEmail(params: { to: string; subject: string; body: string; from: string }): Promise<void>;
-}
-
 export interface PaymentProvider {
   createCheckoutSession(params: {
     priceId?: string;
@@ -35,4 +31,8 @@ export interface PaymentProvider {
 
 export interface LockProvider {
   sendUnlockCommand(params: { ip: string; port?: number; path?: string; durationSeconds: number }): Promise<void>;
+}
+
+export interface IdentityProvider {
+  ensureUser(userPoolId: string, email: string): Promise<string>;
 }

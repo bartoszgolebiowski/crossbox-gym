@@ -3,24 +3,26 @@ import {
   CognitoIdentityProviderClient, 
   AdminInitiateAuthCommand, 
   AdminCreateUserCommand,
-  AdminSetUserPasswordCommand
+  AdminSetUserPasswordCommand,
+  AdminGetUserCommand,
+  AdminResetUserPasswordCommand,
+  ForgotPasswordCommand,
+  ConfirmForgotPasswordCommand
 } from '@aws-sdk/client-cognito-identity-provider';
 import { PutCommand, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { randomBytes, createHash } from 'crypto';
 import { withHandler, parseJsonBody, extractJwtClaims, ValidationError, NotFoundError, UnauthorizedError } from '../shared/http';
 import { ddb } from '../shared/ddb-client';
-import { createEmailProvider } from '../shared/providers';
 import { MagicLinkToken, MagicLinkRateLimit } from '../shared/types';
+import { getMainTableName, getFrontendUrl, getUserPoolId, getUserPoolClientId } from '../shared/env';
 
 const cognito = new CognitoIdentityProviderClient({});
-const MAIN_TABLE_NAME = process.env.MAIN_TABLE_NAME!;
-const USER_POOL_ID = process.env.USER_POOL_ID!;
-const CLIENT_ID = process.env.USER_POOL_CLIENT_ID!;
-const FRONTEND_URL = process.env.FRONTEND_URL || 'https://d3klturtfk9dxr.cloudfront.net';
 
 export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
   const method = event.requestContext.http.method;
   const path = event.requestContext.http.path;
+  const userPoolId = getUserPoolId();
+  const clientId = getUserPoolClientId();
 
   if (method === 'POST' && path === '/auth/login') {
     const { email, password } = parseJsonBody(event);
@@ -30,8 +32,8 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
 
     try {
       const authRes = await cognito.send(new AdminInitiateAuthCommand({
-        UserPoolId: USER_POOL_ID,
-        ClientId: CLIENT_ID,
+        UserPoolId: userPoolId,
+        ClientId: clientId,
         AuthFlow: 'ADMIN_USER_PASSWORD_AUTH',
         AuthParameters: {
           USERNAME: email,
@@ -39,9 +41,13 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
         },
       }));
 
+      if (authRes.ChallengeName === 'NEW_PASSWORD_REQUIRED') {
+        throw new UnauthorizedError('Your account requires password setup. Please use the Magic Link or Password Reset flow to set your permanent password.');
+      }
+
       const authResult = authRes.AuthenticationResult;
       if (!authResult) {
-        throw new UnauthorizedError('Invalid credentials');
+        throw new UnauthorizedError('Invalid email or password');
       }
 
       return {
@@ -51,6 +57,16 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
         expiresIn: authResult.ExpiresIn,
       };
     } catch (err: any) {
+      if (err instanceof UnauthorizedError || err instanceof ValidationError) {
+        throw err;
+      }
+      if (
+        err.name === 'PasswordResetRequiredException' ||
+        err.name === 'UserPasswordNotVerifiedException' ||
+        err.message?.includes('NEW_PASSWORD_REQUIRED')
+      ) {
+        throw new UnauthorizedError('Your account requires password setup. Please use the Magic Link or Password Reset flow to set your permanent password.');
+      }
       console.error('Login error:', err);
       throw new UnauthorizedError('Invalid email or password');
     }
@@ -67,7 +83,7 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     
     // Check rate limiting
     const rlRes = await ddb.send(new GetCommand({
-      TableName: MAIN_TABLE_NAME,
+      TableName: getMainTableName(),
       Key: { PK: rateLimitKey, SK: 'RATELIMIT' }
     }));
     const rateLimit = rlRes.Item as MagicLinkRateLimit | undefined;
@@ -78,7 +94,7 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
 
     // Update rate limit
     await ddb.send(new PutCommand({
-      TableName: MAIN_TABLE_NAME,
+      TableName: getMainTableName(),
       Item: {
         PK: rateLimitKey,
         SK: 'RATELIMIT',
@@ -93,7 +109,7 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     const tokenHash = createHash('sha256').update(token).digest('hex');
 
     await ddb.send(new PutCommand({
-      TableName: MAIN_TABLE_NAME,
+      TableName: getMainTableName(),
       Item: {
         PK: `TOKEN#${tokenHash}`,
         SK: 'TOKEN',
@@ -103,17 +119,9 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
       } as MagicLinkToken
     }));
 
-    const magicUrl = `${FRONTEND_URL}/auth/magic-link/verify?token=${token}&email=${encodeURIComponent(email)}`;
-    const emailProvider = createEmailProvider(process.env.EMAIL_PROVIDER || 'mock');
-    
-    await emailProvider.sendEmail({
-      to: email,
-      from: process.env.SES_SENDER_EMAIL || 'no-reply@crossbox.com',
-      subject: 'Your CrossBox Gym Magic Login Link',
-      body: `Click the following link to log in to your CrossBox Gym account: ${magicUrl}`
-    });
+    const magicUrl = `${getFrontendUrl()}/auth/magic-link/verify?token=${token}&email=${encodeURIComponent(email)}`;
 
-    return { message: 'Magic link sent successfully' };
+    return { message: 'Magic link generated successfully', magicUrl };
   }
 
   if (method === 'GET' && path === '/auth/magic-link/verify') {
@@ -127,7 +135,7 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
 
     const tokenHash = createHash('sha256').update(token).digest('hex');
     const tokenRes = await ddb.send(new GetCommand({
-      TableName: MAIN_TABLE_NAME,
+      TableName: getMainTableName(),
       Key: { PK: `TOKEN#${tokenHash}`, SK: 'TOKEN' }
     }));
 
@@ -154,14 +162,14 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     }
 
     await cognito.send(new AdminSetUserPasswordCommand({
-      UserPoolId: USER_POOL_ID,
+      UserPoolId: userPoolId,
       Username: email,
       Password: newPassword,
       Permanent: true
     }));
 
     await ddb.send(new UpdateCommand({
-      TableName: MAIN_TABLE_NAME,
+      TableName: getMainTableName(),
       Key: { PK: `USER#${claims.sub}`, SK: 'PROFILE' },
       UpdateExpression: 'SET password_set = :true',
       ExpressionAttributeValues: { ':true': true }
@@ -170,17 +178,121 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     return { message: 'Password updated successfully' };
   }
 
-  if (method === 'POST' && path === '/auth/register') {
-    const { email, password } = parseJsonBody(event);
+  if (method === 'POST' && path === '/auth/forgot-password') {
+    const { email } = parseJsonBody(event);
     if (!email) {
       throw new ValidationError('Email is required');
     }
-    const userPassword = password || 'Member123!';
+
+    try {
+      await cognito.send(new ForgotPasswordCommand({
+        ClientId: clientId,
+        Username: email,
+      }));
+    } catch (e: any) {
+      await cognito.send(new AdminResetUserPasswordCommand({
+        UserPoolId: userPoolId,
+        Username: email,
+      })).catch(() => {});
+    }
+
+    return {
+      message: `Password reset request initiated for ${email}`,
+      email
+    };
+  }
+
+  if (method === 'POST' && path === '/auth/confirm-forgot-password') {
+    const { email, code, newPassword } = parseJsonBody(event);
+    if (!email || !code || !newPassword) {
+      throw new ValidationError('Email, confirmation code, and newPassword are required');
+    }
+    if (newPassword.length < 8) {
+      throw new ValidationError('Password must be at least 8 characters long');
+    }
+
+    await cognito.send(new ConfirmForgotPasswordCommand({
+      ClientId: clientId,
+      Username: email,
+      ConfirmationCode: code,
+      Password: newPassword,
+    }));
+
+    const userRes = await cognito.send(new AdminGetUserCommand({
+      UserPoolId: userPoolId,
+      Username: email,
+    })).catch(() => null);
+    const sub = userRes?.UserAttributes?.find(a => a.Name === 'sub')?.Value;
+
+    if (sub) {
+      await ddb.send(new UpdateCommand({
+        TableName: getMainTableName(),
+        Key: { PK: `USER#${sub}`, SK: 'PROFILE' },
+        UpdateExpression: 'SET password_set = :true',
+        ExpressionAttributeValues: { ':true': true }
+      })).catch(() => {});
+    }
+
+    return { message: 'Password reset confirmed successfully' };
+  }
+
+  if (method === 'POST' && path === '/auth/reset-password') {
+    const { email, token, newPassword } = parseJsonBody(event);
+    if (!email || !newPassword) {
+      throw new ValidationError('Email and newPassword are required');
+    }
+    if (newPassword.length < 8) {
+      throw new ValidationError('Password must be at least 8 characters long');
+    }
+
+    if (token) {
+      const tokenHash = createHash('sha256').update(token).digest('hex');
+      const tokenRes = await ddb.send(new GetCommand({
+        TableName: getMainTableName(),
+        Key: { PK: `TOKEN#${tokenHash}`, SK: 'TOKEN' }
+      }));
+
+      const tokenItem = tokenRes.Item as MagicLinkToken | undefined;
+      if (!tokenItem || tokenItem.user_id !== email) {
+        throw new ValidationError('Invalid or expired reset token');
+      }
+    }
+
+    await cognito.send(new AdminSetUserPasswordCommand({
+      UserPoolId: userPoolId,
+      Username: email,
+      Password: newPassword,
+      Permanent: true
+    }));
+
+    const userRes = await cognito.send(new AdminGetUserCommand({
+      UserPoolId: userPoolId,
+      Username: email,
+    })).catch(() => null);
+    const sub = userRes?.UserAttributes?.find(a => a.Name === 'sub')?.Value;
+
+    if (sub) {
+      await ddb.send(new UpdateCommand({
+        TableName: getMainTableName(),
+        Key: { PK: `USER#${sub}`, SK: 'PROFILE' },
+        UpdateExpression: 'SET password_set = :true',
+        ExpressionAttributeValues: { ':true': true }
+      })).catch(() => {});
+    }
+
+    return { message: 'Password reset successfully' };
+  }
+
+  if (method === 'POST' && path === '/auth/register') {
+    const { email, password } = parseJsonBody(event);
+    if (!email || !password) {
+      throw new ValidationError('Email and password are required');
+    }
 
     let sub = '';
     try {
       const userRes = await cognito.send(new AdminCreateUserCommand({
-        UserPoolId: USER_POOL_ID,
+        UserPoolId: userPoolId,
         Username: email,
         UserAttributes: [
           { Name: 'email', Value: email },
@@ -194,15 +306,15 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     }
 
     await cognito.send(new AdminSetUserPasswordCommand({
-      UserPoolId: USER_POOL_ID,
+      UserPoolId: userPoolId,
       Username: email,
-      Password: userPassword,
+      Password: password,
       Permanent: true
     }));
 
     if (sub) {
       await ddb.send(new PutCommand({
-        TableName: MAIN_TABLE_NAME,
+        TableName: getMainTableName(),
         Item: {
           PK: `USER#${sub}`,
           SK: 'PROFILE',
@@ -215,9 +327,9 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     }
 
     return {
-      message: `Member ${email} created successfully!`,
+      message: `User ${email} registered successfully`,
       email,
-      password: userPassword
+      sub
     };
   }
 

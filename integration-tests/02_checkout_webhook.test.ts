@@ -13,7 +13,6 @@ describe('Checkout & EventBridge Lifecycle Test Suite', () => {
     process.env.MAIN_TABLE_NAME = context.mainTableName;
     process.env.USER_POOL_ID = context.userPoolId;
     process.env.PAYMENT_PROVIDER = 'mock';
-    process.env.EMAIL_PROVIDER = 'mock';
   });
 
   test('POST /checkout/session creates Stripe checkout session URL', async () => {

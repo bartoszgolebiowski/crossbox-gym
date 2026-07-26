@@ -2,11 +2,11 @@ import { SQSEvent } from 'aws-lambda';
 import { GetCommand } from '@aws-sdk/lib-dynamodb';
 import { ddb } from '../shared/ddb-client';
 import { createLockProvider } from '../shared/providers';
-
-const MAIN_TABLE = process.env.MAIN_TABLE_NAME!;
+import { getMainTableName, getLockProvider } from '../shared/env';
 
 export const handler = async (event: SQSEvent): Promise<void> => {
-  const lockProvider = createLockProvider(process.env.LOCK_PROVIDER || 'mock');
+  const lockProvider = createLockProvider(getLockProvider());
+  const mainTable = getMainTableName();
 
   for (const record of event.Records) {
     try {
@@ -14,7 +14,7 @@ export const handler = async (event: SQSEvent): Promise<void> => {
       const { location_id, device_id } = body;
 
       const deviceResult = await ddb.send(new GetCommand({
-        TableName: MAIN_TABLE,
+        TableName: mainTable,
         Key: {
           PK: `LOC#${location_id}`,
           SK: `DEV#${device_id}`

@@ -151,11 +151,12 @@ describe('Stripe Live Sandbox Integration Test Suite (No Mocks)', () => {
       }
     };
 
-    // Set fallback table name for local invocation without deployed stack
+    // Set fallback table name and environment for local invocation without deployed stack
     process.env.MAIN_TABLE_NAME = process.env.MAIN_TABLE_NAME || 'CrossboxGymMainTable';
     process.env.USER_POOL_ID = process.env.USER_POOL_ID || 'mock_pool_id';
+    process.env.FRONTEND_URL = process.env.FRONTEND_URL || 'https://d3klturtfk9dxr.cloudfront.net';
     process.env.PAYMENT_PROVIDER = 'mock';
-    process.env.EMAIL_PROVIDER = 'mock';
+    process.env.IDENTITY_PROVIDER = 'mock';
 
     const result = await stripeEventHandler(eventBridgeEnvelope);
     assert.equal(result.received, true);

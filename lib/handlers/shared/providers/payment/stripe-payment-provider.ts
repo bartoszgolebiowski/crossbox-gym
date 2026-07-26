@@ -1,44 +1,6 @@
-import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import Stripe from 'stripe';
-import { PaymentProvider } from './types';
-
-let stripeClient: Stripe | null = null;
-let webhookSecret: string | null = null;
-const ssm = new SSMClient({});
-
-async function getStripeClient(): Promise<Stripe> {
-  if (stripeClient) return stripeClient;
-  const directKey = process.env.STRIPE_TEST_SECRET_KEY || process.env.STRIPE_SECRET_KEY;
-  if (directKey) {
-    stripeClient = new Stripe(directKey, { apiVersion: '2026-06-24.dahlia' as any });
-    return stripeClient;
-  }
-  const path = process.env.STRIPE_SECRET_KEY_SSM_PATH;
-  if (path) {
-    try {
-      const res = await ssm.send(new GetParameterCommand({ Name: path, WithDecryption: true }));
-      const key = res.Parameter?.Value;
-      if (key) {
-        stripeClient = new Stripe(key, { apiVersion: '2026-06-24.dahlia' as any });
-        return stripeClient;
-      }
-    } catch (e) {
-      // SSM parameter does not exist in dev/test stack
-    }
-  }
-  throw new Error('Could not retrieve Stripe secret key');
-}
-
-async function getWebhookSecret(): Promise<string> {
-  if (webhookSecret) return webhookSecret;
-  const path = process.env.STRIPE_WEBHOOK_SECRET_SSM_PATH;
-  if (!path) throw new Error('STRIPE_WEBHOOK_SECRET_SSM_PATH env var not set');
-  const res = await ssm.send(new GetParameterCommand({ Name: path, WithDecryption: true }));
-  const secret = res.Parameter?.Value;
-  if (!secret) throw new Error('Could not retrieve Stripe webhook secret');
-  webhookSecret = secret;
-  return webhookSecret;
-}
+import { PaymentProvider } from '../types';
+import { getStripeClient, getWebhookSecret } from './stripe-client-manager';
 
 export class StripePaymentProvider implements PaymentProvider {
   async createCheckoutSession(params: {
@@ -48,13 +10,8 @@ export class StripePaymentProvider implements PaymentProvider {
     customerEmail?: string;
     metadata?: Record<string, string>;
     enableTax?: boolean;
-  }): Promise<{ url: string; }> {
-    let stripe: Stripe;
-    try {
-      stripe = await getStripeClient();
-    } catch (err) {
-      return new MockPaymentProvider().createCheckoutSession(params);
-    }
+  }): Promise<{ url: string }> {
+    const stripe = await getStripeClient();
 
     // Generate random 8-character suffix for integration_identifier tracking
     const randomSuffix = Math.random().toString(36).substring(2, 10);
@@ -101,13 +58,7 @@ export class StripePaymentProvider implements PaymentProvider {
   }
 
   async createPortalSession(params: { customerId: string; returnUrl: string }): Promise<{ url: string }> {
-    let stripe: Stripe;
-    try {
-      stripe = await getStripeClient();
-    } catch (err) {
-      return new MockPaymentProvider().createPortalSession(params);
-    }
-
+    const stripe = await getStripeClient();
     const session = await stripe.billingPortal.sessions.create({
       customer: params.customerId,
       return_url: params.returnUrl
@@ -148,39 +99,4 @@ export class StripePaymentProvider implements PaymentProvider {
     const secret = await getWebhookSecret();
     return stripe.webhooks.constructEvent(payload, signature, secret);
   }
-}
-
-export class MockPaymentProvider implements PaymentProvider {
-  async createCheckoutSession(params: any): Promise<{ url: string }> {
-    return { url: 'https://mock.stripe.com/checkout' };
-  }
-  
-  async createPortalSession(params: any): Promise<{ url: string }> {
-    return { url: 'https://mock.stripe.com/portal' };
-  }
-
-  async listInvoices(params: { customerId: string }): Promise<Array<any>> {
-    return [
-      {
-        id: 'in_mock_123',
-        number: 'INV-2026-001',
-        pdfUrl: 'https://mock.stripe.com/invoice/INV-2026-001.pdf',
-        total: 4900,
-        tax: 916,
-        currency: 'usd',
-        status: 'paid',
-        createdAt: new Date().toISOString()
-      }
-    ];
-  }
-  
-  async constructWebhookEvent(payload: string, signature: string): Promise<any> {
-    // Basic mock parser
-    return JSON.parse(payload);
-  }
-}
-
-export function createPaymentProvider(type: string): PaymentProvider {
-  const hasStripeKey = Boolean(process.env.STRIPE_TEST_SECRET_KEY || process.env.STRIPE_SECRET_KEY);
-  return (type === 'stripe' || hasStripeKey) ? new StripePaymentProvider() : new MockPaymentProvider();
 }

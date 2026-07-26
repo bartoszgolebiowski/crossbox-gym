@@ -28,6 +28,15 @@ export class MockLockProvider implements LockProvider {
   }
 }
 
+const lockProviders: Record<string, new () => LockProvider> = {
+  http: HttpLockProvider,
+  mock: MockLockProvider,
+};
+
 export function createLockProvider(type: string): LockProvider {
-  return type === 'mock' ? new MockLockProvider() : new HttpLockProvider();
+  const ProviderClass = lockProviders[type];
+  if (!ProviderClass) {
+    throw new Error(`Unsupported lock provider type: '${type}'`);
+  }
+  return new ProviderClass();
 }

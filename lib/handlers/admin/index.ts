@@ -11,10 +11,12 @@ import { ConfigItem } from '../shared/types';
 const s3 = new S3Client({});
 const sqs = new SQSClient({});
 
-const MAIN_TABLE = process.env.MAIN_TABLE_NAME!;
-const AUDIT_LOGS_TABLE = process.env.AUDIT_LOGS_TABLE_NAME!;
-const ASSETS_BUCKET = process.env.STATIC_ASSETS_BUCKET_NAME!;
-const UNLOCK_QUEUE = process.env.UNLOCK_QUEUE_URL!;
+import { getMainTableName, getAuditLogsTableName, getStaticAssetsBucketName, getUnlockQueueUrl } from '../shared/env';
+
+const MAIN_TABLE = getMainTableName();
+const AUDIT_LOGS_TABLE = getAuditLogsTableName();
+const ASSETS_BUCKET = getStaticAssetsBucketName();
+const UNLOCK_QUEUE = getUnlockQueueUrl();
 
 const syncLocationsToS3 = async () => {
   const result = await ddb.send(new QueryCommand({

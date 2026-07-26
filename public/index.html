@@ -322,7 +322,8 @@
           <input type="password" id="loginPassword" class="form-control" value="Admin123!">
         </div>
         <button class="btn btn-primary" style="width: 100%; margin-bottom: 12px;" onclick="login()">Log In to Member Portal</button>
-        <button class="btn btn-secondary" style="width: 100%;" onclick="quickRegister()">Simulate Instant Member Setup</button>
+        <button class="btn btn-secondary" style="width: 100%; margin-bottom: 12px;" onclick="quickRegister()">Simulate Instant Member Setup</button>
+        <button class="btn btn-secondary" style="width: 100%; background: transparent; border: 1px solid var(--border-color);" onclick="forgotPassword()">🔑 Forgot / Reset Password</button>
         <div id="loginError" class="response-box" style="display: none; color: #FF2E63;"></div>
       </div>
     </div>
@@ -463,6 +464,43 @@
         }
       } catch (e) {
         alert('Registration failed: ' + e.message);
+      }
+    }
+
+    async function forgotPassword() {
+      const email = document.getElementById('loginEmail').value || prompt("Enter your email address to reset password:");
+      if (!email) return;
+
+      try {
+        const res = await fetch(`${API_URL}/auth/forgot-password`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          const code = prompt(`✅ Password reset initiated for ${email}.\n\nEnter the confirmation code:`);
+          if (!code) return;
+          const newPassword = prompt("Enter your new password (minimum 8 characters):");
+          if (!newPassword) return;
+
+          const confirmRes = await fetch(`${API_URL}/auth/confirm-forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, code, newPassword })
+          });
+          const confirmData = await confirmRes.json();
+          if (confirmRes.ok) {
+            alert("🎉 Password reset successfully! You can now log in with your new password.");
+            document.getElementById('loginPassword').value = newPassword;
+          } else {
+            alert("❌ Reset Failed: " + (confirmData.message || JSON.stringify(confirmData)));
+          }
+        } else {
+          alert("❌ Reset Request Failed: " + (data.message || JSON.stringify(data)));
+        }
+      } catch (e) {
+        alert("❌ Error: " + e.message);
       }
     }
 

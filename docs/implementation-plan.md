@@ -55,11 +55,11 @@ Ordered build sequence. Each step depends on the resources listed. Within a sing
 | 6 | **`UserPool`** + **`UserPoolClient`** (Cognito) | — | Identity layer. Multiple Lambdas need pool ID/client ID. API Gateway JWT authorizer needs pool ARN. |
 | 7 | **`StaticAssetsBucket`** (S3) | — | Storage. AdminHandler writes locations.json. CloudFront needs this as origin. |
 | 8 | **`CDNDistribution`** (CloudFront) | `StaticAssetsBucket` | Needs S3 bucket as origin with OAC. |
-| 9 | **Provider adapters** (shared Lambda code) | — | Define PaymentProvider, LockProvider, EmailProvider interfaces + mock/real implementations. Shared code layer used by Lambdas. |
+| 9 | **Provider adapters & Centralized Env** (shared Lambda code) | — | Define PaymentProvider (`payment/`), LockProvider interfaces + mock/real implementations. Shared `env.ts` module for environment configuration. |
 | 10 | **`HttpApi`** (API Gateway) + Cognito JWT authorizer | `UserPool` | API surface. Needs Cognito for JWT authorizer. Routes added with Lambda integrations. |
-| 11 | **`AuthHandler`** (Lambda) | `MainTable`, `UserPool`, `HttpApi` | Reads/writes tokens + rate limits in MainTable, calls Cognito APIs, sends emails via SES. |
+| 11 | **`AuthHandler`** (Lambda) | `MainTable`, `UserPool`, `HttpApi` | Reads/writes tokens + rate limits in MainTable, calls Cognito APIs. |
 | 12 | **`CheckoutHandler`** (Lambda) | `HttpApi` | Calls Stripe API (external). Minimal AWS dependencies. |
-| 13 | **`StripeWebhookHandler`** (Lambda) | `MainTable`, `UserPool`, `HttpApi` | Writes users/subscriptions to MainTable, creates Cognito users, sends SES emails. |
+| 13 | **`StripeWebhookHandler`** (Lambda) | `MainTable`, `UserPool`, `HttpApi` | Modular event handlers (`events/`): writes users/subscriptions to MainTable, creates Cognito users. |
 | 14 | **`MemberHandler`** (Lambda) | `MainTable`, `HttpApi` | Reads user/subscription/consent/config/locations from MainTable. |
 | 15 | **`VerifyEntry`** (Lambda) | `MainTable`, `EntryLogs`, `UnlockQueue`, `HttpApi` | Reads from MainTable (device, subscription, config), writes to EntryLogs, publishes to UnlockQueue. |
 | 16 | **`ExecuteUnlock`** (Lambda) | `MainTable`, `UnlockQueue` | Triggered by SQS. Reads device connection params from MainTable, calls lock HTTP endpoint. |
@@ -281,17 +281,13 @@ Ordered build sequence. Each step depends on the resources listed. Within a sing
     - `MAIN_TABLE_NAME` — DynamoDB MainTable name
     - `USER_POOL_ID` — Cognito User Pool ID
     - `USER_POOL_CLIENT_ID` — Cognito User Pool Client ID
-    - `EMAIL_PROVIDER` — `ses` | `mock`
-    - `SES_SENDER_EMAIL` — e.g., `no-reply@crossbox.com`
-    - `FRONTEND_URL` — Magic link redirect base URL
+     - `FRONTEND_URL` — Magic link redirect base URL
 - **IAM permissions:**
   - `dynamodb:GetItem`, `PutItem`, `UpdateItem`, `DeleteItem` on `MainTable` (scoped to `TOKEN#*`, `RATELIMIT#*`, `USER#*` key prefixes via condition)
   - `dynamodb:Query` on `MainTable` `EmailIndex` GSI
   - `cognito-idp:AdminInitiateAuth`, `AdminSetUserPassword`, `AdminCreateUser` on User Pool ARN
-  - `ses:SendEmail` on SES identity ARN (when `EMAIL_PROVIDER=ses`)
 - **Error handling:** Sync API response — return HTTP error codes. No DLQ.
 - **Observability:** CloudWatch Logs (default).
-- **Provider adapters used:** `EmailProvider`
 - **Testing follow-up:** Unit test magic link token generation/validation, rate limiting logic.
 
 ---
@@ -331,8 +327,6 @@ Ordered build sequence. Each step depends on the resources listed. Within a sing
     - `MAIN_TABLE_NAME`
     - `USER_POOL_ID`
     - `PAYMENT_PROVIDER` — `stripe` | `mock`
-    - `EMAIL_PROVIDER` — `ses` | `mock`
-    - `SES_SENDER_EMAIL`
     - `STRIPE_SECRET_KEY_SSM_PATH` — `/crossbox/stripe/secret-key`
     - `STRIPE_WEBHOOK_SECRET_SSM_PATH` — `/crossbox/stripe/webhook-secret`
 - **IAM permissions:**
@@ -340,12 +334,11 @@ Ordered build sequence. Each step depends on the resources listed. Within a sing
   - `dynamodb:Query` on `MainTable` `EmailIndex`, `StripeSubIndex` GSIs
   - `cognito-idp:AdminCreateUser` on User Pool ARN
   - `cognito-idp:AdminAddUserToGroup` on User Pool ARN (for adding to default member group if needed)
-  - `ses:SendEmail` on SES identity ARN
   - `ssm:GetParameter` on `/crossbox/stripe/*` SSM paths
   - `kms:Decrypt` on default SSM KMS key
 - **Error handling:** Return 200 to Stripe on success. Return 500 on transient failure — Stripe retries for up to 3 days. All operations are idempotent (check-before-write).
 - **Observability:** CloudWatch Logs. Monitor error rate — indicates provisioning or status transition failures.
-- **Provider adapters used:** `PaymentProvider`, `EmailProvider`
+- **Provider adapters used:** `PaymentProvider`
 - **Testing follow-up:** Unit test each event type handler, idempotency of user/subscription creation.
 
 ---
@@ -460,16 +453,12 @@ Ordered build sequence. Each step depends on the resources listed. Within a sing
   - Handler: `src/handlers/grace-expiry-cron.handler`
   - Environment variables:
     - `MAIN_TABLE_NAME`
-    - `EMAIL_PROVIDER` — `ses` | `mock`
-    - `SES_SENDER_EMAIL`
 - **IAM permissions:**
   - `dynamodb:Query` on `MainTable` `GSI1` (query `GSI1PK=STATUS#PAST_DUE`, filter `grace_period_end < NOW()`)
   - `dynamodb:UpdateItem` on `MainTable` (conditional: `status = PAST_DUE` before setting `SUSPENDED`)
-  - `ses:SendEmail` on SES identity ARN
 - **Error handling:** If Lambda times out, next cron run (30 min later) picks up remaining items. Conditional updates prevent double-transitions.
 - **Observability:** CloudWatch Logs. Monitor error count.
-- **Provider adapters used:** `EmailProvider`
-- **Testing follow-up:** Unit test conditional status transition, email sending on transition.
+- **Testing follow-up:** Unit test conditional status transition.
 
 ---
 
@@ -507,13 +496,10 @@ Ordered build sequence. Each step depends on the resources listed. Within a sing
 
 Three adapter interfaces with real + mock implementations, selected via environment variable:
 
-| Provider | Env Var | Real Implementation | Mock Implementation | Used By |
-|---|---|---|---|---|
 | `PaymentProvider` | `PAYMENT_PROVIDER` | `StripePaymentProvider` — calls Stripe API | `MockPaymentProvider` — returns dummy URLs, processes `x-mock-event` header | `CheckoutHandler`, `StripeWebhookHandler`, `MemberHandler` |
 | `LockProvider` | `LOCK_PROVIDER` | `HttpLockProvider` — HTTP POST to lock IP | `MockLockProvider` — logs to CloudWatch, writes dummy record to DynamoDB | `ExecuteUnlock` |
-| `EmailProvider` | `EMAIL_PROVIDER` | `SesEmailProvider` — calls `ses:SendEmail` | `MockEmailProvider` — logs email content to CloudWatch | `AuthHandler`, `StripeWebhookHandler`, `GraceExpiryCron` |
 
-**Test environment (`isTestEnvironment=true`):** All three env vars set to `mock`. Lambda IAM policies for SES and SSM (Stripe keys) are conditionally omitted — mock providers don't need them.
+**Test environment (`isTestEnvironment=true`):** Env vars set to `mock`. Lambda IAM policies for SSM (Stripe keys) are conditionally omitted — mock providers don't need them.
 
 ### 5.5 `isTestEnvironment` CDK Context Parameter
 
@@ -521,8 +507,8 @@ When `true`:
 - All DynamoDB tables: `RemovalPolicy.DESTROY`
 - S3 bucket: `RemovalPolicy.DESTROY` + `autoDeleteObjects: true`
 - Cognito User Pool: `RemovalPolicy.DESTROY`
-- All Lambdas: `PAYMENT_PROVIDER=mock`, `LOCK_PROVIDER=mock`, `EMAIL_PROVIDER=mock`
-- SSM/SES IAM permissions: conditionally excluded (not needed with mock providers)
+- All Lambdas: `PAYMENT_PROVIDER=mock`, `LOCK_PROVIDER=mock`
+- SSM IAM permissions: conditionally excluded (not needed with mock providers)
 
 ### 5.6 CloudFormation Stack Outputs
 

@@ -167,6 +167,8 @@ export class CrossboxGymStack extends cdk.Stack {
     new s3deploy.BucketDeployment(this, 'DeployStaticAssets', {
       sources: [s3deploy.Source.asset(path.join(__dirname, '..', 'public'))],
       destinationBucket: staticBucket,
+      distribution,
+      distributionPaths: ['/*'],
     });
 
 
@@ -196,9 +198,7 @@ export class CrossboxGymStack extends cdk.Stack {
 
     const stripeTestSecretKey = process.env.STRIPE_TEST_SECRET_KEY || process.env.STRIPE_SECRET_KEY || '';
     const paymentProvider = (stripeTestSecretKey || !isTest) ? 'stripe' : 'mock';
-    const emailProvider = isTest ? 'mock' : 'ses';
     const lockProvider = isTest ? 'mock' : 'http';
-    const sesSenderEmail = this.node.tryGetContext('sesSenderEmail') || 'no-reply@crossbox.com';
     const contextFrontendUrl = this.node.tryGetContext('frontendUrl');
     const frontendUrl = (contextFrontendUrl && !contextFrontendUrl.includes('localhost')) 
       ? contextFrontendUrl 
@@ -208,10 +208,8 @@ export class CrossboxGymStack extends cdk.Stack {
       MAIN_TABLE_NAME: mainTable.tableName,
       USER_POOL_ID: userPool.userPoolId,
       USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
-      EMAIL_PROVIDER: emailProvider,
       PAYMENT_PROVIDER: paymentProvider,
       LOCK_PROVIDER: lockProvider,
-      SES_SENDER_EMAIL: sesSenderEmail,
       FRONTEND_URL: frontendUrl,
       STRIPE_TEST_SECRET_KEY: stripeTestSecretKey,
     };
@@ -224,11 +222,6 @@ export class CrossboxGymStack extends cdk.Stack {
         sourceMap: true,
       },
     };
-
-    const sesPolicy = new iam.PolicyStatement({
-      actions: ['ses:SendEmail'],
-      resources: ['*'],
-    });
 
     const ssmPolicy = new iam.PolicyStatement({
       actions: ['ssm:GetParameter', 'kms:Decrypt'],
@@ -251,15 +244,15 @@ export class CrossboxGymStack extends cdk.Stack {
       actions: ['cognito-idp:AdminInitiateAuth', 'cognito-idp:AdminSetUserPassword', 'cognito-idp:AdminCreateUser'],
       resources: [userPool.userPoolArn],
     }));
-    if (!isTest) {
-      authHandler.addToRolePolicy(sesPolicy);
-    }
     const authIntegration = new HttpLambdaIntegration('AuthIntegration', authHandler);
     httpApi.addRoutes({ path: '/auth/login', methods: [apigw.HttpMethod.POST], integration: authIntegration });
     httpApi.addRoutes({ path: '/auth/register', methods: [apigw.HttpMethod.POST], integration: authIntegration });
     httpApi.addRoutes({ path: '/auth/magic-link', methods: [apigw.HttpMethod.POST], integration: authIntegration });
     httpApi.addRoutes({ path: '/auth/magic-link/verify', methods: [apigw.HttpMethod.GET], integration: authIntegration });
     httpApi.addRoutes({ path: '/auth/set-password', methods: [apigw.HttpMethod.POST], integration: authIntegration, authorizer: jwtAuthorizer });
+    httpApi.addRoutes({ path: '/auth/forgot-password', methods: [apigw.HttpMethod.POST], integration: authIntegration });
+    httpApi.addRoutes({ path: '/auth/confirm-forgot-password', methods: [apigw.HttpMethod.POST], integration: authIntegration });
+    httpApi.addRoutes({ path: '/auth/reset-password', methods: [apigw.HttpMethod.POST], integration: authIntegration });
 
     // CheckoutHandler
     const checkoutHandler = new nodejs.NodejsFunction(this, 'CheckoutHandler', {
@@ -289,8 +282,6 @@ export class CrossboxGymStack extends cdk.Stack {
         MAIN_TABLE_NAME: mainTable.tableName,
         USER_POOL_ID: userPool.userPoolId,
         PAYMENT_PROVIDER: paymentProvider,
-        EMAIL_PROVIDER: emailProvider,
-        SES_SENDER_EMAIL: sesSenderEmail,
         STRIPE_SECRET_KEY_SSM_PATH: '/crossbox/stripe/secret-key',
       },
     });
@@ -300,7 +291,6 @@ export class CrossboxGymStack extends cdk.Stack {
       resources: [userPool.userPoolArn],
     }));
     if (!isTest) {
-      stripeWebhookHandler.addToRolePolicy(sesPolicy);
       stripeWebhookHandler.addToRolePolicy(ssmPolicy);
     }
 
@@ -433,14 +423,9 @@ export class CrossboxGymStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(60),
       environment: {
         MAIN_TABLE_NAME: mainTable.tableName,
-        EMAIL_PROVIDER: emailProvider,
-        SES_SENDER_EMAIL: sesSenderEmail,
       },
     });
     mainTable.grantReadWriteData(graceExpiryCronHandler);
-    if (!isTest) {
-      graceExpiryCronHandler.addToRolePolicy(sesPolicy);
-    }
     const cronRule = new events.Rule(this, 'GraceExpiryRule', {
       schedule: events.Schedule.rate(cdk.Duration.minutes(30)),
     });
