@@ -1,4 +1,7 @@
-export * from './types';
-export * from './payment';
-export * from './lock';
 export * from './identity';
+export * from './lock';
+export * from './payment';
+export * from './qr';
+export * from './reader';
+export * from './types';
+

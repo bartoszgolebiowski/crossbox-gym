@@ -31,8 +31,8 @@ const readOutputs = () => {
 const run = async () => {
   const outputs = readOutputs();
   
-  const userPoolId = process.env.USER_POOL_ID || outputs.UserPoolId;
-  const mainTableName = process.env.MAIN_TABLE_NAME || outputs.MainTableName;
+  const userPoolId = process.env.USER_POOL_ID || outputs.UserPoolId || outputs.ExportsOutputRefUserPool6BA7E5F296FD7236;
+  const mainTableName = process.env.MAIN_TABLE_NAME || outputs.MainTableName || outputs.ExportsOutputRefMainTable74195DAB4503BD7E;
   const adminEmail = process.env.ADMIN_EMAIL || 'admin@crossboxgym.com';
   const adminPassword = process.env.ADMIN_PASSWORD || 'Admin123!';
 

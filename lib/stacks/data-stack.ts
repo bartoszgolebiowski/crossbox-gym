@@ -67,6 +67,13 @@ export class CrossboxDataStack extends cdk.Stack {
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
+    this.mainTable.addGlobalSecondaryIndex({
+      indexName: 'OutboxStatusIndex',
+      partitionKey: { name: 'OutboxStatusPK', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'OutboxStatusSK', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
     this.entryLogsTable = new dynamodb.Table(this, 'EntryLogs', {
       partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },

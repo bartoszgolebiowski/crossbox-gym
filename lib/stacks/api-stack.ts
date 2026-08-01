@@ -22,6 +22,7 @@ export interface CrossboxApiStackProps extends cdk.StackProps {
 export class CrossboxApiStack extends cdk.Stack {
   public readonly httpApi: apigw.HttpApi;
   public readonly stripeEventBus: events.IEventBus;
+  public readonly unlockOutboxDispatcher: nodejs.NodejsFunction;
 
   constructor(scope: Construct, id: string, props: CrossboxApiStackProps) {
     super(scope, id, props);
@@ -204,11 +205,25 @@ export class CrossboxApiStack extends cdk.Stack {
         UNLOCK_QUEUE_URL: unlockQueue.queueUrl,
       },
     });
-    mainTable.grantReadData(verifyEntryHandler);
+    mainTable.grantReadWriteData(verifyEntryHandler);
     entryLogsTable.grantReadWriteData(verifyEntryHandler);
     unlockQueue.grantSendMessages(verifyEntryHandler);
     const verifyEntryIntegration = new HttpLambdaIntegration('VerifyEntryIntegration', verifyEntryHandler);
     this.httpApi.addRoutes({ path: '/device/verify', methods: [apigw.HttpMethod.POST], integration: verifyEntryIntegration });
+
+    this.unlockOutboxDispatcher = new nodejs.NodejsFunction(this, 'UnlockOutboxDispatcher', {
+      ...defaultNodejsFunctionProps,
+      entry: path.join(handlersPath, 'unlock-outbox-dispatcher', 'index.ts'),
+      memorySize: 256,
+      timeout: cdk.Duration.seconds(30),
+      environment: { ...commonEnv, UNLOCK_QUEUE_URL: unlockQueue.queueUrl },
+    });
+    mainTable.grantReadWriteData(this.unlockOutboxDispatcher);
+    unlockQueue.grantSendMessages(this.unlockOutboxDispatcher);
+    new events.Rule(this, 'UnlockOutboxDispatchSchedule', {
+      schedule: events.Schedule.rate(cdk.Duration.minutes(1)),
+      targets: [new targets.LambdaFunction(this.unlockOutboxDispatcher)],
+    });
 
     // ExecuteUnlock
     const executeUnlockHandler = new nodejs.NodejsFunction(this, 'ExecuteUnlock', {
@@ -232,17 +247,23 @@ export class CrossboxApiStack extends cdk.Stack {
       environment: {
         ...commonEnv,
         AUDIT_LOGS_TABLE_NAME: auditLogsTable.tableName,
+        ENTRY_LOGS_TABLE_NAME: entryLogsTable.tableName,
         UNLOCK_QUEUE_URL: unlockQueue.queueUrl,
       },
     });
     mainTable.grantReadWriteData(adminHandler);
     auditLogsTable.grantWriteData(adminHandler);
+    entryLogsTable.grantReadData(adminHandler);
     unlockQueue.grantSendMessages(adminHandler);
     
     const adminIntegration = new HttpLambdaIntegration('AdminIntegration', adminHandler);
     const adminRoutes = [
       { path: '/admin/locations', methods: [apigw.HttpMethod.GET, apigw.HttpMethod.POST] },
       { path: '/admin/locations/{id}', methods: [apigw.HttpMethod.PUT, apigw.HttpMethod.DELETE] },
+      { path: '/admin/locations/{id}/activity', methods: [apigw.HttpMethod.GET] },
+      { path: '/admin/locations/{id}/scanners', methods: [apigw.HttpMethod.GET, apigw.HttpMethod.POST] },
+      { path: '/admin/locations/{id}/lockers', methods: [apigw.HttpMethod.GET, apigw.HttpMethod.POST] },
+      { path: '/admin/locations/{id}/scanners/{scannerId}/locker', methods: [apigw.HttpMethod.PUT] },
       { path: '/admin/locations/{id}/devices', methods: [apigw.HttpMethod.GET, apigw.HttpMethod.POST] },
       { path: '/admin/devices/{id}', methods: [apigw.HttpMethod.PUT, apigw.HttpMethod.DELETE] },
       { path: '/admin/members', methods: [apigw.HttpMethod.GET] },

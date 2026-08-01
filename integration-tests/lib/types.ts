@@ -12,6 +12,7 @@ export interface IntegrationTestContext {
   unlockQueueUrl: string;
   staticBucketName: string;
   stripeEventBusName?: string;
+  unlockOutboxDispatcherFunctionName?: string;
   region: string;
 }
 
@@ -58,6 +59,33 @@ export interface TestDeviceRecord {
   api_key_hash: string;
   status: 'active' | 'inactive';
   created_at: string;
+}
+
+export interface TestScannerRecord {
+  PK: string;
+  SK: string;
+  scanner_id: string;
+  location_id: string;
+  name: string;
+  status: 'active' | 'disabled' | 'pending-enrollment';
+  reader_adapter: string;
+  allowed_qr_providers: string[];
+  assigned_locker_id?: string;
+  api_key_hash: string;
+  scanner_api_key?: string;
+}
+
+export interface TestLockerRecord {
+  PK: string;
+  SK: string;
+  locker_id: string;
+  location_id: string;
+  name: string;
+  status: 'active' | 'disabled' | 'configured' | 'unreachable';
+  lock_adapter: string;
+  unlock_duration_seconds: number;
+  assigned_scanner_id?: string;
+  adapter_configuration: Record<string, string>;
 }
 
 export interface TestQRPayload {

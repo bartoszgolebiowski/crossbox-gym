@@ -33,10 +33,6 @@ export class CognitoIdentityProvider implements IdentityProvider {
         MessageAction: 'SUPPRESS',
         UserAttributes: [{ Name: 'email', Value: email }, { Name: 'email_verified', Value: 'true' }]
       }));
-      await this.cognito.send(new AdminResetUserPasswordCommand({
-        UserPoolId: userPoolId,
-        Username: email,
-      }));
       return createRes.User?.Attributes?.find(a => a.Name === 'sub')?.Value || '';
     } catch (e: any) {
       if (e.name === 'UsernameExistsException') {

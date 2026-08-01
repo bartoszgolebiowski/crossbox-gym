@@ -3,12 +3,16 @@ import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
 import configReducer, { bootstrapAdminConfigThunk } from './configSlice';
 import authReducer from './authSlice';
 import adminOpsReducer from './adminSlice';
+import uiReducer from './uiSlice';
+import hardwareActivityReducer from './hardwareActivitySlice';
 
 export const adminStore = configureStore({
   reducer: {
     config: configReducer,
     auth: authReducer,
     adminOps: adminOpsReducer,
+    ui: uiReducer,
+    hardwareActivity: hardwareActivityReducer,
   },
 });
 

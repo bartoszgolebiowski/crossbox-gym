@@ -1,23 +1,54 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { adminApiClient } from '../services/apiClient';
 
+export interface LocationItem {
+  PK: string;
+  SK: string;
+  name: string;
+  address?: string;
+  created_at?: string;
+}
+
+export interface ScannerItem {
+  scanner_id: string;
+  location_id: string;
+  name: string;
+  assigned_locker_id?: string;
+}
+
+export interface LockerItem {
+  locker_id: string;
+  location_id: string;
+  name: string;
+  assigned_scanner_id?: string;
+}
+
 export interface AdminOpsState {
   locationOutput: string | null;
+  accessOutput: string | null;
   remoteOutput: string | null;
   overrideOutput: string | null;
+  locationsList: LocationItem[];
+  scannersList: ScannerItem[];
+  lockersList: LockerItem[];
 }
 
 const initialState: AdminOpsState = {
   locationOutput: null,
+  accessOutput: null,
   remoteOutput: null,
   overrideOutput: null,
+  locationsList: [],
+  scannersList: [],
+  lockersList: [],
 };
 
 export const createLocationThunk = createAsyncThunk(
   'adminOps/createLocation',
-  async (payload: { name: string; address: string }, { rejectWithValue }) => {
+  async (payload: { name: string; address: string }, { rejectWithValue, dispatch }) => {
     try {
       const data = await adminApiClient.post('/admin/locations', payload);
+      dispatch(listLocationsThunk());
       return JSON.stringify(data, null, 2);
     } catch (err: any) {
       return rejectWithValue(`Error: ${err.message}`);
@@ -30,6 +61,93 @@ export const listLocationsThunk = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const data = await adminApiClient.get('/admin/locations');
+      return JSON.stringify(data, null, 2);
+    } catch (err: any) {
+      return rejectWithValue(`Error: ${err.message}`);
+    }
+  }
+);
+
+export const fetchScannersThunk = createAsyncThunk(
+  'adminOps/fetchScanners',
+  async (locationId: string, { rejectWithValue }) => {
+    try {
+      const data = await adminApiClient.get(`/admin/locations/${locationId}/scanners`);
+      return { locationId, scanners: (Array.isArray(data) ? data : []) as ScannerItem[] };
+    } catch (err: any) {
+      return rejectWithValue(`Error: ${err.message}`);
+    }
+  }
+);
+
+export const fetchLockersThunk = createAsyncThunk(
+  'adminOps/fetchLockers',
+  async (locationId: string, { rejectWithValue }) => {
+    try {
+      const data = await adminApiClient.get(`/admin/locations/${locationId}/lockers`);
+      return { locationId, lockers: (Array.isArray(data) ? data : []) as LockerItem[] };
+    } catch (err: any) {
+      return rejectWithValue(`Error: ${err.message}`);
+    }
+  }
+);
+
+export const createScannerThunk = createAsyncThunk(
+  'adminOps/createScanner',
+  async (payload: { locationId: string; name: string }, { rejectWithValue, dispatch }) => {
+    try {
+      const data = await adminApiClient.post(`/admin/locations/${payload.locationId}/scanners`, { name: payload.name, reader_adapter: 'mock', allowed_qr_providers: ['basic-subscription', 'mock'] });
+      dispatch(fetchScannersThunk(payload.locationId));
+      return JSON.stringify(data, null, 2);
+    } catch (err: any) {
+      return rejectWithValue(`Error: ${err.message}`);
+    }
+  }
+);
+
+export const createLockerThunk = createAsyncThunk(
+  'adminOps/createLocker',
+  async (payload: { locationId: string; name: string }, { rejectWithValue, dispatch }) => {
+    try {
+      const data = await adminApiClient.post(`/admin/locations/${payload.locationId}/lockers`, { name: payload.name, lock_adapter: 'mock', unlock_duration_seconds: 5, adapter_configuration: {} });
+      dispatch(fetchLockersThunk(payload.locationId));
+      return JSON.stringify(data, null, 2);
+    } catch (err: any) {
+      return rejectWithValue(`Error: ${err.message}`);
+    }
+  }
+);
+
+export const registerAndAssignLockerThunk = createAsyncThunk(
+  'adminOps/registerAndAssignLocker',
+  async (payload: { locationId: string; scannerId: string; lockerName: string }, { dispatch, rejectWithValue }) => {
+    try {
+      const lockerRes = await adminApiClient.post(`/admin/locations/${payload.locationId}/lockers`, {
+        name: payload.lockerName,
+        lock_adapter: 'mock',
+        unlock_duration_seconds: 5,
+        adapter_configuration: {},
+      });
+      const lockerId = (lockerRes as any)?.locker_id || (lockerRes as any)?.SK?.replace(/^LOCKER#/, '');
+      if (lockerId && payload.scannerId) {
+        await adminApiClient.put(`/admin/locations/${payload.locationId}/scanners/${payload.scannerId}/locker`, { locker_id: lockerId });
+      }
+      dispatch(fetchScannersThunk(payload.locationId));
+      dispatch(fetchLockersThunk(payload.locationId));
+      return JSON.stringify({ locker: lockerRes, assignedScannerId: payload.scannerId }, null, 2);
+    } catch (err: any) {
+      return rejectWithValue(`Error: ${err.message}`);
+    }
+  }
+);
+
+export const assignLockerThunk = createAsyncThunk(
+  'adminOps/assignLocker',
+  async (payload: { locationId: string; scannerId: string; lockerId: string }, { rejectWithValue, dispatch }) => {
+    try {
+      const data = await adminApiClient.put(`/admin/locations/${payload.locationId}/scanners/${payload.scannerId}/locker`, { locker_id: payload.lockerId });
+      dispatch(fetchScannersThunk(payload.locationId));
+      dispatch(fetchLockersThunk(payload.locationId));
       return JSON.stringify(data, null, 2);
     } catch (err: any) {
       return rejectWithValue(`Error: ${err.message}`);
@@ -100,9 +218,45 @@ const adminSlice = createSlice({
       })
       .addCase(listLocationsThunk.fulfilled, (state, action) => {
         state.locationOutput = action.payload;
+        try {
+          const parsed = JSON.parse(action.payload);
+          if (Array.isArray(parsed)) {
+            state.locationsList = parsed;
+          }
+        } catch (e) {}
       })
       .addCase(listLocationsThunk.rejected, (state, action) => {
         state.locationOutput = action.payload as string;
+      })
+      .addCase(fetchScannersThunk.fulfilled, (state, action) => {
+        state.scannersList = action.payload.scanners;
+      })
+      .addCase(fetchLockersThunk.fulfilled, (state, action) => {
+        state.lockersList = action.payload.lockers;
+      })
+      .addCase(createScannerThunk.fulfilled, (state, action) => {
+        state.accessOutput = action.payload;
+      })
+      .addCase(createScannerThunk.rejected, (state, action) => {
+        state.accessOutput = action.payload as string;
+      })
+      .addCase(createLockerThunk.fulfilled, (state, action) => {
+        state.accessOutput = action.payload;
+      })
+      .addCase(createLockerThunk.rejected, (state, action) => {
+        state.accessOutput = action.payload as string;
+      })
+      .addCase(registerAndAssignLockerThunk.fulfilled, (state, action) => {
+        state.accessOutput = action.payload;
+      })
+      .addCase(registerAndAssignLockerThunk.rejected, (state, action) => {
+        state.accessOutput = action.payload as string;
+      })
+      .addCase(assignLockerThunk.fulfilled, (state, action) => {
+        state.accessOutput = action.payload;
+      })
+      .addCase(assignLockerThunk.rejected, (state, action) => {
+        state.accessOutput = action.payload as string;
       })
       .addCase(remoteUnlockThunk.fulfilled, (state, action) => {
         state.remoteOutput = action.payload;
@@ -126,7 +280,11 @@ const adminSlice = createSlice({
 });
 
 export const selectLocationOutput = (state: { adminOps: AdminOpsState }) => state.adminOps.locationOutput;
+export const selectAccessOutput = (state: { adminOps: AdminOpsState }) => state.adminOps.accessOutput;
 export const selectRemoteOutput = (state: { adminOps: AdminOpsState }) => state.adminOps.remoteOutput;
 export const selectOverrideOutput = (state: { adminOps: AdminOpsState }) => state.adminOps.overrideOutput;
+export const selectLocationsList = (state: { adminOps: AdminOpsState }) => state.adminOps.locationsList;
+export const selectScannersList = (state: { adminOps: AdminOpsState }) => state.adminOps.scannersList;
+export const selectLockersList = (state: { adminOps: AdminOpsState }) => state.adminOps.lockersList;
 
 export default adminSlice.reducer;

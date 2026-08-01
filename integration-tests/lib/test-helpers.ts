@@ -1,23 +1,27 @@
-import { 
-  CognitoIdentityProviderClient, 
-  AdminCreateUserCommand, 
-  AdminSetUserPasswordCommand, 
-  AdminAddUserToGroupCommand,
-  AdminDeleteUserCommand,
-  AdminGetUserCommand,
-  AdminInitiateAuthCommand
+import { CloudFormationClient, ListStackResourcesCommand } from '@aws-sdk/client-cloudformation';
+import {
+    AdminAddUserToGroupCommand,
+    AdminCreateUserCommand,
+    AdminDeleteUserCommand,
+    AdminGetUserCommand,
+    AdminInitiateAuthCommand,
+    AdminSetUserPasswordCommand,
+    CognitoIdentityProviderClient
 } from '@aws-sdk/client-cognito-identity-provider';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda';
 import { BatchWriteCommand, DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { createHmac, randomBytes } from 'crypto';
 import { requireOutput } from './stack-outputs.ts';
 import {
-  IntegrationTestContext,
-  TestUserSession,
-  TestLocationInput,
-  TestLocationRecord,
-  TestDeviceInput,
-  TestDeviceRecord
+    IntegrationTestContext,
+    TestDeviceInput,
+    TestDeviceRecord,
+    TestLocationInput,
+    TestLocationRecord,
+    TestLockerRecord,
+    TestScannerRecord,
+    TestUserSession,
 } from './types.ts';
 
 let cachedContext: IntegrationTestContext | undefined;
@@ -34,6 +38,7 @@ export async function getTestContext(): Promise<IntegrationTestContext> {
   const unlockQueueUrl = await requireOutput('UnlockQueueUrl');
   const staticBucketName = await requireOutput('StaticBucketName').catch(() => requireOutput('AdminBucketName')).catch(() => requireOutput('AppBucketName'));
   const stripeEventBusName = await requireOutput('StripeEventBusName').catch(() => undefined);
+  const unlockOutboxDispatcherFunctionName = await requireOutput('UnlockOutboxDispatcherFunctionName').catch(() => undefined);
   const region = process.env.AWS_REGION || 'eu-central-1';
 
   cachedContext = {
@@ -46,6 +51,7 @@ export async function getTestContext(): Promise<IntegrationTestContext> {
     unlockQueueUrl,
     staticBucketName,
     stripeEventBusName,
+    unlockOutboxDispatcherFunctionName,
     region
   };
 
@@ -253,6 +259,70 @@ export async function createTestDevice(
   return { device, rawApiKey };
 }
 
+export async function createMockScanner(
+  context: IntegrationTestContext,
+  adminToken: string,
+  locationId: string,
+  options?: { name?: string; allowedQrProviders?: string[] },
+): Promise<TestScannerRecord> {
+  const response = await fetch(`${context.apiUrl}/admin/locations/${locationId}/scanners`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+    body: JSON.stringify({
+      name: options?.name || `Mock Scanner ${Date.now()}`,
+      reader_adapter: 'mock',
+      allowed_qr_providers: options?.allowedQrProviders || ['mock'],
+    }),
+  });
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(`Failed to create mock scanner (${response.status}): ${await response.text()}`);
+  }
+  const scanner = await response.json() as TestScannerRecord;
+  if (!scanner.scanner_id || !scanner.scanner_api_key) {
+    throw new Error('Mock scanner creation did not return a scanner ID and one-time scanner API key');
+  }
+  return scanner;
+}
+
+export async function createMockLocker(
+  context: IntegrationTestContext,
+  adminToken: string,
+  locationId: string,
+  options?: { name?: string; durationSeconds?: number },
+): Promise<TestLockerRecord> {
+  const response = await fetch(`${context.apiUrl}/admin/locations/${locationId}/lockers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+    body: JSON.stringify({
+      name: options?.name || `Mock Locker ${Date.now()}`,
+      lock_adapter: 'mock',
+      unlock_duration_seconds: options?.durationSeconds || 5,
+      adapter_configuration: {},
+    }),
+  });
+  if (response.status !== 200 && response.status !== 201) {
+    throw new Error(`Failed to create mock locker (${response.status}): ${await response.text()}`);
+  }
+  return await response.json() as TestLockerRecord;
+}
+
+export async function assignTestLocker(
+  context: IntegrationTestContext,
+  adminToken: string,
+  locationId: string,
+  scannerId: string,
+  lockerId: string,
+): Promise<void> {
+  const response = await fetch(`${context.apiUrl}/admin/locations/${locationId}/scanners/${scannerId}/locker`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+    body: JSON.stringify({ locker_id: lockerId }),
+  });
+  if (response.status !== 200) {
+    throw new Error(`Failed to assign mock locker (${response.status}): ${await response.text()}`);
+  }
+}
+
 export async function generateTestQRPayload(
   context: IntegrationTestContext,
   userId: string,
@@ -356,3 +426,88 @@ export async function cleanupTestUserByEmail(
     Username: email,
   }));
 }
+
+export async function deleteDynamoPartition(
+  context: IntegrationTestContext,
+  tableName: string,
+  pk: string
+): Promise<void> {
+  const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({ region: context.region }));
+  const records = await ddb.send(new QueryCommand({
+    TableName: tableName,
+    KeyConditionExpression: 'PK = :pk',
+    ExpressionAttributeValues: { ':pk': pk },
+    ProjectionExpression: 'PK, SK',
+  }));
+
+  const requests = (records.Items || []).map((item) => ({ DeleteRequest: { Key: item } }));
+  for (let offset = 0; offset < requests.length; offset += 25) {
+    await ddb.send(new BatchWriteCommand({
+      RequestItems: { [tableName]: requests.slice(offset, offset + 25) }
+    }));
+  }
+}
+
+export async function dispatchUnlockOutbox(context: IntegrationTestContext): Promise<void> {
+  let dispatcherFunctionName = context.unlockOutboxDispatcherFunctionName;
+
+  if (!dispatcherFunctionName) {
+    const stackArgumentIndex = process.argv.indexOf('--stack');
+    const stackName = (stackArgumentIndex >= 0 ? process.argv[stackArgumentIndex + 1] : undefined) || process.env.STACK_NAME || 'CrossboxGymDev';
+    const apiStackName = `${stackName.replace(/Stack$/, '')}ApiStack`;
+    const cloudFormation = new CloudFormationClient({ region: context.region });
+    let nextToken: string | undefined;
+    let dispatcherResource: { PhysicalResourceId?: string } | undefined;
+
+    do {
+      const resources = await cloudFormation.send(new ListStackResourcesCommand({ StackName: apiStackName, NextToken: nextToken }));
+      dispatcherResource = resources.StackResourceSummaries?.find((resource) => resource.LogicalResourceId?.startsWith('UnlockOutboxDispatcher'));
+      nextToken = resources.NextToken;
+    } while (!dispatcherResource && nextToken);
+
+    dispatcherFunctionName = dispatcherResource?.PhysicalResourceId;
+  }
+
+  if (!dispatcherFunctionName) {
+    throw new Error('UnlockOutboxDispatcher Lambda function was not found');
+  }
+
+  const lambda = new LambdaClient({ region: context.region });
+  const response = await lambda.send(new InvokeCommand({
+    FunctionName: dispatcherFunctionName,
+    InvocationType: 'RequestResponse'
+  }));
+
+  if (response.FunctionError) {
+    const payload = response.Payload ? Buffer.from(response.Payload).toString('utf-8') : '';
+    throw new Error(`UnlockOutboxDispatcher failed (${response.FunctionError}): ${payload}`);
+  }
+}
+
+export async function scanMockDevice(
+  context: IntegrationTestContext,
+  scannerApiKey: string,
+  mockScanValue: string
+): Promise<{ result: string; reason?: string; entry_id?: string; feedback?: string }> {
+  const response = await fetch(`${context.apiUrl}/device/verify`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': scannerApiKey
+    },
+    body: JSON.stringify({
+      scan: {
+        content: { kind: 'text', value: mockScanValue },
+        observed_at: new Date().toISOString()
+      }
+    })
+  });
+
+  if (response.status !== 200) {
+    const text = await response.text();
+    throw new Error(`Scan request failed with HTTP ${response.status}: ${text}`);
+  }
+
+  return await response.json() as { result: string; reason?: string; entry_id?: string; feedback?: string };
+}
+

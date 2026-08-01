@@ -119,5 +119,6 @@ export class CrossboxFrontendStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'AdminDistributionId', { value: this.adminDistribution.distributionId });
     new cdk.CfnOutput(this, 'CloudFrontUrl', { value: this.appDistribution.distributionDomainName });
     new cdk.CfnOutput(this, 'StripeEventBusName', { value: stripeEventBus.eventBusName });
+    new cdk.CfnOutput(this, 'UnlockOutboxDispatcherFunctionName', { value: apiStack.unlockOutboxDispatcher.functionName });
   }
 }

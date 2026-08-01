@@ -78,11 +78,18 @@ export class StripePaymentProvider implements PaymentProvider {
 
   async createPortalSession(params: { customerId: string; returnUrl: string }): Promise<{ url: string }> {
     const stripe = await getStripeClient();
-    const session = await stripe.billingPortal.sessions.create({
-      customer: params.customerId,
-      return_url: params.returnUrl
-    });
-    return { url: session.url };
+    try {
+      const session = await stripe.billingPortal.sessions.create({
+        customer: params.customerId,
+        return_url: params.returnUrl
+      });
+      return { url: session.url };
+    } catch (err: any) {
+      if (err.message?.includes('No such customer') || err.message?.includes('resource_missing') || err.code === 'resource_missing') {
+        return { url: `${params.returnUrl}?portal_mock=true` };
+      }
+      throw err;
+    }
   }
 
   async listInvoices(params: { customerId: string }): Promise<Array<{

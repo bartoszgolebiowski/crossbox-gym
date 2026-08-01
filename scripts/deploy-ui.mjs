@@ -15,14 +15,30 @@ function run(command, args) {
 }
 
 function getFrontendOutputs() {
-  if (!fs.existsSync(outputsPath)) {
-    throw new Error('cdk-outputs.json is missing. Deploy the frontend stack before publishing UI assets.');
+  let frontend;
+  if (fs.existsSync(outputsPath)) {
+    try {
+      const outputs = JSON.parse(fs.readFileSync(outputsPath, 'utf8'));
+      frontend = Object.entries(outputs).find(([stackName]) => stackName.endsWith('FrontendStack'))?.[1];
+    } catch (e) {}
   }
 
-  const outputs = JSON.parse(fs.readFileSync(outputsPath, 'utf8'));
-  const frontend = Object.entries(outputs).find(([stackName]) => stackName.endsWith('FrontendStack'))?.[1];
   if (!frontend || typeof frontend !== 'object') {
-    throw new Error('Frontend stack outputs are missing. Deploy the frontend stack before publishing UI assets.');
+    try {
+      const region = process.env.AWS_REGION || 'eu-central-1';
+      const stackName = (process.env.STACK_NAME ? process.env.STACK_NAME.replace(/Stack$/, '') : 'CrossboxGymDev') + 'FrontendStack';
+      const outputJson = execFileSync('aws', ['cloudformation', 'describe-stacks', '--stack-name', stackName, '--region', region, '--output', 'json'], { encoding: 'utf8' });
+      const parsed = JSON.parse(outputJson);
+      const outputs = parsed.Stacks?.[0]?.Outputs || [];
+      frontend = {};
+      for (const o of outputs) {
+        if (o.OutputKey && o.OutputValue) {
+          frontend[o.OutputKey] = o.OutputValue;
+        }
+      }
+    } catch (e) {
+      throw new Error('Frontend stack outputs are missing. Deploy the frontend stack before publishing UI assets.');
+    }
   }
 
   const required = ['ApiUrl', 'UserPoolId', 'UserPoolClientId', 'AppBucketName', 'AdminBucketName', 'AppDistributionId', 'AdminDistributionId'];

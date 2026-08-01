@@ -1,6 +1,7 @@
 import { GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { LockerItem, ScannerItem } from './access-types';
 import { ddb } from './ddb-client';
-import { UserItem, SubscriptionItem, DeviceItem, ConfigItem } from './types';
+import { ConfigItem, DeviceItem, SubscriptionItem, UserItem } from './types';
 
 /** Helper to fetch user profile by user_id */
 export async function getUserProfile(tableName: string, userId: string): Promise<UserItem | undefined> {
@@ -33,6 +34,28 @@ export async function getDeviceByApiKey(tableName: string, apiKeyHash: string): 
     ExpressionAttributeValues: { ':hash': apiKeyHash }
   }));
   return result.Items?.[0] as DeviceItem | undefined;
+}
+
+/** Helper to look up a registered scanner through the existing API-key index. */
+export async function getScannerByApiKey(tableName: string, apiKeyHash: string): Promise<ScannerItem | undefined> {
+  const result = await ddb.send(new QueryCommand({
+    TableName: tableName,
+    IndexName: 'ApiKeyIndex',
+    KeyConditionExpression: 'api_key_hash = :hash',
+    ExpressionAttributeValues: { ':hash': apiKeyHash },
+  }));
+  const scanner = result.Items?.find((item) => String(item.SK).startsWith('SCANNER#')) as ScannerItem | undefined;
+  return scanner?.status === 'active' ? scanner : undefined;
+}
+
+/** Helper to retrieve a locker only from the authenticated scanner's location. */
+export async function getLocker(tableName: string, locationId: string, lockerId: string): Promise<LockerItem | undefined> {
+  const result = await ddb.send(new GetCommand({
+    TableName: tableName,
+    Key: { PK: `LOC#${locationId}`, SK: `LOCKER#${lockerId}` },
+  }));
+  const locker = result.Item as LockerItem | undefined;
+  return locker?.status === 'active' ? locker : undefined;
 }
 
 /** Helper to get config item by key */

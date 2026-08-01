@@ -48,63 +48,62 @@ export async function getStackOutputs(): Promise<StackOutputs> {
   if (cached) return cached;
 
   // 1. Try reading local cdk-outputs.json first
+  let merged: StackOutputs = {};
   try {
     const outputsPath = path.join(__dirname, "../../cdk-outputs.json");
     if (fs.existsSync(outputsPath)) {
       const data = JSON.parse(fs.readFileSync(outputsPath, "utf8"));
-      let merged: StackOutputs = {};
       for (const key of Object.keys(data)) {
         merged = { ...merged, ...data[key] };
-      }
-      if (Object.keys(merged).length > 0) {
-        cache.set(cacheKey, merged);
-        return merged;
       }
     }
   } catch (e) {
     // Fall back to CloudFormation SDK
   }
 
-  // 2. Query CloudFormation API for stack outputs
-  const cfn = new CloudFormationClient({ region });
+  if (!merged.ApiUrl && merged.ExportsOutputFnGetAttHttpApiF5A9A8A7ApiEndpoint082134F8) {
+    merged.ApiUrl = merged.ExportsOutputFnGetAttHttpApiF5A9A8A7ApiEndpoint082134F8;
+  }
+
   const prefix = stackName.replace(/Stack$/, "");
-  const possibleStackNames = [
-    `${prefix}FrontendStack`,
-    `${prefix}ApiStack`,
-    `${prefix}DataStack`,
-    stackName,
-  ];
 
-  let result: StackOutputs = {};
-  let foundAny = false;
+  // 2. Query CloudFormation API if required outputs are missing
+  if (!merged.ApiUrl || !merged.UserPoolId || !merged.MainTableName) {
+    const cfn = new CloudFormationClient({ region });
+    const possibleStackNames = [
+      `${prefix}FrontendStack`,
+      `${prefix}ApiStack`,
+      `${prefix}DataStack`,
+      stackName,
+    ];
 
-  for (const name of possibleStackNames) {
-    try {
-      const { Stacks } = await cfn.send(
-        new DescribeStacksCommand({ StackName: name })
-      );
-      const stack = Stacks?.[0];
-      if (stack && stack.Outputs) {
-        foundAny = true;
-        for (const o of stack.Outputs) {
-          if (o.OutputKey && o.OutputValue) {
-            result[o.OutputKey] = o.OutputValue;
+    for (const name of possibleStackNames) {
+      try {
+        const { Stacks } = await cfn.send(
+          new DescribeStacksCommand({ StackName: name })
+        );
+        const stack = Stacks?.[0];
+        if (stack && stack.Outputs) {
+          for (const o of stack.Outputs) {
+            if (o.OutputKey && o.OutputValue) {
+              merged[o.OutputKey] = o.OutputValue;
+            }
           }
         }
+      } catch {
+        // Ignore individual stack describe failures
       }
-    } catch {
-      // Ignore individual stack describe failures
     }
   }
 
-  if (!foundAny || Object.keys(result).length === 0) {
+  if (Object.keys(merged).length === 0) {
     throw new Error(
       `No active stacks or stack outputs found for "${prefix}" in region ${region}. Run 'npm run deploy' first.`
     );
   }
 
-  cache.set(cacheKey, result);
-  return result;
+  cache.set(cacheKey, merged);
+  return merged;
 }
 
 /** Fetches a single required output, throwing a clear error if missing. */

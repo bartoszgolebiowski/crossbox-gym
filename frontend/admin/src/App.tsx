@@ -1,5 +1,6 @@
 import { AuthCard } from './components/AuthCard';
 import { Footer } from './components/Footer';
+import { HardwareActivityCard } from './components/HardwareActivityCard';
 import { Header } from './components/Header';
 import { LocationManagerCard } from './components/LocationManagerCard';
 import { MemberOverrideCard } from './components/MemberOverrideCard';
@@ -7,12 +8,14 @@ import { RemoteOpsCard } from './components/RemoteOpsCard';
 import { useAdminDispatch, useAdminSelector } from './store';
 import { adminLogout, selectAdminEmail, selectAdminToken } from './store/authSlice';
 import { retryAdminConfigThunk, selectAdminConfig } from './store/configSlice';
+import { selectActiveTab, setActiveTab } from './store/uiSlice';
 
 export default function App() {
   const dispatch = useAdminDispatch();
   const config = useAdminSelector(selectAdminConfig);
   const token = useAdminSelector(selectAdminToken);
   const email = useAdminSelector(selectAdminEmail);
+  const activeTab = useAdminSelector(selectActiveTab);
 
   const handleLogout = () => {
     dispatch(adminLogout());
@@ -53,13 +56,13 @@ export default function App() {
     <div className="min-h-screen bg-[#eef3f7] text-slate-900 flex flex-col justify-between selection:bg-teal-700 selection:text-white">
       <Header token={token} email={email} onLogout={handleLogout} />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-10">
-        <div className="mb-8 border-b border-slate-300 pb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
+        <div className="mb-6 border-b border-slate-300 pb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-teal-700">CrossBox operations</p>
-            <h1 className="mt-2 font-[family-name:var(--font-heading)] text-3xl font-bold tracking-tight text-slate-900">Administration console</h1>
+            <h1 className="mt-1 font-[family-name:var(--font-heading)] text-3xl font-bold tracking-tight text-slate-900">Administration console</h1>
           </div>
-          <p className="max-w-md text-sm leading-6 text-slate-600 sm:text-right">Locations, physical access controls, and member status changes.</p>
+          <p className="max-w-md text-sm leading-6 text-slate-600 sm:text-right">Locations, physical access controls, scanner & lock activity auditing.</p>
         </div>
 
         {!token ? (
@@ -68,50 +71,92 @@ export default function App() {
           </div>
         ) : (
           <div className="space-y-6">
+            {/* Navigation Tabs */}
+            <div className="flex border-b border-slate-300 gap-4">
+              <button
+                type="button"
+                onClick={() => dispatch(setActiveTab('management'))}
+                className={`pb-3 px-1 text-sm font-bold border-b-2 transition flex items-center gap-2 ${
+                  activeTab === 'management'
+                    ? 'border-teal-700 text-teal-800'
+                    : 'border-transparent text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                </svg>
+                Location & Access Controls
+              </button>
+
+              <button
+                type="button"
+                onClick={() => dispatch(setActiveTab('activity'))}
+                className={`pb-3 px-1 text-sm font-bold border-b-2 transition flex items-center gap-2 ${
+                  activeTab === 'activity'
+                    ? 'border-teal-700 text-teal-800'
+                    : 'border-transparent text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Scanner & Lock Activity Audit
+              </button>
+            </div>
+
+            {/* Stat Cards Overview */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-px overflow-hidden rounded-lg border border-slate-300 bg-slate-300">
-              <div className="bg-white p-5 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-cyan-50 text-cyan-700 border border-cyan-200 flex items-center justify-center shrink-0">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-white p-4 flex items-center gap-4">
+                <div className="w-9 h-9 rounded-lg bg-cyan-50 text-cyan-700 border border-cyan-200 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
                 </div>
                 <div>
                   <div className="text-xs text-slate-500 font-medium">Facility Locations</div>
-                  <div className="text-sm font-semibold text-slate-900 mt-0.5">Multi-Location Engine</div>
+                  <div className="text-xs font-semibold text-slate-900 mt-0.5">Multi-Location Engine</div>
                 </div>
               </div>
 
-              <div className="bg-white p-5 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center shrink-0">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-white p-4 flex items-center gap-4">
+                <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
                 </div>
                 <div>
                   <div className="text-xs text-slate-500 font-medium">IoT Hardware Relay</div>
-                  <div className="text-sm font-semibold text-amber-700 mt-0.5">Online & Connected</div>
+                  <div className="text-xs font-semibold text-amber-700 mt-0.5">Online & Connected</div>
                 </div>
               </div>
 
-              <div className="bg-white p-5 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-white p-4 flex items-center gap-4">
+                <div className="w-9 h-9 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 0-1.042-.133-2.052-.382-3.016z" />
                   </svg>
                 </div>
                 <div>
-                  <div className="text-xs text-slate-500 font-medium">Security Enforcer</div>
-                  <div className="text-sm font-semibold text-emerald-700 mt-0.5">Active Monitoring</div>
+                  <div className="text-xs text-slate-500 font-medium">Activity Audit Trail</div>
+                  <div className="text-xs font-semibold text-emerald-700 mt-0.5">Real-time Logging</div>
                 </div>
               </div>
             </div>
 
-            {/* Admin Controls Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 items-stretch">
-              <LocationManagerCard />
-              <RemoteOpsCard />
-              <MemberOverrideCard />
-            </div>
+            {/* Tab Views */}
+            {activeTab === 'management' ? (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                <div className="lg:col-span-2">
+                  <LocationManagerCard />
+                </div>
+                <div className="lg:col-span-1 space-y-6">
+                  <RemoteOpsCard />
+                  <MemberOverrideCard />
+                </div>
+              </div>
+            ) : (
+              <HardwareActivityCard />
+            )}
           </div>
         )}
       </main>

@@ -1,8 +1,9 @@
-import { SQSEvent } from 'aws-lambda';
 import { GetCommand } from '@aws-sdk/lib-dynamodb';
+import { SQSEvent } from 'aws-lambda';
+import { LockerItem, UnlockCommand } from '../shared/access-types';
 import { ddb } from '../shared/ddb-client';
-import { createLockProvider } from '../shared/providers';
-import { getMainTableName, getLockProvider } from '../shared/env';
+import { getLockProvider, getMainTableName } from '../shared/env';
+import { createLockerAdapter, createLockProvider } from '../shared/providers';
 
 export const handler = async (event: SQSEvent): Promise<void> => {
   const lockProvider = createLockProvider(getLockProvider());
@@ -12,6 +13,21 @@ export const handler = async (event: SQSEvent): Promise<void> => {
     try {
       const body = JSON.parse(record.body);
       const { location_id, device_id } = body;
+
+      if (typeof body.command_id === 'string' && typeof body.locker_id === 'string') {
+        const command = body as UnlockCommand;
+        const lockerResult = await ddb.send(new GetCommand({
+          TableName: mainTable,
+          Key: { PK: `LOC#${command.location_id}`, SK: `LOCKER#${command.locker_id}` },
+        }));
+        const locker = lockerResult.Item as LockerItem | undefined;
+        if (!locker || locker.status !== 'active' || locker.assigned_scanner_id !== command.scanner_id) {
+          throw new Error(`Assigned locker unavailable for command ${command.command_id}`);
+        }
+        await createLockerAdapter(locker.lock_adapter).unlock(locker, command);
+        console.log(`Unlock command ${command.command_id} delivered to locker ${command.locker_id}`);
+        continue;
+      }
 
       const deviceResult = await ddb.send(new GetCommand({
         TableName: mainTable,

@@ -1,6 +1,6 @@
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
-import { DeleteCommand, GetCommand, PutCommand, QueryCommand, ScanCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { DeleteCommand, GetCommand, PutCommand, QueryCommand, ScanCommand, TransactWriteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { randomBytes } from 'crypto';
 import { ddb } from '../shared/ddb-client';
@@ -11,7 +11,7 @@ import { ConfigItem } from '../shared/types';
 const s3 = new S3Client({});
 const sqs = new SQSClient({});
 
-import { getAuditLogsTableName, getMainTableName, getUnlockQueueUrl } from '../shared/env';
+import { getAuditLogsTableName, getEntryLogsTableName, getMainTableName, getUnlockQueueUrl } from '../shared/env';
 
 const MAIN_TABLE = getMainTableName();
 const AUDIT_LOGS_TABLE = getAuditLogsTableName();
@@ -61,7 +61,8 @@ const logAudit = async (adminId: string, actionType: string, details: Record<str
 export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
   const adminId = assertAdmin(event);
   const method = event.requestContext.http.method;
-  const path = event.requestContext.http.path;
+  const rawPath = event.requestContext.http.path || event.rawPath || '';
+  const path = rawPath.length > 1 && rawPath.endsWith('/') ? rawPath.slice(0, -1) : rawPath;
 
   // GET /admin/locations
   if (method === 'GET' && path === '/admin/locations') {
@@ -96,7 +97,7 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
   }
 
   // PUT /admin/locations/{id}
-  if (method === 'PUT' && path.startsWith('/admin/locations/')) {
+  if (method === 'PUT' && /^\/admin\/locations\/[^/]+$/.test(path)) {
     const id = path.split('/')[3];
     const body = parseJsonBody(event);
     await ddb.send(new UpdateCommand({
@@ -118,6 +119,171 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     await logAudit(adminId, 'delete_location', { target_id: id });
     await syncLocationsToS3();
     return { message: 'Location deleted' };
+  }
+
+  if (method === 'GET' && /^\/admin\/locations\/[^/]+\/scanners$/.test(path)) {
+    const locationId = path.split('/')[3];
+    const result = await ddb.send(new QueryCommand({
+      TableName: MAIN_TABLE,
+      KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
+      ExpressionAttributeValues: { ':pk': `LOC#${locationId}`, ':sk': 'SCANNER#' },
+    }));
+    return result.Items || [];
+  }
+
+  if (method === 'GET' && /^\/admin\/locations\/[^/]+\/lockers$/.test(path)) {
+    const locationId = path.split('/')[3];
+    const result = await ddb.send(new QueryCommand({
+      TableName: MAIN_TABLE,
+      KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
+      ExpressionAttributeValues: { ':pk': `LOC#${locationId}`, ':sk': 'LOCKER#' },
+    }));
+    return result.Items || [];
+  }
+
+  if (method === 'POST' && /^\/admin\/locations\/[^/]+\/scanners$/.test(path)) {
+    const locationId = path.split('/')[3];
+    const body = parseJsonBody(event);
+    const scannerId = randomBytes(8).toString('hex');
+    const scannerApiKey = randomBytes(32).toString('hex');
+    const now = new Date().toISOString();
+    const item = {
+      PK: `LOC#${locationId}`,
+      SK: `SCANNER#${scannerId}`,
+      scanner_id: scannerId,
+      location_id: locationId,
+      name: body.name || `Scanner ${scannerId}`,
+      status: 'active',
+      reader_adapter: body.reader_adapter || 'mock',
+      allowed_qr_providers: body.allowed_qr_providers || ['basic-subscription', 'mock'],
+      api_key_hash: hashApiKey(scannerApiKey),
+      api_key_last_rotated_at: now,
+      hardware_metadata: body.hardware_metadata,
+      created_at: now,
+      updated_at: now,
+    };
+    await ddb.send(new PutCommand({ TableName: MAIN_TABLE, Item: item }));
+    await logAudit(adminId, 'create_scanner', { target_id: scannerId, location_id: locationId });
+    return { ...item, scanner_api_key: scannerApiKey };
+  }
+
+  if (method === 'POST' && /^\/admin\/locations\/[^/]+\/lockers$/.test(path)) {
+    const locationId = path.split('/')[3];
+    const body = parseJsonBody(event);
+    const lockerId = randomBytes(8).toString('hex');
+    const now = new Date().toISOString();
+    const item = {
+      PK: `LOC#${locationId}`,
+      SK: `LOCKER#${lockerId}`,
+      locker_id: lockerId,
+      location_id: locationId,
+      name: body.name || `Locker ${lockerId}`,
+      status: 'active',
+      lock_adapter: body.lock_adapter || 'mock',
+      unlock_duration_seconds: Number(body.unlock_duration_seconds || 5),
+      adapter_configuration: body.adapter_configuration || {},
+      created_at: now,
+      updated_at: now,
+    };
+    await ddb.send(new PutCommand({ TableName: MAIN_TABLE, Item: item }));
+    await logAudit(adminId, 'create_locker', { target_id: lockerId, location_id: locationId });
+    return item;
+  }
+
+  if (method === 'PUT' && /^\/admin\/locations\/[^/]+\/scanners\/[^/]+\/locker$/.test(path)) {
+    const [, , , locationId, , scannerId] = path.split('/');
+    const body = parseJsonBody(event);
+    const lockerId = body.locker_id as string;
+    const lockerResult = await ddb.send(new GetCommand({ TableName: MAIN_TABLE, Key: { PK: `LOC#${locationId}`, SK: `LOCKER#${lockerId}` } }));
+    if (!lockerResult.Item) throw new NotFoundError('Locker not found at this location');
+    const now = new Date().toISOString();
+    await ddb.send(new TransactWriteCommand({
+      TransactItems: [
+        {
+          Update: {
+            TableName: MAIN_TABLE, Key: { PK: `LOC#${locationId}`, SK: `SCANNER#${scannerId}` },
+            UpdateExpression: 'SET assigned_locker_id = :locker, updated_at = :now',
+            ConditionExpression: 'attribute_exists(PK)',
+            ExpressionAttributeValues: { ':locker': lockerId, ':now': now },
+          },
+        },
+        {
+          Update: {
+            TableName: MAIN_TABLE, Key: { PK: `LOC#${locationId}`, SK: `LOCKER#${lockerId}` },
+            UpdateExpression: 'SET assigned_scanner_id = :scanner, updated_at = :now',
+            ConditionExpression: 'attribute_exists(PK)',
+            ExpressionAttributeValues: { ':scanner': scannerId, ':now': now },
+          },
+        },
+      ],
+    }));
+    await logAudit(adminId, 'assign_locker', { target_id: lockerId, location_id: locationId, scanner_id: scannerId });
+    return { message: 'Locker assigned to scanner' };
+  }
+
+  // GET /admin/locations/{id}/activity
+  if (method === 'GET' && /^\/admin\/locations\/[^/]+\/activity$/.test(path)) {
+    const locationId = path.split('/')[3];
+    const queryParams = event.queryStringParameters || {};
+    const scannerId = queryParams.scanner_id;
+    const lockerId = queryParams.locker_id;
+    const entryLogsTable = getEntryLogsTableName();
+
+    const scanResult = await ddb.send(new ScanCommand({
+      TableName: entryLogsTable,
+      FilterExpression: 'location_id = :locId OR location_id = :locPk',
+      ExpressionAttributeValues: { ':locId': locationId, ':locPk': `LOC#${locationId}` },
+    })).catch(() => ({ Items: [] }));
+
+    let items = (scanResult.Items || []) as Array<Record<string, any>>;
+
+    if (scannerId && scannerId !== 'all') {
+      items = items.filter((item) => item.scanner_id === scannerId || item.device_id === scannerId);
+    }
+
+    if (lockerId && lockerId !== 'all') {
+      items = items.filter((item) => item.locker_id === lockerId);
+    }
+
+    // Sort timestamp descending
+    items.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+
+    // Aggregations
+    const hourly_stats: Record<string, number> = {};
+    const daily_stats: Record<string, number> = {};
+    const weekly_stats: Record<string, number> = {};
+    let successCount = 0;
+    let deniedCount = 0;
+
+    for (const item of items) {
+      if (item.result === 'success') successCount++;
+      else deniedCount++;
+
+      const date = new Date(item.timestamp);
+      if (isNaN(date.getTime())) continue;
+
+      const hourKey = `${date.toISOString().slice(0, 13)}:00`;
+      const dayKey = date.toISOString().slice(0, 10);
+
+      const jan1 = new Date(date.getFullYear(), 0, 1);
+      const weekNum = Math.ceil((((date.getTime() - jan1.getTime()) / 86400000) + jan1.getDay() + 1) / 7);
+      const weekKey = `${date.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+
+      hourly_stats[hourKey] = (hourly_stats[hourKey] || 0) + 1;
+      daily_stats[dayKey] = (daily_stats[dayKey] || 0) + 1;
+      weekly_stats[weekKey] = (weekly_stats[weekKey] || 0) + 1;
+    }
+
+    return {
+      location_id: locationId,
+      total_count: items.length,
+      success_count: successCount,
+      denied_count: deniedCount,
+      hourly_stats,
+      daily_stats,
+      weekly_stats,
+      items,
+    };
   }
 
   // GET /admin/locations/{id}/devices
