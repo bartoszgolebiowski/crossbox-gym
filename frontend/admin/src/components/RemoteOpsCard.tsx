@@ -1,25 +1,96 @@
-import React, { useReducer } from 'react';
-import { initialRemoteOpsFormState, remoteOpsFormReducer, setUnlockDeviceId } from '../reducers/remoteOpsFormReducer';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useAdminDispatch, useAdminSelector } from '../store';
-import { remoteUnlockThunk, rotateHMACThunk, selectRemoteOutput } from '../store/adminSlice';
+import {
+  fetchDevicesThunk,
+  fetchLockersThunk,
+  listLocationsThunk,
+  remoteUnlockThunk,
+  selectDevicesList,
+  selectLocationsList,
+  selectLockersList,
+  selectRemoteOutput,
+} from '../store/adminSlice';
 
-const fieldLabelClass = 'mb-2 block text-sm font-medium text-slate-700';
-const fieldClass = 'w-full rounded-md border border-slate-300 bg-white px-3.5 py-3 font-mono text-sm text-slate-900 shadow-sm placeholder:text-slate-400 transition focus:border-amber-700 focus:outline-none focus:ring-4 focus:ring-amber-700/10';
+const fieldLabelClass = 'mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-600';
+const selectClass = 'w-full rounded-md border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition focus:border-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-700/20 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed cursor-pointer';
 
 export const RemoteOpsCard: React.FC = () => {
   const dispatch = useAdminDispatch();
   const remoteOutput = useAdminSelector(selectRemoteOutput);
+  const locationsList = useAdminSelector(selectLocationsList);
+  const lockersList = useAdminSelector(selectLockersList);
+  const devicesList = useAdminSelector(selectDevicesList);
 
-  const [formState, dispatchForm] = useReducer(remoteOpsFormReducer, initialRemoteOpsFormState);
-  const { unlockDeviceId } = formState;
-  const canUnlock = unlockDeviceId.trim().length > 0;
+  const [selectedLocationId, setSelectedLocationId] = useState<string>('');
+  const [selectedLockId, setSelectedLockId] = useState<string>('');
+
+  // Fetch locations on mount if empty
+  useEffect(() => {
+    if (locationsList.length === 0) {
+      dispatch(listLocationsThunk());
+    }
+  }, [dispatch, locationsList.length]);
+
+  // Set default location when list loads
+  useEffect(() => {
+    if (locationsList.length > 0 && !selectedLocationId) {
+      const firstLocId = locationsList[0].PK.replace(/^LOC#/, '');
+      setSelectedLocationId(firstLocId);
+    }
+  }, [locationsList, selectedLocationId]);
+
+  // Fetch locks/lockers whenever selected location changes
+  useEffect(() => {
+    if (selectedLocationId) {
+      dispatch(fetchLockersThunk(selectedLocationId));
+      dispatch(fetchDevicesThunk(selectedLocationId));
+    }
+  }, [dispatch, selectedLocationId]);
+
+  // Consolidate all locks for the active location (lockers + lock devices)
+  const availableLocks = useMemo(() => {
+    const locksFromLockers = lockersList.map((l) => ({
+      id: l.locker_id,
+      name: l.name || `Locker ${l.locker_id}`,
+      type: 'Locker / Gate Lock',
+    }));
+
+    const locksFromDevices = devicesList
+      .filter((d) => !d.type || d.type === 'lock')
+      .map((d) => ({
+        id: d.device_id,
+        name: d.name || `Device ${d.device_id}`,
+        type: 'IoT Hardware Relay',
+      }));
+
+    const combined = [...locksFromLockers, ...locksFromDevices];
+    // Deduplicate by ID
+    const map = new Map<string, { id: string; name: string; type: string }>();
+    combined.forEach((item) => {
+      if (!map.has(item.id)) {
+        map.set(item.id, item);
+      }
+    });
+    return Array.from(map.values());
+  }, [lockersList, devicesList]);
+
+  // Auto-select first lock option when locks list changes
+  useEffect(() => {
+    if (availableLocks.length > 0) {
+      if (!selectedLockId || !availableLocks.some((l) => l.id === selectedLockId)) {
+        setSelectedLockId(availableLocks[0].id);
+      }
+    } else {
+      setSelectedLockId('');
+    }
+  }, [availableLocks, selectedLockId]);
+
+  const canUnlock = selectedLockId.trim().length > 0 && availableLocks.length > 0;
 
   const handleRemoteUnlock = () => {
-    dispatch(remoteUnlockThunk({ deviceId: unlockDeviceId }));
-  };
-
-  const handleRotateHMAC = () => {
-    dispatch(rotateHMACThunk());
+    if (canUnlock) {
+      dispatch(remoteUnlockThunk({ deviceId: selectedLockId, locationId: selectedLocationId }));
+    }
   };
 
   return (
@@ -33,28 +104,61 @@ export const RemoteOpsCard: React.FC = () => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </span>
-            <span>Remote Operations</span>
+            <span>Remote Gate Unlock</span>
           </div>
           <span className="px-2 py-0.5 rounded-full text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200">
             Hardware Relays
           </span>
         </div>
 
-        {/* Input Field */}
+        {/* Location Selector */}
+        {locationsList.length > 0 && (
+          <div className="mb-4">
+            <label className={fieldLabelClass} htmlFor="remote-location-select">Active Location</label>
+            <select
+              id="remote-location-select"
+              className={selectClass}
+              value={selectedLocationId}
+              onChange={(e) => setSelectedLocationId(e.target.value)}
+            >
+              {locationsList.map((loc) => {
+                const id = loc.PK.replace(/^LOC#/, '');
+                return (
+                  <option key={id} value={id}>
+                    {loc.name} ({id})
+                  </option>
+                );
+              })}
+            </select>
+          </div>
+        )}
+
+        {/* Lock Dropdown Select */}
         <div className="mb-5">
-          <label className={fieldLabelClass} htmlFor="turnstile-device-id">Target Turnstile Device ID</label>
-          <input
+          <label className={fieldLabelClass} htmlFor="turnstile-device-id">Target Lock / Turnstile</label>
+          <select
             id="turnstile-device-id"
-            type="text"
-            placeholder="e.g. TURNSTILE-MAIN-01"
-            className={fieldClass}
-            value={unlockDeviceId}
-            onChange={(e) => dispatchForm(setUnlockDeviceId(e.target.value))}
-          />
+            className={selectClass}
+            value={selectedLockId}
+            onChange={(e) => setSelectedLockId(e.target.value)}
+            disabled={availableLocks.length === 0}
+          >
+            {availableLocks.length > 0 ? (
+              availableLocks.map((lock) => (
+                <option key={lock.id} value={lock.id}>
+                  {lock.name} [{lock.id}]
+                </option>
+              ))
+            ) : (
+              <option value="" disabled>
+                No locks available at this location
+              </option>
+            )}
+          </select>
         </div>
 
-        {/* Action Triggers */}
-        <div className="space-y-2.5 mb-2">
+        {/* Action Button */}
+        <div className="mb-2">
           <button
             className="flex w-full items-center justify-center gap-2 rounded-md bg-amber-700 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-600 disabled:cursor-not-allowed disabled:bg-amber-300"
             onClick={handleRemoteUnlock}
@@ -65,21 +169,11 @@ export const RemoteOpsCard: React.FC = () => {
             </svg>
             <span>Remote Turnstile Unlock Signal</span>
           </button>
-
-          <button
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
-            onClick={handleRotateHMAC}
-          >
-            <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            <span>Rotate HMAC Secret Keys</span>
-          </button>
         </div>
       </div>
 
       {/* Output */}
-      {remoteOutput && (
+      {remoteOutput && !remoteOutput.includes('HMAC') && (
         <div className="mt-4 rounded-md bg-slate-50 border border-slate-200 overflow-hidden text-xs">
           <div className="bg-slate-100 px-3 py-1.5 border-b border-slate-200 flex items-center justify-between text-[11px] text-slate-500 font-mono">
             <span>Remote Command Log</span>

@@ -23,6 +23,14 @@ export interface LockerItem {
   assigned_scanner_id?: string;
 }
 
+export interface DeviceItem {
+  device_id: string;
+  location_id?: string;
+  name: string;
+  type?: 'lock' | 'scanner';
+  status?: 'active' | 'inactive';
+}
+
 export interface AdminOpsState {
   locationOutput: string | null;
   accessOutput: string | null;
@@ -31,6 +39,7 @@ export interface AdminOpsState {
   locationsList: LocationItem[];
   scannersList: ScannerItem[];
   lockersList: LockerItem[];
+  devicesList: DeviceItem[];
 }
 
 const initialState: AdminOpsState = {
@@ -41,6 +50,7 @@ const initialState: AdminOpsState = {
   locationsList: [],
   scannersList: [],
   lockersList: [],
+  devicesList: [],
 };
 
 export const createLocationThunk = createAsyncThunk(
@@ -86,6 +96,18 @@ export const fetchLockersThunk = createAsyncThunk(
     try {
       const data = await adminApiClient.get(`/admin/locations/${locationId}/lockers`);
       return { locationId, lockers: (Array.isArray(data) ? data : []) as LockerItem[] };
+    } catch (err: any) {
+      return rejectWithValue(`Error: ${err.message}`);
+    }
+  }
+);
+
+export const fetchDevicesThunk = createAsyncThunk(
+  'adminOps/fetchDevices',
+  async (locationId: string, { rejectWithValue }) => {
+    try {
+      const data = await adminApiClient.get(`/admin/locations/${locationId}/devices`);
+      return { locationId, devices: (Array.isArray(data) ? data : []) as DeviceItem[] };
     } catch (err: any) {
       return rejectWithValue(`Error: ${err.message}`);
     }
@@ -234,6 +256,9 @@ const adminSlice = createSlice({
       .addCase(fetchLockersThunk.fulfilled, (state, action) => {
         state.lockersList = action.payload.lockers;
       })
+      .addCase(fetchDevicesThunk.fulfilled, (state, action) => {
+        state.devicesList = action.payload.devices;
+      })
       .addCase(createScannerThunk.fulfilled, (state, action) => {
         state.accessOutput = action.payload;
       })
@@ -286,5 +311,6 @@ export const selectOverrideOutput = (state: { adminOps: AdminOpsState }) => stat
 export const selectLocationsList = (state: { adminOps: AdminOpsState }) => state.adminOps.locationsList;
 export const selectScannersList = (state: { adminOps: AdminOpsState }) => state.adminOps.scannersList;
 export const selectLockersList = (state: { adminOps: AdminOpsState }) => state.adminOps.lockersList;
+export const selectDevicesList = (state: { adminOps: AdminOpsState }) => state.adminOps.devicesList;
 
 export default adminSlice.reducer;

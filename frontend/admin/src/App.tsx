@@ -2,6 +2,7 @@ import { AuthCard } from './components/AuthCard';
 import { Footer } from './components/Footer';
 import { HardwareActivityCard } from './components/HardwareActivityCard';
 import { Header } from './components/Header';
+import { HmacRotationCard } from './components/HmacRotationCard';
 import { LocationManagerCard } from './components/LocationManagerCard';
 import { MemberOverrideCard } from './components/MemberOverrideCard';
 import { RemoteOpsCard } from './components/RemoteOpsCard';
@@ -151,6 +152,7 @@ export default function App() {
                 </div>
                 <div className="lg:col-span-1 space-y-6">
                   <RemoteOpsCard />
+                  <HmacRotationCard />
                   <MemberOverrideCard />
                 </div>
               </div>
