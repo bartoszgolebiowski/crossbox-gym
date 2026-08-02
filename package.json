@@ -14,7 +14,8 @@
     "test:integration:full": "npm run deploy && node scripts/run-integration-tests.mjs",
     "test:ui:install": "playwright install chromium",
     "test:ui": "playwright test",
-    "seed": "tsx scripts/seed-admin.ts"
+    "seed": "tsx scripts/seed-admin.ts",
+    "fetch:certs": "tsx scripts/fetch-iot-certs.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.0",
@@ -36,8 +37,10 @@
     "@aws-sdk/client-cloudformation": "^3.731.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.731.0",
     "@aws-sdk/client-dynamodb": "^3.731.0",
+    "@aws-sdk/client-iot-data-plane": "^3.1101.0",
     "@aws-sdk/client-lambda": "^3.1101.0",
     "@aws-sdk/client-s3": "^3.731.0",
+    "@aws-sdk/client-secrets-manager": "^3.1101.0",
     "@aws-sdk/client-sqs": "^3.731.0",
     "@aws-sdk/client-ssm": "^3.731.0",
     "@aws-sdk/lib-dynamodb": "^3.731.0",

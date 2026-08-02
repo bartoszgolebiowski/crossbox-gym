@@ -1,18 +1,18 @@
+import { IoTDataPlaneClient, PublishCommand } from '@aws-sdk/client-iot-data-plane';
 import { SQSClient, SendMessageCommand } from '@aws-sdk/client-sqs';
 import { PutCommand, QueryCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { randomBytes } from 'crypto';
 import { ScanContent, UnlockCommand, UnlockOutboxItem } from '../shared/access-types';
-import { getConfigItem, getDeviceByApiKey, getLocker, getScannerByApiKey, getUserSubscription } from '../shared/db-helpers';
+import { getConfigItem, getDeviceByApiKey, getLocker, getScannerByApiKey, getScannerById, getUserSubscription } from '../shared/db-helpers';
 import { ddb } from '../shared/ddb-client';
 import { hashApiKey, signQrPayload } from '../shared/hash-helpers';
 import { parseJsonBody, withHandler } from '../shared/http';
 import { createQrClassifier, createScannerReader } from '../shared/providers';
 import { EntryLogItem } from '../shared/types';
+import { getEntryLogsTableName, getMainTableName, getUnlockQueueUrl } from '../shared/env';
 
 const sqs = new SQSClient({});
-
-import { getEntryLogsTableName, getMainTableName, getUnlockQueueUrl } from '../shared/env';
 
 const MAIN_TABLE = getMainTableName();
 const ENTRY_LOGS_TABLE = getEntryLogsTableName();
@@ -24,30 +24,64 @@ interface QRPayload {
   hmac: string;
 }
 
+async function sendMqttFeedback(scannerId: string | undefined, payload: Record<string, any>) {
+  if (!scannerId) return;
+  const endpoint = process.env.IOT_ENDPOINT;
+  try {
+    const iotData = new IoTDataPlaneClient(endpoint ? { endpoint: `https://${endpoint}` } : {});
+    await iotData.send(new PublishCommand({
+      topic: `gym/scanners/${scannerId}/feedback`,
+      qos: 1,
+      payload: Buffer.from(JSON.stringify(payload)),
+    }));
+  } catch (err) {
+    console.warn(`[VerifyEntry] Failed to send MQTT feedback to ${scannerId}:`, err);
+  }
+}
+
 export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
-  const apiKey = event.headers['x-api-key'];
-  if (!apiKey) {
-    return { result: 'denied', reason: 'invalid_device' };
+  const rawEvent = event as any;
+  const apiKey = event.headers?.['x-api-key'] || rawEvent.api_key || rawEvent.apiKey;
+  const targetScannerId = rawEvent.scannerId || rawEvent.scanner_id;
+
+  let scanner = apiKey ? await getScannerByApiKey(MAIN_TABLE, hashApiKey(apiKey)) : undefined;
+  if (!scanner && targetScannerId) {
+    scanner = await getScannerById(MAIN_TABLE, targetScannerId);
   }
 
-  const apiKeyHash = hashApiKey(apiKey);
-  const scanner = await getScannerByApiKey(MAIN_TABLE, apiKeyHash);
   if (scanner) {
-    if (!scanner.assigned_locker_id) return { result: 'denied', reason: 'assigned_locker_unavailable' };
+    if (!scanner.assigned_locker_id) {
+      const resp = { result: 'denied', reason: 'assigned_locker_unavailable' };
+      await sendMqttFeedback(scanner.scanner_id, resp);
+      return resp;
+    }
 
     const locker = await getLocker(MAIN_TABLE, scanner.location_id, scanner.assigned_locker_id);
     if (!locker || locker.assigned_scanner_id !== scanner.scanner_id) {
-      return { result: 'denied', reason: 'assigned_locker_unavailable' };
+      const resp = { result: 'denied', reason: 'assigned_locker_unavailable' };
+      await sendMqttFeedback(scanner.scanner_id, resp);
+      return resp;
     }
 
-    const body = parseJsonBody(event);
+    let body: Record<string, any> = {};
+    if (event.body) {
+      body = parseJsonBody(event);
+    } else if (typeof rawEvent === 'object') {
+      body = rawEvent;
+    }
+
     const suppliedScan = body.scan as { content?: ScanContent; observed_at?: string } | undefined;
     const legacyQr = body.qr_code;
     const content = suppliedScan?.content || (legacyQr ? {
       kind: 'text' as const,
       value: typeof legacyQr === 'string' ? legacyQr : JSON.stringify(legacyQr),
     } : undefined);
-    if (!content || typeof content.value !== 'string') return { result: 'denied', reason: 'invalid_qr' };
+
+    if (!content || typeof content.value !== 'string') {
+      const resp = { result: 'denied', reason: 'invalid_qr' };
+      await sendMqttFeedback(scanner.scanner_id, resp);
+      return resp;
+    }
 
     const [currentKey, previousKey] = await Promise.all([
       getConfigItem(MAIN_TABLE, 'HMAC_CURRENT_KEY'),
@@ -56,15 +90,22 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     const reader = createScannerReader(scanner.reader_adapter);
     const scan = await reader.read(content, suppliedScan?.observed_at || new Date().toISOString());
     const classification = await createQrClassifier(currentKey || 'default_key', previousKey).classify(scan, scanner.allowed_qr_providers);
+    
     if (classification.status !== 'recognized') {
-      return { result: 'denied', reason: classification.status === 'rejected' ? classification.reason : 'invalid_qr' };
+      const resp = { result: 'denied', reason: classification.status === 'rejected' ? classification.reason : 'invalid_qr' };
+      await sendMqttFeedback(scanner.scanner_id, resp);
+      return resp;
     }
 
     const now = Math.floor(Date.now() / 1000);
     if (classification.credential.provider_id === 'basic-subscription') {
       const subscription = await getUserSubscription(MAIN_TABLE, classification.credential.subject_id);
       const subscriptionActive = subscription?.status === 'ACTIVE' || (subscription?.status === 'PAST_DUE' && subscription.grace_period_end && new Date(subscription.grace_period_end).getTime() / 1000 > now);
-      if (!subscriptionActive) return { result: 'denied', reason: 'subscription_inactive' };
+      if (!subscriptionActive) {
+        const resp = { result: 'denied', reason: 'subscription_inactive' };
+        await sendMqttFeedback(scanner.scanner_id, resp);
+        return resp;
+      }
     }
 
     const committedAt = new Date().toISOString();
@@ -123,21 +164,37 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
       console.error('Access entry commitment failed', error);
       const transactionError = error as { name?: string; CancellationReasons?: Array<{ Code?: string }> };
       if (transactionError.name === 'TransactionCanceledException' && transactionError.CancellationReasons?.[0]?.Code === 'ConditionalCheckFailed') {
-        return { result: 'denied', reason: 'anti_passback_cooldown' };
+        const resp = { result: 'denied', reason: 'anti_passback_cooldown' };
+        await sendMqttFeedback(scanner.scanner_id, resp);
+        return resp;
       }
       throw error;
     }
 
-    return { result: 'success', entry_id: entryId, feedback: 'Welcome to CrossBox Gym!' };
+    const successResp = { result: 'success', entry_id: entryId, feedback: 'Welcome to CrossBox Gym!' };
+    await sendMqttFeedback(scanner.scanner_id, successResp);
+    return successResp;
   }
 
+  // Fallback to legacy device API Key lookup
+  if (!apiKey) {
+    return { result: 'denied', reason: 'invalid_device' };
+  }
+
+  const apiKeyHash = hashApiKey(apiKey);
   const device = await getDeviceByApiKey(MAIN_TABLE, apiKeyHash);
 
   if (!device || device.status !== 'active') {
     return { result: 'denied', reason: 'invalid_device' };
   }
 
-  const body = parseJsonBody(event);
+  let body: Record<string, any> = {};
+  if (event.body) {
+    body = parseJsonBody(event);
+  } else if (typeof rawEvent === 'object') {
+    body = rawEvent;
+  }
+
   const qrCodeStr = body.qr_code as string;
   if (!qrCodeStr) {
     return { result: 'denied', reason: 'invalid_qr' };
@@ -155,7 +212,6 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     return { result: 'denied', reason: 'qr_expired' };
   }
 
-  // Read current and previous HMAC keys
   const [currentKey, prevKey] = await Promise.all([
     getConfigItem(MAIN_TABLE, 'HMAC_CURRENT_KEY'),
     getConfigItem(MAIN_TABLE, 'HMAC_PREVIOUS_KEY')
@@ -169,7 +225,6 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     return { result: 'denied', reason: 'invalid_qr_hmac' };
   }
 
-  // Fetch user subscription
   const sub = await getUserSubscription(MAIN_TABLE, qrPayload.user_id);
   if (!sub) {
     return { result: 'denied', reason: 'subscription_inactive' };
@@ -180,7 +235,6 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     return { result: 'denied', reason: 'subscription_inactive' };
   }
 
-  // Extract locationId from PK: LOC#<location_id>
   const locationId = device.PK.replace('LOC#', '');
   const antiPassbackPK = `USER#${qrPayload.user_id}#LOC#${locationId}`;
 
@@ -204,7 +258,6 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
   const isoTimestamp = new Date().toISOString();
   const entryId = `${now}_${Math.random().toString(36).substring(2, 9)}`;
 
-  // Log Entry
   await ddb.send(new PutCommand({
     TableName: ENTRY_LOGS_TABLE,
     Item: {
@@ -221,7 +274,6 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     }
   }));
 
-  // Enqueue unlock message
   await sqs.send(new SendMessageCommand({
     QueueUrl: UNLOCK_QUEUE_URL,
     MessageBody: JSON.stringify({

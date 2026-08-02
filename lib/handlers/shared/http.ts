@@ -95,8 +95,8 @@ export function withHandler(handler: BusinessHandler) {
   return async (event: APIGatewayProxyEventV2) => {
     const start = Date.now();
     const requestContext = {
-      method: event.requestContext.http.method,
-      path: event.requestContext.http.path,
+      method: event?.requestContext?.http?.method || 'POST',
+      path: event?.requestContext?.http?.path || '/device/verify',
     };
 
     try {

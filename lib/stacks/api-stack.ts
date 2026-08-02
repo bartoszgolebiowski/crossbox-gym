@@ -23,6 +23,7 @@ export class CrossboxApiStack extends cdk.Stack {
   public readonly httpApi: apigw.HttpApi;
   public readonly stripeEventBus: events.IEventBus;
   public readonly unlockOutboxDispatcher: nodejs.NodejsFunction;
+  public readonly verifyEntryFunction: nodejs.NodejsFunction;
 
   constructor(scope: Construct, id: string, props: CrossboxApiStackProps) {
     super(scope, id, props);
@@ -194,7 +195,7 @@ export class CrossboxApiStack extends cdk.Stack {
     this.httpApi.addRoutes({ path: '/member/invoices', methods: [apigw.HttpMethod.GET], integration: memberIntegration, authorizer: jwtAuthorizer });
 
     // VerifyEntry
-    const verifyEntryHandler = new nodejs.NodejsFunction(this, 'VerifyEntry', {
+    this.verifyEntryFunction = new nodejs.NodejsFunction(this, 'VerifyEntry', {
       ...defaultNodejsFunctionProps,
       entry: path.join(handlersPath, 'verify-entry', 'index.ts'),
       memorySize: 1024,
@@ -205,10 +206,14 @@ export class CrossboxApiStack extends cdk.Stack {
         UNLOCK_QUEUE_URL: unlockQueue.queueUrl,
       },
     });
-    mainTable.grantReadWriteData(verifyEntryHandler);
-    entryLogsTable.grantReadWriteData(verifyEntryHandler);
-    unlockQueue.grantSendMessages(verifyEntryHandler);
-    const verifyEntryIntegration = new HttpLambdaIntegration('VerifyEntryIntegration', verifyEntryHandler);
+    mainTable.grantReadWriteData(this.verifyEntryFunction);
+    entryLogsTable.grantReadWriteData(this.verifyEntryFunction);
+    unlockQueue.grantSendMessages(this.verifyEntryFunction);
+    this.verifyEntryFunction.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['iot:Publish', 'iot:DescribeEndpoint'],
+      resources: ['*'],
+    }));
+    const verifyEntryIntegration = new HttpLambdaIntegration('VerifyEntryIntegration', this.verifyEntryFunction);
     this.httpApi.addRoutes({ path: '/device/verify', methods: [apigw.HttpMethod.POST], integration: verifyEntryIntegration });
 
     this.unlockOutboxDispatcher = new nodejs.NodejsFunction(this, 'UnlockOutboxDispatcher', {

@@ -1,4 +1,4 @@
-import { GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { LockerItem, ScannerItem } from './access-types';
 import { ddb } from './ddb-client';
 import { ConfigItem, DeviceItem, SubscriptionItem, UserItem } from './types';
@@ -46,6 +46,18 @@ export async function getScannerByApiKey(tableName: string, apiKeyHash: string):
   }));
   const scanner = result.Items?.find((item) => String(item.SK).startsWith('SCANNER#')) as ScannerItem | undefined;
   return scanner?.status === 'active' ? scanner : undefined;
+}
+
+/** Helper to look up a registered scanner by scanner_id. */
+export async function getScannerById(tableName: string, scannerId: string): Promise<ScannerItem | undefined> {
+  const result = await ddb.send(new ScanCommand({
+    TableName: tableName,
+    FilterExpression: 'scanner_id = :sid AND #status = :status',
+    ExpressionAttributeNames: { '#status': 'status' },
+    ExpressionAttributeValues: { ':sid': scannerId, ':status': 'active' },
+    Limit: 1,
+  }));
+  return result.Items?.[0] as ScannerItem | undefined;
 }
 
 /** Helper to retrieve a locker only from the authenticated scanner's location. */

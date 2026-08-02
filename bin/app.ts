@@ -3,6 +3,8 @@ import * as fs from 'fs';
 import { CrossboxApiStack } from '../lib/stacks/api-stack';
 import { CrossboxDataStack } from '../lib/stacks/data-stack';
 import { CrossboxFrontendStack } from '../lib/stacks/frontend-stack';
+import { CrossboxIotStack } from '../lib/stacks/iot-stack';
+
 
 if (fs.existsSync('.env')) {
   try {
@@ -60,3 +62,11 @@ new CrossboxFrontendStack(app, `${prefix}FrontendStack`, {
   apiStack,
   env,
 });
+
+// 4. IoT Stack (IoT Core Thing, Policy, mTLS Cert Secret, Topic Rule)
+new CrossboxIotStack(app, `${prefix}IotStack`, {
+  isTest,
+  apiStack,
+  env,
+});
+

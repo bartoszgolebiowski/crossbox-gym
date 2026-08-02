@@ -93,11 +93,12 @@ const stackMap = {
   api: `${prefix}ApiStack`,
   frontend: `${prefix}FrontendStack`,
   ui: `${prefix}FrontendStack`,
+  iot: `${prefix}IotStack`,
 };
 
 let selectedStacks = [];
 if (rawStacks.toLowerCase() === 'all' || rawStacks.trim() === '*') {
-  selectedStacks = [`${prefix}DataStack`, `${prefix}ApiStack`, `${prefix}FrontendStack`].join(' ');
+  selectedStacks = [`${prefix}DataStack`, `${prefix}ApiStack`, `${prefix}FrontendStack`, `${prefix}IotStack`].join(' ');
 } else {
   const parts = rawStacks.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
   const matched = parts.map(p => stackMap[p] || `${prefix}${p.charAt(0).toUpperCase() + p.slice(1)}Stack`);

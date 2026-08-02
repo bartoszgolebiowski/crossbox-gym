@@ -64,6 +64,27 @@ export async function getStackOutputs(): Promise<StackOutputs> {
   if (!merged.ApiUrl && merged.ExportsOutputFnGetAttHttpApiF5A9A8A7ApiEndpoint082134F8) {
     merged.ApiUrl = merged.ExportsOutputFnGetAttHttpApiF5A9A8A7ApiEndpoint082134F8;
   }
+  if (!merged.UserPoolId && merged.ExportsOutputRefUserPool6BA7E5F296FD7236) {
+    merged.UserPoolId = merged.ExportsOutputRefUserPool6BA7E5F296FD7236;
+  }
+  if (!merged.UserPoolClientId && merged.ExportsOutputRefUserPoolClient2F5918F753847A55) {
+    merged.UserPoolClientId = merged.ExportsOutputRefUserPoolClient2F5918F753847A55;
+  }
+  if (!merged.MainTableName && merged.ExportsOutputRefMainTable74195DAB4503BD7E) {
+    merged.MainTableName = merged.ExportsOutputRefMainTable74195DAB4503BD7E;
+  }
+  if (!merged.EntryLogsTableName && merged.ExportsOutputRefEntryLogs619EADFEEEBA8359) {
+    merged.EntryLogsTableName = merged.ExportsOutputRefEntryLogs619EADFEEEBA8359;
+  }
+  if (!merged.AuditLogsTableName && merged.ExportsOutputRefAuditLogsB945E340FCD35647) {
+    merged.AuditLogsTableName = merged.ExportsOutputRefAuditLogsB945E340FCD35647;
+  }
+  if (!merged.UnlockQueueUrl && merged.ExportsOutputRefUnlockQueue18021AA5E426E411) {
+    merged.UnlockQueueUrl = merged.ExportsOutputRefUnlockQueue18021AA5E426E411;
+  }
+  if (!merged.UnlockOutboxDispatcherFunctionName && merged.ExportsOutputRefUnlockOutboxDispatcherC1739C5034016AEF) {
+    merged.UnlockOutboxDispatcherFunctionName = merged.ExportsOutputRefUnlockOutboxDispatcherC1739C5034016AEF;
+  }
 
   const prefix = stackName.replace(/Stack$/, "");
 
@@ -74,6 +95,7 @@ export async function getStackOutputs(): Promise<StackOutputs> {
       `${prefix}FrontendStack`,
       `${prefix}ApiStack`,
       `${prefix}DataStack`,
+      `${prefix}IotStack`,
       stackName,
     ];
 

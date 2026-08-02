@@ -36,7 +36,7 @@ export async function getTestContext(): Promise<IntegrationTestContext> {
   const entryLogsTableName = await requireOutput('EntryLogsTableName');
   const auditLogsTableName = await requireOutput('AuditLogsTableName');
   const unlockQueueUrl = await requireOutput('UnlockQueueUrl');
-  const staticBucketName = await requireOutput('StaticBucketName').catch(() => requireOutput('AdminBucketName')).catch(() => requireOutput('AppBucketName'));
+  const staticBucketName = await requireOutput('StaticBucketName').catch(() => requireOutput('AdminBucketName')).catch(() => requireOutput('AppBucketName')).catch(() => '');
   const stripeEventBusName = await requireOutput('StripeEventBusName').catch(() => undefined);
   const unlockOutboxDispatcherFunctionName = await requireOutput('UnlockOutboxDispatcherFunctionName').catch(() => undefined);
   const region = process.env.AWS_REGION || 'eu-central-1';
