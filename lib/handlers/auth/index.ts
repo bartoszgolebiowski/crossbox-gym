@@ -12,9 +12,9 @@ import {
 import { PutCommand, GetCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { randomBytes, createHash } from 'crypto';
 import { withHandler, parseJsonBody, extractJwtClaims, HttpError, ValidationError, NotFoundError, UnauthorizedError } from '../shared/http';
-import { ddb } from '../shared/ddb-client';
+import { ddb } from '../shared/database';
 import { MagicLinkToken, MagicLinkRateLimit } from '../shared/types';
-import { getMainTableName, getFrontendUrl, getUserPoolId, getUserPoolClientId } from '../shared/env';
+import { getMainTableName, getFrontendUrl, getUserPoolId, getUserPoolClientId } from '../shared/config';
 
 const cognito = new CognitoIdentityProviderClient({});
 

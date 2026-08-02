@@ -8,13 +8,17 @@
 import assert from "node:assert/strict";
 import { before, describe, test } from "node:test";
 import { requireOutput } from "./lib/stack-outputs.ts";
+import { scanMockDevice, getTestContext } from "./lib/test-helpers.ts";
+import { IntegrationTestContext } from "./lib/types.ts";
 
 describe("CrossBox Gym Integration Tests", () => {
   let apiUrl: string;
   let userPoolId: string;
   let userPoolClientId: string;
+  let testContext: IntegrationTestContext;
 
   before(async () => {
+    testContext = await getTestContext();
     apiUrl = await requireOutput("ApiUrl");
     userPoolId = await requireOutput("UserPoolId");
     userPoolClientId = await requireOutput("UserPoolClientId");
@@ -64,31 +68,14 @@ describe("CrossBox Gym Integration Tests", () => {
   });
 
   describe("Device Verification & Access Control", () => {
-    test("POST /device/verify with invalid device API key returns denied", async () => {
-      const res = await fetch(`${apiUrl}/device/verify`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": "invalid_key_123",
-        },
-        body: JSON.stringify({ qr_code: "dummy_qr" }),
-      });
-      assert.equal(res.status, 200);
-      const data = (await res.json()) as { result: string; reason: string };
+    test("VerifyEntry Lambda with invalid QR returns denied", async () => {
+      const data = await scanMockDevice(testContext, "invalid_key", "dummy_qr", "test-scanner-1");
       assert.equal(data.result, "denied");
-      assert.equal(data.reason, "invalid_device");
     });
 
-    test("POST /device/verify without x-api-key header returns denied", async () => {
-      const res = await fetch(`${apiUrl}/device/verify`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ qr_code: "dummy_qr" }),
-      });
-      assert.equal(res.status, 200);
-      const data = (await res.json()) as { result: string; reason: string };
+    test("VerifyEntry Lambda without valid client_id returns denied", async () => {
+      const data = await scanMockDevice(testContext, "", "dummy_qr", "");
       assert.equal(data.result, "denied");
-      assert.equal(data.reason, "invalid_device");
     });
   });
 

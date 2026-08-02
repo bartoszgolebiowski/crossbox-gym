@@ -48,7 +48,14 @@ const STACK = values.stack ?? process.env.STACK_NAME ?? "CrossboxGymDev";
 const prefix = STACK.replace(/Stack$/, "");
 const REGION = values.region ?? process.env.AWS_REGION ?? "eu-central-1";
 
-const outputsPath = path.join(rootDir, "cdk-outputs.json");
+let outputsPath = path.join(rootDir, "cdk-outputs.json");
+if (!fs.existsSync(outputsPath)) {
+  const altPath = path.join(rootDir, "outputs.json");
+  if (fs.existsSync(altPath)) {
+    fs.copyFileSync(altPath, outputsPath);
+  }
+}
+
 if (!fs.existsSync(outputsPath)) {
   console.error(`\n❌ Error: cdk-outputs.json not found in ${rootDir}.`);
   console.error(`Please run 'npm run deploy' first to deploy your stack before running integration tests.\n`);

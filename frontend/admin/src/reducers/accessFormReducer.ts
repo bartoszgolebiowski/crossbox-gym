@@ -1,9 +1,7 @@
 export interface AccessFormState {
   locationId: string;
   scannerName: string;
-  lockerName: string;
   scannerId: string;
-  existingLockerId: string;
   isCustomLocation: boolean;
 }
 
@@ -15,9 +13,7 @@ export type AccessFormAction =
 export const initialAccessFormState: AccessFormState = {
   locationId: '',
   scannerName: '',
-  lockerName: '',
   scannerId: '',
-  existingLockerId: '',
   isCustomLocation: false,
 };
 

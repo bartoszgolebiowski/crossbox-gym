@@ -3,7 +3,7 @@ import {
   getFrontendUrl,
   getUserPoolId,
   getIdentityProvider,
-} from '../shared/env';
+} from '../shared/config';
 import { IdentityProvider, createIdentityProvider } from '../shared/providers';
 
 /**

@@ -1,7 +1,7 @@
 import { QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
-import { ddb } from '../shared/ddb-client';
+import { ddb } from '../shared/database';
 import { SubscriptionItem } from '../shared/types';
-import { getMainTableName } from '../shared/env';
+import { getMainTableName } from '../shared/config';
 
 export const handler = async (): Promise<void> => {
   const nowIso = new Date().toISOString();

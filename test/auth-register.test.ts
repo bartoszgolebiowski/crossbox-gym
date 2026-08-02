@@ -20,10 +20,10 @@ describe('Auth Registration & Password Reset Unit Tests', () => {
       isBase64Encoded: false
     };
 
-    const response = await authHandler(event);
+    const response: any = await authHandler(event);
     assert.equal(response.statusCode, 400);
     const body = JSON.parse(response.body);
-    assert.equal(body.message, 'Email and password are required');
+    assert.equal(body.error || body.message, 'Email and password are required');
   });
 
   test('POST /auth/forgot-password throws ValidationError when email is missing', async () => {
@@ -43,10 +43,10 @@ describe('Auth Registration & Password Reset Unit Tests', () => {
       isBase64Encoded: false
     };
 
-    const response = await authHandler(event);
+    const response: any = await authHandler(event);
     assert.equal(response.statusCode, 400);
     const body = JSON.parse(response.body);
-    assert.equal(body.message, 'Email is required');
+    assert.equal(body.error || body.message, 'Email is required');
   });
 
   test('POST /auth/confirm-forgot-password throws ValidationError when missing parameters', async () => {
@@ -66,9 +66,9 @@ describe('Auth Registration & Password Reset Unit Tests', () => {
       isBase64Encoded: false
     };
 
-    const response = await authHandler(event);
+    const response: any = await authHandler(event);
     assert.equal(response.statusCode, 400);
     const body = JSON.parse(response.body);
-    assert.equal(body.message, 'Email, confirmation code, and newPassword are required');
+    assert.equal(body.error || body.message, 'Email, confirmation code, and newPassword are required');
   });
 });

@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { adminApiClient } from '../services/apiClient';
-import { LockerItem, ScannerItem } from './adminSlice';
+import { ScannerItem } from './adminSlice';
 
 export interface ActivityItem {
   entry_id: string;
@@ -9,10 +9,8 @@ export interface ActivityItem {
   location_id: string;
   scanner_id?: string;
   device_id?: string;
-  locker_id?: string;
   qr_provider_id?: string;
   result: 'success' | 'denied';
-  unlock_command_id?: string;
 }
 
 export interface ActivityResponse {
@@ -28,9 +26,7 @@ export interface ActivityResponse {
 
 export interface HardwareActivityState {
   selectedLocationId: string;
-  deviceType: 'scanners' | 'lockers';
   scanners: ScannerItem[];
-  lockers: LockerItem[];
   selectedDeviceId: string;
   timeWindow: 'hourly' | 'daily' | 'weekly';
   activityData: ActivityResponse | null;
@@ -41,9 +37,7 @@ export interface HardwareActivityState {
 
 const initialState: HardwareActivityState = {
   selectedLocationId: '',
-  deviceType: 'scanners',
   scanners: [],
-  lockers: [],
   selectedDeviceId: 'all',
   timeWindow: 'daily',
   activityData: null,
@@ -56,13 +50,9 @@ export const fetchHardwareDevicesThunk = createAsyncThunk(
   'hardwareActivity/fetchDevices',
   async (locationId: string, { rejectWithValue }) => {
     try {
-      const [scannersList, lockersList] = await Promise.all([
-        adminApiClient.get<ScannerItem[]>(`/admin/locations/${locationId}/scanners`).catch(() => []),
-        adminApiClient.get<LockerItem[]>(`/admin/locations/${locationId}/lockers`).catch(() => []),
-      ]);
+      const scannersList = await adminApiClient.get<ScannerItem[]>(`/admin/locations/${locationId}/scanners`).catch(() => []);
       return {
         scanners: scannersList || [],
-        lockers: lockersList || [],
       };
     } catch (err: any) {
       return rejectWithValue(err.message || 'Failed to fetch hardware devices');
@@ -74,16 +64,14 @@ export const fetchActivityThunk = createAsyncThunk(
   'hardwareActivity/fetchActivity',
   async (_, { getState, rejectWithValue }) => {
     const state = getState() as { hardwareActivity: HardwareActivityState };
-    const { selectedLocationId, timeWindow, deviceType, selectedDeviceId } = state.hardwareActivity;
+    const { selectedLocationId, timeWindow, selectedDeviceId } = state.hardwareActivity;
     if (!selectedLocationId) {
       return rejectWithValue('No location selected');
     }
 
     let queryPath = `/admin/locations/${selectedLocationId}/activity?window=${timeWindow}`;
-    if (deviceType === 'scanners' && selectedDeviceId !== 'all') {
+    if (selectedDeviceId !== 'all') {
       queryPath += `&scanner_id=${selectedDeviceId}`;
-    } else if (deviceType === 'lockers' && selectedDeviceId !== 'all') {
-      queryPath += `&locker_id=${selectedDeviceId}`;
     }
 
     try {
@@ -101,9 +89,6 @@ const hardwareActivitySlice = createSlice({
   reducers: {
     setSelectedLocationId: (state, action: PayloadAction<string>) => {
       state.selectedLocationId = action.payload;
-    },
-    setDeviceType: (state, action: PayloadAction<'scanners' | 'lockers'>) => {
-      state.deviceType = action.payload;
     },
     setSelectedDeviceId: (state, action: PayloadAction<string>) => {
       state.selectedDeviceId = action.payload;
@@ -124,7 +109,6 @@ const hardwareActivitySlice = createSlice({
       .addCase(fetchHardwareDevicesThunk.fulfilled, (state, action) => {
         state.isLoading = false;
         state.scanners = action.payload.scanners;
-        state.lockers = action.payload.lockers;
       })
       .addCase(fetchHardwareDevicesThunk.rejected, (state, action) => {
         state.isLoading = false;
@@ -147,7 +131,6 @@ const hardwareActivitySlice = createSlice({
 
 export const {
   setSelectedLocationId,
-  setDeviceType,
   setSelectedDeviceId,
   setTimeWindow,
   setSearchFilter,

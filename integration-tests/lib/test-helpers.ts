@@ -35,10 +35,11 @@ export async function getTestContext(): Promise<IntegrationTestContext> {
   const mainTableName = await requireOutput('MainTableName');
   const entryLogsTableName = await requireOutput('EntryLogsTableName');
   const auditLogsTableName = await requireOutput('AuditLogsTableName');
-  const unlockQueueUrl = await requireOutput('UnlockQueueUrl');
+  const unlockQueueUrl = await requireOutput('UnlockQueueUrl').catch(() => undefined);
   const staticBucketName = await requireOutput('StaticBucketName').catch(() => requireOutput('AdminBucketName')).catch(() => requireOutput('AppBucketName')).catch(() => '');
   const stripeEventBusName = await requireOutput('StripeEventBusName').catch(() => undefined);
   const unlockOutboxDispatcherFunctionName = await requireOutput('UnlockOutboxDispatcherFunctionName').catch(() => undefined);
+  const verifyEntryFunctionName = await requireOutput('VerifyEntryFunctionName').catch(() => undefined);
   const region = process.env.AWS_REGION || 'eu-central-1';
 
   cachedContext = {
@@ -52,6 +53,7 @@ export async function getTestContext(): Promise<IntegrationTestContext> {
     staticBucketName,
     stripeEventBusName,
     unlockOutboxDispatcherFunctionName,
+    verifyEntryFunctionName,
     region
   };
 
@@ -284,45 +286,6 @@ export async function createMockScanner(
   return scanner;
 }
 
-export async function createMockLocker(
-  context: IntegrationTestContext,
-  adminToken: string,
-  locationId: string,
-  options?: { name?: string; durationSeconds?: number },
-): Promise<TestLockerRecord> {
-  const response = await fetch(`${context.apiUrl}/admin/locations/${locationId}/lockers`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
-    body: JSON.stringify({
-      name: options?.name || `Mock Locker ${Date.now()}`,
-      lock_adapter: 'mock',
-      unlock_duration_seconds: options?.durationSeconds || 5,
-      adapter_configuration: {},
-    }),
-  });
-  if (response.status !== 200 && response.status !== 201) {
-    throw new Error(`Failed to create mock locker (${response.status}): ${await response.text()}`);
-  }
-  return await response.json() as TestLockerRecord;
-}
-
-export async function assignTestLocker(
-  context: IntegrationTestContext,
-  adminToken: string,
-  locationId: string,
-  scannerId: string,
-  lockerId: string,
-): Promise<void> {
-  const response = await fetch(`${context.apiUrl}/admin/locations/${locationId}/scanners/${scannerId}/locker`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
-    body: JSON.stringify({ locker_id: lockerId }),
-  });
-  if (response.status !== 200) {
-    throw new Error(`Failed to assign mock locker (${response.status}): ${await response.text()}`);
-  }
-}
-
 export async function generateTestQRPayload(
   context: IntegrationTestContext,
   userId: string,
@@ -487,27 +450,36 @@ export async function dispatchUnlockOutbox(context: IntegrationTestContext): Pro
 export async function scanMockDevice(
   context: IntegrationTestContext,
   scannerApiKey: string,
-  mockScanValue: string
+  mockScanValue: string,
+  scannerId: string = 'hd360-qr-scanner-01'
 ): Promise<{ result: string; reason?: string; entry_id?: string; feedback?: string }> {
-  const response = await fetch(`${context.apiUrl}/device/verify`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': scannerApiKey
-    },
-    body: JSON.stringify({
-      scan: {
-        content: { kind: 'text', value: mockScanValue },
-        observed_at: new Date().toISOString()
-      }
-    })
-  });
-
-  if (response.status !== 200) {
-    const text = await response.text();
-    throw new Error(`Scan request failed with HTTP ${response.status}: ${text}`);
+  if (!context.verifyEntryFunctionName) {
+    throw new Error('VerifyEntryFunctionName is not defined in integration test context');
   }
 
-  return await response.json() as { result: string; reason?: string; entry_id?: string; feedback?: string };
+  const lambda = new LambdaClient({ region: context.region });
+  const payload = {
+    event_id: `test-event-${Date.now()}`,
+    client_id: scannerId,
+    timestamp: Math.floor(Date.now() / 1000),
+    payload: {
+      raw_data: mockScanValue,
+      encoding: 'utf-8',
+    },
+  };
+
+  const response = await lambda.send(
+    new InvokeCommand({
+      FunctionName: context.verifyEntryFunctionName,
+      Payload: Buffer.from(JSON.stringify(payload)),
+    })
+  );
+
+  if (!response.Payload) {
+    throw new Error('Lambda returned empty response payload');
+  }
+
+  const resultStr = Buffer.from(response.Payload).toString('utf-8');
+  return JSON.parse(resultStr);
 }
 

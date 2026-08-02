@@ -1,5 +1,5 @@
 import { PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
-import { ddb } from '../../shared/ddb-client';
+import { ddb } from '../../shared/database';
 import { SubscriptionItem } from '../../shared/types';
 import { WebhookContext } from '../context';
 

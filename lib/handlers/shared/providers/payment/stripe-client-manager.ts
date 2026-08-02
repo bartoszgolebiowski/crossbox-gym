@@ -3,7 +3,7 @@ import Stripe from 'stripe';
 import {
   getStripeSecretKeySsmPath,
   getStripeWebhookSecretSsmPath,
-} from '../../env';
+} from '../../config';
 
 let stripeClient: Stripe | null = null;
 let webhookSecret: string | null = null;

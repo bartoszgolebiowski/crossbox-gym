@@ -1,7 +1,7 @@
 import { GetCommand, QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
-import { LockerItem, ScannerItem } from './access-types';
-import { ddb } from './ddb-client';
-import { ConfigItem, DeviceItem, SubscriptionItem, UserItem } from './types';
+import { ScannerItem } from '../access/types';
+import { ConfigItem, DeviceItem, SubscriptionItem, UserItem } from '../types';
+import { ddb } from './client';
 
 /** Helper to fetch user profile by user_id */
 export async function getUserProfile(tableName: string, userId: string): Promise<UserItem | undefined> {
@@ -58,16 +58,6 @@ export async function getScannerById(tableName: string, scannerId: string): Prom
     Limit: 1,
   }));
   return result.Items?.[0] as ScannerItem | undefined;
-}
-
-/** Helper to retrieve a locker only from the authenticated scanner's location. */
-export async function getLocker(tableName: string, locationId: string, lockerId: string): Promise<LockerItem | undefined> {
-  const result = await ddb.send(new GetCommand({
-    TableName: tableName,
-    Key: { PK: `LOC#${locationId}`, SK: `LOCKER#${lockerId}` },
-  }));
-  const locker = result.Item as LockerItem | undefined;
-  return locker?.status === 'active' ? locker : undefined;
 }
 
 /** Helper to get config item by key */

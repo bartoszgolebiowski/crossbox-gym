@@ -2,12 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useAdminDispatch, useAdminSelector } from '../store';
 import {
   fetchDevicesThunk,
-  fetchLockersThunk,
   listLocationsThunk,
   remoteUnlockThunk,
   selectDevicesList,
   selectLocationsList,
-  selectLockersList,
   selectRemoteOutput,
 } from '../store/adminSlice';
 
@@ -18,7 +16,6 @@ export const RemoteOpsCard: React.FC = () => {
   const dispatch = useAdminDispatch();
   const remoteOutput = useAdminSelector(selectRemoteOutput);
   const locationsList = useAdminSelector(selectLocationsList);
-  const lockersList = useAdminSelector(selectLockersList);
   const devicesList = useAdminSelector(selectDevicesList);
 
   const [selectedLocationId, setSelectedLocationId] = useState<string>('');
@@ -39,40 +36,22 @@ export const RemoteOpsCard: React.FC = () => {
     }
   }, [locationsList, selectedLocationId]);
 
-  // Fetch locks/lockers whenever selected location changes
+  // Fetch devices whenever selected location changes
   useEffect(() => {
     if (selectedLocationId) {
-      dispatch(fetchLockersThunk(selectedLocationId));
       dispatch(fetchDevicesThunk(selectedLocationId));
     }
   }, [dispatch, selectedLocationId]);
 
-  // Consolidate all locks for the active location (lockers + lock devices)
   const availableLocks = useMemo(() => {
-    const locksFromLockers = lockersList.map((l) => ({
-      id: l.locker_id,
-      name: l.name || `Locker ${l.locker_id}`,
-      type: 'Locker / Gate Lock',
-    }));
-
-    const locksFromDevices = devicesList
+    return devicesList
       .filter((d) => !d.type || d.type === 'lock')
       .map((d) => ({
         id: d.device_id,
         name: d.name || `Device ${d.device_id}`,
         type: 'IoT Hardware Relay',
       }));
-
-    const combined = [...locksFromLockers, ...locksFromDevices];
-    // Deduplicate by ID
-    const map = new Map<string, { id: string; name: string; type: string }>();
-    combined.forEach((item) => {
-      if (!map.has(item.id)) {
-        map.set(item.id, item);
-      }
-    });
-    return Array.from(map.values());
-  }, [lockersList, devicesList]);
+  }, [devicesList]);
 
   // Auto-select first lock option when locks list changes
   useEffect(() => {

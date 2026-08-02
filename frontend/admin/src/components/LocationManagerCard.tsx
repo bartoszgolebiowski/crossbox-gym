@@ -3,17 +3,13 @@ import { accessFormReducer, initialAccessFormState, updateAccessFormField } from
 import { changeLocationFormField, initialLocationFormState, locationFormReducer } from '../reducers/locationFormReducer';
 import { useAdminDispatch, useAdminSelector } from '../store';
 import {
-  assignLockerThunk,
   createLocationThunk,
   createScannerThunk,
-  fetchLockersThunk,
   fetchScannersThunk,
   listLocationsThunk,
-  registerAndAssignLockerThunk,
   selectAccessOutput,
   selectLocationOutput,
   selectLocationsList,
-  selectLockersList,
   selectScannersList,
 } from '../store/adminSlice';
 
@@ -27,7 +23,6 @@ export const LocationManagerCard: React.FC = () => {
   const accessOutput = useAdminSelector(selectAccessOutput);
   const locationsList = useAdminSelector(selectLocationsList);
   const scannersList = useAdminSelector(selectScannersList);
-  const lockersList = useAdminSelector(selectLockersList);
 
   const [accessForm, dispatchAccessForm] = useReducer(accessFormReducer, initialAccessFormState);
 
@@ -47,11 +42,10 @@ export const LocationManagerCard: React.FC = () => {
     }
   }, [locationsList, accessForm.locationId, accessForm.isCustomLocation]);
 
-  // Auto-fetch scanners and lockers when locationId changes
+  // Auto-fetch scanners when locationId changes
   useEffect(() => {
     if (accessForm.locationId.trim()) {
       dispatch(fetchScannersThunk(accessForm.locationId.trim()));
-      dispatch(fetchLockersThunk(accessForm.locationId.trim()));
     }
   }, [dispatch, accessForm.locationId]);
 
@@ -78,8 +72,6 @@ export const LocationManagerCard: React.FC = () => {
 
   const canCreateLocation = locName.trim().length > 0 && locAddress.trim().length > 0;
   const canAssignScanner = accessForm.locationId.trim().length > 0 && accessForm.scannerName.trim().length > 0;
-  const canAssignLocker = accessForm.locationId.trim().length > 0 && accessForm.scannerId.trim().length > 0 && accessForm.lockerName.trim().length > 0;
-  const canLinkExisting = accessForm.locationId.trim().length > 0 && accessForm.scannerId.trim().length > 0 && accessForm.existingLockerId.trim().length > 0;
 
   return (
     <div className="bg-white border border-slate-300 rounded-lg p-6 shadow-xl shadow-slate-900/5 flex flex-col justify-between h-full space-y-6">
@@ -291,119 +283,6 @@ export const LocationManagerCard: React.FC = () => {
           >
             Assign Scanner to Location
           </button>
-        </div>
-
-        {/* --- FORM 2: ASSIGN LOCKER TO SCANNER --- */}
-        <div className="bg-teal-50/40 p-4 rounded-lg border border-teal-200 space-y-3">
-          <div className="border-b border-teal-200 pb-2 flex items-center justify-between">
-            <span className="text-xs font-bold uppercase tracking-wider text-teal-900 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-teal-700 text-white flex items-center justify-center text-xs">2</span>
-              <span>Assign Locker to Scanner</span>
-            </span>
-            <span className="text-[11px] text-teal-700">
-              Location: {accessForm.locationId || 'None Selected'}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={fieldLabelClass} htmlFor="form2-scanner">Select Scanner</label>
-              <select
-                id="form2-scanner"
-                className={selectClass}
-                value={accessForm.scannerId}
-                onChange={(e) => updateAccessForm('scannerId', e.target.value)}
-                disabled={!accessForm.locationId.trim() || scannersList.length === 0}
-              >
-                <option value="">
-                  {scannersList.length === 0 ? '-- No Scanners at Location --' : '-- Select Target Scanner --'}
-                </option>
-                {scannersList.map((s) => (
-                  <option key={s.scanner_id} value={s.scanner_id}>
-                    {s.name || s.scanner_id} ({s.scanner_id})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className={fieldLabelClass} htmlFor="form2-locker-name">New Locker Name</label>
-              <input
-                id="form2-locker-name"
-                className={fieldClass}
-                placeholder="e.g. Turnstile Solenoid Lock #1"
-                value={accessForm.lockerName}
-                onChange={(e) => updateAccessForm('lockerName', e.target.value)}
-                disabled={!accessForm.scannerId.trim()}
-              />
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className={`w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition ${
-              canAssignLocker
-                ? 'bg-teal-700 hover:bg-teal-600 cursor-pointer'
-                : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
-            }`}
-            onClick={() =>
-              dispatch(
-                registerAndAssignLockerThunk({
-                  locationId: accessForm.locationId,
-                  scannerId: accessForm.scannerId,
-                  lockerName: accessForm.lockerName,
-                })
-              )
-            }
-            disabled={!canAssignLocker}
-            title={canAssignLocker ? 'Provision locker and link directly to scanner' : 'Select a location, target scanner, and enter locker name'}
-          >
-            Provision & Assign Locker to Scanner
-          </button>
-
-          {/* Optional: Link Existing Locker */}
-          {lockersList.length > 0 && (
-            <div className="pt-2 border-t border-teal-200/60 mt-3 space-y-2">
-              <div className="text-[11px] font-semibold text-teal-800 uppercase tracking-wider">
-                Or Link Existing Locker to Scanner
-              </div>
-              <div className="flex gap-2">
-                <select
-                  className={selectClass}
-                  value={accessForm.existingLockerId}
-                  onChange={(e) => updateAccessForm('existingLockerId', e.target.value)}
-                  disabled={!accessForm.scannerId.trim()}
-                >
-                  <option value="">-- Select Existing Locker --</option>
-                  {lockersList.map((l) => (
-                    <option key={l.locker_id} value={l.locker_id}>
-                      {l.name || l.locker_id} ({l.locker_id})
-                    </option>
-                  ))}
-                </select>
-                <button
-                  type="button"
-                  className={`px-4 py-2 rounded-md text-xs font-semibold text-white transition whitespace-nowrap ${
-                    canLinkExisting
-                      ? 'bg-teal-800 hover:bg-teal-700 cursor-pointer'
-                      : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
-                  }`}
-                  onClick={() =>
-                    dispatch(
-                      assignLockerThunk({
-                        locationId: accessForm.locationId,
-                        scannerId: accessForm.scannerId,
-                        lockerId: accessForm.existingLockerId,
-                      })
-                    )
-                  }
-                  disabled={!canLinkExisting}
-                >
-                  Link Locker
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
 

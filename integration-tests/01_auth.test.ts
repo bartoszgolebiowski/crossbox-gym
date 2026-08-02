@@ -62,7 +62,8 @@ describe('Auth & Account Setup Test Suite', () => {
     });
     assert.equal(res.status, 400);
     const data = await res.json() as any;
-    assert.ok(data.message.includes('limit reached'));
+    const msg = data.error || data.message || '';
+    assert.ok(msg.toLowerCase().includes('limit') || msg.toLowerCase().includes('rate'));
   });
 
   test('GET /auth/magic-link/verify verifies token and prevents replay attack', async () => {

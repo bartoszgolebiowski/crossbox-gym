@@ -1,7 +1,7 @@
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { withHandler, parseJsonBody, ValidationError, NotFoundError } from '../shared/http';
 import { createPaymentProvider } from '../shared/providers';
-import { getPaymentProvider } from '../shared/env';
+import { getPaymentProvider } from '../shared/config';
 
 export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
   const method = event.requestContext.http.method;

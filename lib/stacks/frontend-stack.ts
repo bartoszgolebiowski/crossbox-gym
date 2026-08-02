@@ -24,7 +24,7 @@ export class CrossboxFrontendStack extends cdk.Stack {
     super(scope, id, props);
 
     const { isTest, dataStack, apiStack } = props;
-    const { mainTable, entryLogsTable, auditLogsTable, unlockQueue, userPool, userPoolClient } = dataStack;
+    const { mainTable, entryLogsTable, auditLogsTable, userPool, userPoolClient } = dataStack;
     const { httpApi, stripeEventBus } = apiStack;
 
     const removalPolicy = isTest ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN;
@@ -109,7 +109,6 @@ export class CrossboxFrontendStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'MainTableName', { value: mainTable.tableName });
     new cdk.CfnOutput(this, 'EntryLogsTableName', { value: entryLogsTable.tableName });
     new cdk.CfnOutput(this, 'AuditLogsTableName', { value: auditLogsTable.tableName });
-    new cdk.CfnOutput(this, 'UnlockQueueUrl', { value: unlockQueue.queueUrl });
     new cdk.CfnOutput(this, 'AppBucketName', { value: this.appBucket.bucketName });
     new cdk.CfnOutput(this, 'AdminBucketName', { value: this.adminBucket.bucketName });
     new cdk.CfnOutput(this, 'StaticBucketName', { value: this.adminBucket.bucketName });
@@ -119,6 +118,5 @@ export class CrossboxFrontendStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'AdminDistributionId', { value: this.adminDistribution.distributionId });
     new cdk.CfnOutput(this, 'CloudFrontUrl', { value: this.appDistribution.distributionDomainName });
     new cdk.CfnOutput(this, 'StripeEventBusName', { value: stripeEventBus.eventBusName });
-    new cdk.CfnOutput(this, 'UnlockOutboxDispatcherFunctionName', { value: apiStack.unlockOutboxDispatcher.functionName });
   }
 }

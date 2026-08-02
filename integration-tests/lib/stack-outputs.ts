@@ -85,6 +85,9 @@ export async function getStackOutputs(): Promise<StackOutputs> {
   if (!merged.UnlockOutboxDispatcherFunctionName && merged.ExportsOutputRefUnlockOutboxDispatcherC1739C5034016AEF) {
     merged.UnlockOutboxDispatcherFunctionName = merged.ExportsOutputRefUnlockOutboxDispatcherC1739C5034016AEF;
   }
+  if (!merged.VerifyEntryFunctionName && merged.ExportsOutputFnGetAttVerifyEntryACD6A33CArnA9006F02) {
+    merged.VerifyEntryFunctionName = merged.ExportsOutputFnGetAttVerifyEntryACD6A33CArnA9006F02;
+  }
 
   const prefix = stackName.replace(/Stack$/, "");
 

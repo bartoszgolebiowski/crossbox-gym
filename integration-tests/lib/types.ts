@@ -9,10 +9,11 @@ export interface IntegrationTestContext {
   mainTableName: string;
   entryLogsTableName: string;
   auditLogsTableName: string;
-  unlockQueueUrl: string;
+  unlockQueueUrl?: string;
   staticBucketName: string;
   stripeEventBusName?: string;
   unlockOutboxDispatcherFunctionName?: string;
+  verifyEntryFunctionName?: string;
   region: string;
 }
 

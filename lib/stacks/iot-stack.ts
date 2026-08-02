@@ -15,6 +15,7 @@ export interface CrossboxIotStackProps extends cdk.StackProps {
 export class CrossboxIotStack extends cdk.Stack {
   public readonly certSecret: secretsmanager.Secret;
   public readonly iotThing: iot.CfnThing;
+  public readonly lockerThing: iot.CfnThing;
   public readonly iotPolicy: iot.CfnPolicy;
   public readonly topicRule: iot.CfnTopicRule;
 
@@ -23,16 +24,28 @@ export class CrossboxIotStack extends cdk.Stack {
 
     const { isTest, apiStack } = props;
 
-    const thingName = this.node.tryGetContext('thing_name') || 'hd360-qr-scanner-01';
-    const policyName = this.node.tryGetContext('policy_name') || 'hd360-qr-scanner-policy';
-    const secretName = this.node.tryGetContext('secret_name') || 'hd360-qr-scanner/certs';
+    const thingName = this.node.tryGetContext('thing_name') || 'crossbox-qr-scanner-01';
+    const lockThingName = this.node.tryGetContext('lock_thing_name') || 'crossbox-locker-relay-01';
+    const policyName = this.node.tryGetContext('policy_name') || 'crossbox-gym-iot-policy';
+    const secretName = this.node.tryGetContext('secret_name') || 'crossbox-gym/iot/certs';
 
-    // 1. Create AWS IoT Thing
+    // 1a. Create AWS IoT Thing for QR Scanner
     this.iotThing = new iot.CfnThing(this, 'QrScannerThing', {
       thingName,
       attributePayload: {
         attributes: {
           device_type: 'HDWR-HD360-QR-Scanner',
+          version: '1.0.0',
+        },
+      },
+    });
+
+    // 1b. Create AWS IoT Thing for Lock (Shelly Plus 1 Mini Gen3)
+    this.lockerThing = new iot.CfnThing(this, 'LockerThing', {
+      thingName: lockThingName,
+      attributePayload: {
+        attributes: {
+          device_type: 'Shelly-Plus-1-Mini-Gen3',
           version: '1.0.0',
         },
       },
@@ -45,7 +58,11 @@ export class CrossboxIotStack extends cdk.Stack {
         {
           Effect: 'Allow',
           Action: ['iot:Connect'],
-          Resource: [`arn:aws:iot:${this.region}:${this.account}:client/${thingName}`],
+          Resource: [
+            `arn:aws:iot:${this.region}:${this.account}:client/${thingName}`,
+            `arn:aws:iot:${this.region}:${this.account}:client/${lockThingName}`,
+            `arn:aws:iot:${this.region}:${this.account}:client/*`,
+          ],
         },
         {
           Effect: 'Allow',
@@ -55,25 +72,31 @@ export class CrossboxIotStack extends cdk.Stack {
         {
           Effect: 'Allow',
           Action: ['iot:Subscribe'],
-          Resource: [`arn:aws:iot:${this.region}:${this.account}:topicfilter/gym/scanners/*/feedback`],
+          Resource: [
+            `arn:aws:iot:${this.region}:${this.account}:topicfilter/gym/scanners/*/feedback`,
+            `arn:aws:iot:${this.region}:${this.account}:topicfilter/gym/lockers/*/command`,
+          ],
         },
         {
           Effect: 'Allow',
           Action: ['iot:Receive'],
-          Resource: [`arn:aws:iot:${this.region}:${this.account}:topic/gym/scanners/*/feedback`],
+          Resource: [
+            `arn:aws:iot:${this.region}:${this.account}:topic/gym/scanners/*/feedback`,
+            `arn:aws:iot:${this.region}:${this.account}:topic/gym/lockers/*/command`,
+          ],
         },
       ],
     };
 
-    this.iotPolicy = new iot.CfnPolicy(this, 'QrScannerPolicy', {
+    this.iotPolicy = new iot.CfnPolicy(this, 'CrossboxIotPolicy', {
       policyName,
       policyDocument: iotPolicyDocument,
     });
 
     // 3. Secrets Manager Secret for storing X.509 Certs & Keys
-    this.certSecret = new secretsmanager.Secret(this, 'QrScannerCertSecret', {
+    this.certSecret = new secretsmanager.Secret(this, 'CrossboxIotCertSecret', {
       secretName,
-      description: 'mTLS X.509 Device Certificate & Private Key for HDWR HD360 QR Scanner',
+      description: 'mTLS X.509 Device Certificate & Private Key for Crossbox Gym IoT devices (QR Scanner and Shelly Lock Relay)',
       removalPolicy: isTest ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN,
     });
 
@@ -119,13 +142,14 @@ export class CrossboxIotStack extends cdk.Stack {
     });
 
     customResource.node.addDependency(this.iotThing);
+    customResource.node.addDependency(this.lockerThing);
     customResource.node.addDependency(this.iotPolicy);
 
     // 5. AWS IoT Topic Rule to invoke VerifyEntry Lambda on incoming scans
     const verifyEntryFunc = apiStack.verifyEntryFunction;
 
-    this.topicRule = new iot.CfnTopicRule(this, 'QrScannerScanRule', {
-      ruleName: 'QrScannerScanRule',
+    this.topicRule = new iot.CfnTopicRule(this, 'CrossboxQrScannerScanRule', {
+      ruleName: 'CrossboxQrScannerScanRule',
       topicRulePayload: {
         sql: "SELECT *, topic(3) as scannerId FROM 'gym/scanners/+/scan'",
         description: 'Forwards MQTT scan events from RPi QR scanner to VerifyEntry Lambda',
@@ -143,7 +167,7 @@ export class CrossboxIotStack extends cdk.Stack {
     // Grant IoT permission to invoke VerifyEntry Lambda
     verifyEntryFunc.addPermission('IoTInvokePermission', {
       principal: new iam.ServicePrincipal('iot.amazonaws.com'),
-      sourceArn: `arn:aws:iot:${this.region}:${this.account}:rule/QrScannerScanRule`,
+      sourceArn: `arn:aws:iot:${this.region}:${this.account}:rule/CrossboxQrScannerScanRule`,
     });
 
     // Stack Outputs
@@ -154,7 +178,12 @@ export class CrossboxIotStack extends cdk.Stack {
 
     new cdk.CfnOutput(this, 'ThingNameOutput', {
       value: thingName,
-      description: 'AWS IoT Thing Name',
+      description: 'AWS IoT QR Scanner Thing Name',
+    });
+
+    new cdk.CfnOutput(this, 'LockerThingNameOutput', {
+      value: lockThingName,
+      description: 'AWS IoT Lock Thing Name (Shelly Plus 1 Mini Gen3)',
     });
 
     new cdk.CfnOutput(this, 'IotEndpointOutput', {

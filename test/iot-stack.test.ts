@@ -16,9 +16,9 @@ test('CrossboxIotStack synthesizes required IoT resources', () => {
 
   const template = Template.fromStack(iotStack);
 
-  // Assert IoT Thing
+  // Assert QR Scanner IoT Thing
   template.hasResourceProperties('AWS::IoT::Thing', {
-    ThingName: 'hd360-qr-scanner-01',
+    ThingName: 'crossbox-qr-scanner-01',
     AttributePayload: {
       Attributes: {
         device_type: 'HDWR-HD360-QR-Scanner',
@@ -27,24 +27,36 @@ test('CrossboxIotStack synthesizes required IoT resources', () => {
     },
   });
 
+  // Assert Locker IoT Thing (Shelly Plus 1 Mini Gen3)
+  template.hasResourceProperties('AWS::IoT::Thing', {
+    ThingName: 'crossbox-locker-relay-01',
+    AttributePayload: {
+      Attributes: {
+        device_type: 'Shelly-Plus-1-Mini-Gen3',
+        version: '1.0.0',
+      },
+    },
+  });
+
   // Assert IoT Policy
   template.hasResourceProperties('AWS::IoT::Policy', {
-    PolicyName: 'hd360-qr-scanner-policy',
+    PolicyName: 'crossbox-gym-iot-policy',
   });
 
   // Assert Secrets Manager Secret
   template.hasResourceProperties('AWS::SecretsManager::Secret', {
-    Name: 'hd360-qr-scanner/certs',
+    Name: 'crossbox-gym/iot/certs',
   });
 
   // Assert IoT Topic Rule
   template.hasResourceProperties('AWS::IoT::TopicRule', {
-    RuleName: 'QrScannerScanRule',
+    RuleName: 'CrossboxQrScannerScanRule',
     TopicRulePayload: {
       Sql: "SELECT *, topic(3) as scannerId FROM 'gym/scanners/+/scan'",
       RuleDisabled: false,
     },
   });
 
-  assert.ok(iotStack);
+  assert.ok(iotStack.iotThing);
+  assert.ok(iotStack.lockerThing);
 });

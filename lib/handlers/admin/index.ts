@@ -1,21 +1,18 @@
 import { PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
-import { DeleteCommand, GetCommand, PutCommand, QueryCommand, ScanCommand, TransactWriteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { DeleteCommand, GetCommand, PutCommand, QueryCommand, ScanCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { randomBytes } from 'crypto';
-import { ddb } from '../shared/ddb-client';
-import { hashApiKey } from '../shared/hash-helpers';
+import { getAuditLogsTableName, getEntryLogsTableName, getMainTableName } from '../shared/config';
+import { hashApiKey } from '../shared/crypto';
+import { ddb } from '../shared/database';
 import { assertAdmin, NotFoundError, parseJsonBody, withHandler } from '../shared/http';
+import { createMqttPublisher } from '../shared/providers/feedback';
 import { ConfigItem } from '../shared/types';
 
 const s3 = new S3Client({});
-const sqs = new SQSClient({});
-
-import { getAuditLogsTableName, getEntryLogsTableName, getMainTableName, getUnlockQueueUrl } from '../shared/env';
 
 const MAIN_TABLE = getMainTableName();
 const AUDIT_LOGS_TABLE = getAuditLogsTableName();
-const UNLOCK_QUEUE = getUnlockQueueUrl();
 
 const syncLocationsToS3 = async () => {
   const assetsBucket = process.env.STATIC_ASSETS_BUCKET_NAME;
@@ -131,16 +128,6 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     return result.Items || [];
   }
 
-  if (method === 'GET' && /^\/admin\/locations\/[^/]+\/lockers$/.test(path)) {
-    const locationId = path.split('/')[3];
-    const result = await ddb.send(new QueryCommand({
-      TableName: MAIN_TABLE,
-      KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
-      ExpressionAttributeValues: { ':pk': `LOC#${locationId}`, ':sk': 'LOCKER#' },
-    }));
-    return result.Items || [];
-  }
-
   if (method === 'POST' && /^\/admin\/locations\/[^/]+\/scanners$/.test(path)) {
     const locationId = path.split('/')[3];
     const body = parseJsonBody(event);
@@ -167,66 +154,11 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     return { ...item, scanner_api_key: scannerApiKey };
   }
 
-  if (method === 'POST' && /^\/admin\/locations\/[^/]+\/lockers$/.test(path)) {
-    const locationId = path.split('/')[3];
-    const body = parseJsonBody(event);
-    const lockerId = randomBytes(8).toString('hex');
-    const now = new Date().toISOString();
-    const item = {
-      PK: `LOC#${locationId}`,
-      SK: `LOCKER#${lockerId}`,
-      locker_id: lockerId,
-      location_id: locationId,
-      name: body.name || `Locker ${lockerId}`,
-      status: 'active',
-      lock_adapter: body.lock_adapter || 'mock',
-      unlock_duration_seconds: Number(body.unlock_duration_seconds || 5),
-      adapter_configuration: body.adapter_configuration || {},
-      created_at: now,
-      updated_at: now,
-    };
-    await ddb.send(new PutCommand({ TableName: MAIN_TABLE, Item: item }));
-    await logAudit(adminId, 'create_locker', { target_id: lockerId, location_id: locationId });
-    return item;
-  }
-
-  if (method === 'PUT' && /^\/admin\/locations\/[^/]+\/scanners\/[^/]+\/locker$/.test(path)) {
-    const [, , , locationId, , scannerId] = path.split('/');
-    const body = parseJsonBody(event);
-    const lockerId = body.locker_id as string;
-    const lockerResult = await ddb.send(new GetCommand({ TableName: MAIN_TABLE, Key: { PK: `LOC#${locationId}`, SK: `LOCKER#${lockerId}` } }));
-    if (!lockerResult.Item) throw new NotFoundError('Locker not found at this location');
-    const now = new Date().toISOString();
-    await ddb.send(new TransactWriteCommand({
-      TransactItems: [
-        {
-          Update: {
-            TableName: MAIN_TABLE, Key: { PK: `LOC#${locationId}`, SK: `SCANNER#${scannerId}` },
-            UpdateExpression: 'SET assigned_locker_id = :locker, updated_at = :now',
-            ConditionExpression: 'attribute_exists(PK)',
-            ExpressionAttributeValues: { ':locker': lockerId, ':now': now },
-          },
-        },
-        {
-          Update: {
-            TableName: MAIN_TABLE, Key: { PK: `LOC#${locationId}`, SK: `LOCKER#${lockerId}` },
-            UpdateExpression: 'SET assigned_scanner_id = :scanner, updated_at = :now',
-            ConditionExpression: 'attribute_exists(PK)',
-            ExpressionAttributeValues: { ':scanner': scannerId, ':now': now },
-          },
-        },
-      ],
-    }));
-    await logAudit(adminId, 'assign_locker', { target_id: lockerId, location_id: locationId, scanner_id: scannerId });
-    return { message: 'Locker assigned to scanner' };
-  }
-
   // GET /admin/locations/{id}/activity
   if (method === 'GET' && /^\/admin\/locations\/[^/]+\/activity$/.test(path)) {
     const locationId = path.split('/')[3];
     const queryParams = event.queryStringParameters || {};
     const scannerId = queryParams.scanner_id;
-    const lockerId = queryParams.locker_id;
     const entryLogsTable = getEntryLogsTableName();
 
     const scanResult = await ddb.send(new ScanCommand({
@@ -239,10 +171,6 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
 
     if (scannerId && scannerId !== 'all') {
       items = items.filter((item) => item.scanner_id === scannerId || item.device_id === scannerId);
-    }
-
-    if (lockerId && lockerId !== 'all') {
-      items = items.filter((item) => item.locker_id === lockerId);
     }
 
     // Sort timestamp descending
@@ -302,15 +230,8 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     const deviceId = path.split('/')[3];
     const body = parseJsonBody(event);
 
-    await sqs.send(new SendMessageCommand({
-      QueueUrl: UNLOCK_QUEUE,
-      MessageBody: JSON.stringify({
-        location_id: body.location_id,
-        device_id: deviceId,
-        user_id: adminId,
-        timestamp: new Date().toISOString()
-      })
-    }));
+    const mqttPublisher = createMqttPublisher();
+    await mqttPublisher.sendGateUnlockSignal(deviceId, `remote_${Date.now()}`);
 
     await logAudit(adminId, 'remote_unlock', { target_id: deviceId, reason: body.reason });
     return { message: 'Remote unlock triggered' };

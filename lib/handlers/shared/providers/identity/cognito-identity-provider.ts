@@ -1,19 +1,15 @@
 import {
   AdminCreateUserCommand,
   AdminGetUserCommand,
-  AdminResetUserPasswordCommand,
   CognitoIdentityProviderClient,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { randomBytes } from 'crypto';
-import { IdentityProvider } from './types';
+import { IdentityProvider } from '../types';
 
-/**
- * Generates a high-entropy temporary password compliant with Cognito password policies.
- */
 function generateStrongTemporaryPassword(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
   const bytes = randomBytes(16);
-  let password = 'Aa1!'; // Guarantees upper, lower, number, special char
+  let password = 'Aa1!';
   for (let i = 0; i < 12; i++) {
     password += chars[bytes[i] % chars.length];
   }

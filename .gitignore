@@ -9,3 +9,5 @@ frontend/*/dist
 frontend/**/dist
 frontend/*/node_modules
 *.tsbuildinfo
+certs/
+certs

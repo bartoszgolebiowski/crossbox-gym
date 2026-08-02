@@ -4,32 +4,11 @@ import { IntegrationTestContext } from './types';
 
 export interface AccessEntryRecord {
   entry_id: string;
-  unlock_command_id: string;
   scanner_id: string;
-  locker_id: string;
   qr_provider_id: string;
   location_id: string;
   timestamp: string;
   result: 'success' | 'denied';
-}
-
-export interface UnlockOutboxRecord {
-  PK: string;
-  SK: string;
-  status: string;
-  delivery_attempts: number;
-  OutboxStatusPK: string;
-  dispatched_at?: string;
-  command: {
-    command_id: string;
-    entry_id: string;
-    requested_at: string;
-    scanner_id: string;
-    locker_id: string;
-    user_id: string;
-    provider_id: string;
-    duration_seconds: number;
-  };
 }
 
 export interface AntiPassbackStateRecord {
@@ -54,15 +33,6 @@ export class TestAccessRepository {
       ExpressionAttributeValues: { ':pk': `USER#${userId}` },
     }));
     return (res.Items || []) as AccessEntryRecord[];
-  }
-
-  /** Fetches a pending or dispatched outbox item by command ID */
-  async getOutboxItem(commandId: string): Promise<UnlockOutboxRecord | undefined> {
-    const res = await this.ddb.send(new GetCommand({
-      TableName: this.context.mainTableName,
-      Key: { PK: `OUTBOX#${commandId}`, SK: 'OUTBOX' },
-    }));
-    return res.Item as UnlockOutboxRecord | undefined;
   }
 
   /** Fetches anti-passback state for a user at a location */
@@ -114,17 +84,5 @@ export class TestAccessRepository {
         ],
       },
     })).catch(() => undefined);
-  }
-
-  /** Deletes a list of outbox items by command IDs */
-  async deleteOutboxItems(commandIds: Iterable<string>): Promise<void> {
-    const requests = Array.from(commandIds).map((id) => ({
-      DeleteRequest: { Key: { PK: `OUTBOX#${id}`, SK: 'OUTBOX' } },
-    }));
-    for (let offset = 0; offset < requests.length; offset += 25) {
-      await this.ddb.send(new BatchWriteCommand({
-        RequestItems: { [this.context.mainTableName]: requests.slice(offset, offset + 25) },
-      })).catch(() => undefined);
-    }
   }
 }

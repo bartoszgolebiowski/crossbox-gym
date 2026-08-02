@@ -1,7 +1,10 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 
-const rawClient = new DynamoDBClient({});
-export const ddb = DynamoDBDocumentClient.from(rawClient, {
+const client = new DynamoDBClient({
+  region: process.env.AWS_REGION || 'eu-central-1',
+});
+
+export const ddb = DynamoDBDocumentClient.from(client, {
   marshallOptions: { removeUndefinedValues: true },
 });

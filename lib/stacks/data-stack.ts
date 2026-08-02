@@ -16,7 +16,6 @@ export class CrossboxDataStack extends cdk.Stack {
   public readonly mainTable: dynamodb.Table;
   public readonly entryLogsTable: dynamodb.Table;
   public readonly auditLogsTable: dynamodb.Table;
-  public readonly unlockQueue: sqs.Queue;
   public readonly userPool: cognito.UserPool;
   public readonly userPoolClient: cognito.UserPoolClient;
 
@@ -96,12 +95,7 @@ export class CrossboxDataStack extends cdk.Stack {
       removalPolicy,
     });
 
-    // --- 2. SQS Queue ---
-    this.unlockQueue = new sqs.Queue(this, 'UnlockQueue', {
-      visibilityTimeout: cdk.Duration.seconds(30),
-    });
-
-    // --- 3. Cognito User Pool & Client ---
+    // --- 2. Cognito User Pool & Client ---
     this.userPool = new cognito.UserPool(this, 'UserPool', {
       selfSignUpEnabled: false,
       signInAliases: { email: true },

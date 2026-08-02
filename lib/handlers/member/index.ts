@@ -1,13 +1,11 @@
 import { PutCommand, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
-import { getConfigItem, getUserProfile, getUserSubscription } from '../shared/db-helpers';
-import { ddb } from '../shared/ddb-client';
-import { signQrPayload } from '../shared/hash-helpers';
+import { ddb, getConfigItem, getUserProfile, getUserSubscription } from '../shared/database';
+import { signQrPayload } from '../shared/crypto';
 import { extractJwtClaims, NotFoundError, parseJsonBody, UnauthorizedError, ValidationError, withHandler } from '../shared/http';
 import { createPaymentProvider } from '../shared/providers';
 import { ConsentRecord } from '../shared/types';
-
-import { getMainTableName, getPaymentProvider } from '../shared/env';
+import { getMainTableName, getPaymentProvider } from '../shared/config';
 
 export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
   const method = event.requestContext.http.method;

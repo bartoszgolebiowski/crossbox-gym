@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
-import { getTestContext, createTestUserSession, createTestLocation, createTestDevice, generateTestQRPayload, cleanupTestLocation } from './lib/test-helpers.ts';
+import { getTestContext, createTestUserSession, createTestLocation, createTestDevice, generateTestQRPayload, cleanupTestLocation, scanMockDevice } from './lib/test-helpers.ts';
 import { IntegrationTestContext, TestUserSession, TestLocationRecord, TestDeviceRecord } from './lib/types.ts';
 
 describe('Turnstile Entry & Device Verification Test Suite', () => {
@@ -28,88 +28,44 @@ describe('Turnstile Entry & Device Verification Test Suite', () => {
     }
   });
 
-  test('POST /device/verify with valid device API key and signed QR returns success', async () => {
+  test('VerifyEntry Lambda with valid signed QR returns success and gate unlock signal', async () => {
     const qrPayload = await generateTestQRPayload(context, memberSession.userId);
-    const res = await fetch(`${context.apiUrl}/device/verify`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': rawApiKey
-      },
-      body: JSON.stringify({ qr_code: qrPayload })
-    });
+    const data = await scanMockDevice(context, rawApiKey, qrPayload, testDevice.device.scanner_id);
 
-    assert.equal(res.status, 200);
-    const data = await res.json() as any;
     assert.equal(data.result, 'success');
+    assert.equal(data.action, 'open_gate');
   });
 
-  test('POST /device/verify anti-passback denies second scan within 15 minutes', async () => {
+  test('VerifyEntry Lambda anti-passback denies second scan within 15 minutes', async () => {
     const qrPayload = await generateTestQRPayload(context, memberSession.userId);
-    const res = await fetch(`${context.apiUrl}/device/verify`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': rawApiKey
-      },
-      body: JSON.stringify({ qr_code: qrPayload })
-    });
+    const data = await scanMockDevice(context, rawApiKey, qrPayload, testDevice.device.scanner_id);
 
-    assert.equal(res.status, 200);
-    const data = await res.json() as any;
     assert.equal(data.result, 'denied');
     assert.equal(data.reason, 'anti_passback_cooldown');
   });
 
-  test('POST /device/verify with invalid x-api-key returns denied invalid_device', async () => {
+  test('VerifyEntry Lambda with invalid/missing client_id returns denied', async () => {
     const qrPayload = await generateTestQRPayload(context, memberSession.userId);
-    const res = await fetch(`${context.apiUrl}/device/verify`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': 'bad_api_key_999'
-      },
-      body: JSON.stringify({ qr_code: qrPayload })
-    });
+    const data = await scanMockDevice(context, rawApiKey, qrPayload, '');
 
-    assert.equal(res.status, 200);
-    const data = await res.json() as any;
     assert.equal(data.result, 'denied');
-    assert.equal(data.reason, 'invalid_device');
+    assert.equal(data.reason, 'missing_or_invalid_client_id');
   });
 
-  test('POST /device/verify with expired QR (>60s) returns denied qr_expired', async () => {
+  test('VerifyEntry Lambda with expired QR (>60s) returns denied qr_expired', async () => {
     const expiredUser = await createTestUserSession(context, { role: 'member', withActiveSubscription: true });
     const qrPayload = await generateTestQRPayload(context, expiredUser.userId, { timestampOffsetSeconds: -120 });
-    const res = await fetch(`${context.apiUrl}/device/verify`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': rawApiKey
-      },
-      body: JSON.stringify({ qr_code: qrPayload })
-    });
+    const data = await scanMockDevice(context, rawApiKey, qrPayload, testDevice.device.scanner_id);
 
-    assert.equal(res.status, 200);
-    const data = await res.json() as any;
     assert.equal(data.result, 'denied');
     assert.equal(data.reason, 'qr_expired');
   });
 
-  test('POST /device/verify with tampered HMAC returns denied invalid_qr_hmac', async () => {
+  test('VerifyEntry Lambda with tampered HMAC returns denied invalid_qr_hmac', async () => {
     const tamperedUser = await createTestUserSession(context, { role: 'member', withActiveSubscription: true });
     const qrPayload = await generateTestQRPayload(context, tamperedUser.userId, { customHmacKey: 'invalid_secret_key' });
-    const res = await fetch(`${context.apiUrl}/device/verify`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': rawApiKey
-      },
-      body: JSON.stringify({ qr_code: qrPayload })
-    });
+    const data = await scanMockDevice(context, rawApiKey, qrPayload, testDevice.device.scanner_id);
 
-    assert.equal(res.status, 200);
-    const data = await res.json() as any;
     assert.equal(data.result, 'denied');
     assert.equal(data.reason, 'invalid_qr_hmac');
   });

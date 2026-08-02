@@ -2,25 +2,16 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { adminApiClient } from '../services/apiClient';
 
 export interface LocationItem {
-  PK: string;
-  SK: string;
+  location_id: string;
   name: string;
-  address?: string;
-  created_at?: string;
+  address: string;
+  status: string;
 }
 
 export interface ScannerItem {
   scanner_id: string;
   location_id: string;
   name: string;
-  assigned_locker_id?: string;
-}
-
-export interface LockerItem {
-  locker_id: string;
-  location_id: string;
-  name: string;
-  assigned_scanner_id?: string;
 }
 
 export interface DeviceItem {
@@ -38,7 +29,6 @@ export interface AdminOpsState {
   overrideOutput: string | null;
   locationsList: LocationItem[];
   scannersList: ScannerItem[];
-  lockersList: LockerItem[];
   devicesList: DeviceItem[];
 }
 
@@ -49,7 +39,6 @@ const initialState: AdminOpsState = {
   overrideOutput: null,
   locationsList: [],
   scannersList: [],
-  lockersList: [],
   devicesList: [],
 };
 
@@ -90,18 +79,6 @@ export const fetchScannersThunk = createAsyncThunk(
   }
 );
 
-export const fetchLockersThunk = createAsyncThunk(
-  'adminOps/fetchLockers',
-  async (locationId: string, { rejectWithValue }) => {
-    try {
-      const data = await adminApiClient.get(`/admin/locations/${locationId}/lockers`);
-      return { locationId, lockers: (Array.isArray(data) ? data : []) as LockerItem[] };
-    } catch (err: any) {
-      return rejectWithValue(`Error: ${err.message}`);
-    }
-  }
-);
-
 export const fetchDevicesThunk = createAsyncThunk(
   'adminOps/fetchDevices',
   async (locationId: string, { rejectWithValue }) => {
@@ -120,56 +97,6 @@ export const createScannerThunk = createAsyncThunk(
     try {
       const data = await adminApiClient.post(`/admin/locations/${payload.locationId}/scanners`, { name: payload.name, reader_adapter: 'mock', allowed_qr_providers: ['basic-subscription', 'mock'] });
       dispatch(fetchScannersThunk(payload.locationId));
-      return JSON.stringify(data, null, 2);
-    } catch (err: any) {
-      return rejectWithValue(`Error: ${err.message}`);
-    }
-  }
-);
-
-export const createLockerThunk = createAsyncThunk(
-  'adminOps/createLocker',
-  async (payload: { locationId: string; name: string }, { rejectWithValue, dispatch }) => {
-    try {
-      const data = await adminApiClient.post(`/admin/locations/${payload.locationId}/lockers`, { name: payload.name, lock_adapter: 'mock', unlock_duration_seconds: 5, adapter_configuration: {} });
-      dispatch(fetchLockersThunk(payload.locationId));
-      return JSON.stringify(data, null, 2);
-    } catch (err: any) {
-      return rejectWithValue(`Error: ${err.message}`);
-    }
-  }
-);
-
-export const registerAndAssignLockerThunk = createAsyncThunk(
-  'adminOps/registerAndAssignLocker',
-  async (payload: { locationId: string; scannerId: string; lockerName: string }, { dispatch, rejectWithValue }) => {
-    try {
-      const lockerRes = await adminApiClient.post(`/admin/locations/${payload.locationId}/lockers`, {
-        name: payload.lockerName,
-        lock_adapter: 'mock',
-        unlock_duration_seconds: 5,
-        adapter_configuration: {},
-      });
-      const lockerId = (lockerRes as any)?.locker_id || (lockerRes as any)?.SK?.replace(/^LOCKER#/, '');
-      if (lockerId && payload.scannerId) {
-        await adminApiClient.put(`/admin/locations/${payload.locationId}/scanners/${payload.scannerId}/locker`, { locker_id: lockerId });
-      }
-      dispatch(fetchScannersThunk(payload.locationId));
-      dispatch(fetchLockersThunk(payload.locationId));
-      return JSON.stringify({ locker: lockerRes, assignedScannerId: payload.scannerId }, null, 2);
-    } catch (err: any) {
-      return rejectWithValue(`Error: ${err.message}`);
-    }
-  }
-);
-
-export const assignLockerThunk = createAsyncThunk(
-  'adminOps/assignLocker',
-  async (payload: { locationId: string; scannerId: string; lockerId: string }, { rejectWithValue, dispatch }) => {
-    try {
-      const data = await adminApiClient.put(`/admin/locations/${payload.locationId}/scanners/${payload.scannerId}/locker`, { locker_id: payload.lockerId });
-      dispatch(fetchScannersThunk(payload.locationId));
-      dispatch(fetchLockersThunk(payload.locationId));
       return JSON.stringify(data, null, 2);
     } catch (err: any) {
       return rejectWithValue(`Error: ${err.message}`);
@@ -253,9 +180,6 @@ const adminSlice = createSlice({
       .addCase(fetchScannersThunk.fulfilled, (state, action) => {
         state.scannersList = action.payload.scanners;
       })
-      .addCase(fetchLockersThunk.fulfilled, (state, action) => {
-        state.lockersList = action.payload.lockers;
-      })
       .addCase(fetchDevicesThunk.fulfilled, (state, action) => {
         state.devicesList = action.payload.devices;
       })
@@ -263,24 +187,6 @@ const adminSlice = createSlice({
         state.accessOutput = action.payload;
       })
       .addCase(createScannerThunk.rejected, (state, action) => {
-        state.accessOutput = action.payload as string;
-      })
-      .addCase(createLockerThunk.fulfilled, (state, action) => {
-        state.accessOutput = action.payload;
-      })
-      .addCase(createLockerThunk.rejected, (state, action) => {
-        state.accessOutput = action.payload as string;
-      })
-      .addCase(registerAndAssignLockerThunk.fulfilled, (state, action) => {
-        state.accessOutput = action.payload;
-      })
-      .addCase(registerAndAssignLockerThunk.rejected, (state, action) => {
-        state.accessOutput = action.payload as string;
-      })
-      .addCase(assignLockerThunk.fulfilled, (state, action) => {
-        state.accessOutput = action.payload;
-      })
-      .addCase(assignLockerThunk.rejected, (state, action) => {
         state.accessOutput = action.payload as string;
       })
       .addCase(remoteUnlockThunk.fulfilled, (state, action) => {
@@ -310,7 +216,6 @@ export const selectRemoteOutput = (state: { adminOps: AdminOpsState }) => state.
 export const selectOverrideOutput = (state: { adminOps: AdminOpsState }) => state.adminOps.overrideOutput;
 export const selectLocationsList = (state: { adminOps: AdminOpsState }) => state.adminOps.locationsList;
 export const selectScannersList = (state: { adminOps: AdminOpsState }) => state.adminOps.scannersList;
-export const selectLockersList = (state: { adminOps: AdminOpsState }) => state.adminOps.lockersList;
 export const selectDevicesList = (state: { adminOps: AdminOpsState }) => state.adminOps.devicesList;
 
 export default adminSlice.reducer;

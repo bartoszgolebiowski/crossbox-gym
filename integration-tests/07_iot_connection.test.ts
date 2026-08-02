@@ -81,7 +81,7 @@ describe('AWS IoT Core Connection & Provisioning Integration Suite', () => {
     const tmpDir = path.join(process.cwd(), 'certs_test_tmp');
 
     try {
-      execSync(`npx tsx ./scripts/fetch-iot-certs.ts "${tmpDir}"`, {
+      execSync(`node ./scripts/fetch-iot-certs.mjs "${tmpDir}"`, {
         cwd: path.resolve(__dirname, '..'),
         env: { ...process.env, SECRET_NAME: secretName, AWS_REGION: region },
         stdio: 'pipe',
