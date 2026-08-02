@@ -89,7 +89,7 @@ export async function getStackOutputs(): Promise<StackOutputs> {
   const prefix = stackName.replace(/Stack$/, "");
 
   // 2. Query CloudFormation API if required outputs are missing
-  if (!merged.ApiUrl || !merged.UserPoolId || !merged.MainTableName) {
+  if (!merged.ApiUrl || !merged.UserPoolId || !merged.MainTableName || !merged.SecretNameOutput) {
     const cfn = new CloudFormationClient({ region });
     const possibleStackNames = [
       `${prefix}FrontendStack`,

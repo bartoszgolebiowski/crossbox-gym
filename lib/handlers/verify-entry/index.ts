@@ -40,6 +40,7 @@ async function sendMqttFeedback(scannerId: string | undefined, payload: Record<s
 }
 
 export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
+  console.log('[VerifyEntry] Incoming payload:', JSON.stringify(event, null, 2));
   const rawEvent = event as any;
   const apiKey = event.headers?.['x-api-key'] || rawEvent.api_key || rawEvent.apiKey;
   const targetScannerId = rawEvent.scannerId || rawEvent.scanner_id;
