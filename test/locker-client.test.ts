@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { AccessService } from '../lib/handlers/shared/providers';
-import { createLockerClient, MockLockerClient, MqttLockerClient } from '../lib/handlers/shared/providers/lockers';
+import { createLockerClient, MockLockerClient, MqttLockerClient, setLockerClientOverride } from '../lib/handlers/shared/providers/lockers';
 import { parseIotScanEvent, handler as verifyEntryHandler } from '../lib/handlers/verify-entry';
 
 test('Locker Client Suite - 1. MockLockerClient builds correct payload and topic', async () => {
@@ -82,6 +82,7 @@ test('Locker Client Suite - 5. verifyEntryHandler sends feedback to scanner and 
 
   try {
     const mockLockerClient = new MockLockerClient();
+    setLockerClientOverride(mockLockerClient);
 
     const scanEvent = {
       event_id: 'evt-456',
@@ -94,7 +95,7 @@ test('Locker Client Suite - 5. verifyEntryHandler sends feedback to scanner and 
       },
     };
 
-    const result: any = await verifyEntryHandler(scanEvent, mockLockerClient);
+    const result: any = await verifyEntryHandler(scanEvent);
 
     assert.strictEqual(result.result, 'success');
     assert.strictEqual(result.action, 'open_gate');
@@ -112,6 +113,7 @@ test('Locker Client Suite - 5. verifyEntryHandler sends feedback to scanner and 
     assert.strictEqual(mockLockerClient.sentCommands.length, 1);
     assert.strictEqual(mockLockerClient.sentCommands[0].topic, 'gym/lockers/locker-02/command');
   } finally {
+    setLockerClientOverride(undefined);
     AccessService.prototype.commitAccess = originalCommitAccess;
   }
 });

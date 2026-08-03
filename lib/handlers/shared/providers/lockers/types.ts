@@ -11,7 +11,7 @@ export interface LockerCommandPayload {
 }
 
 export interface ILockerClient {
-  openLocker(lockerId: string, options?: Partial<LockerCommandParams>): Promise<LockerCommandPayload>;
+  openLocker(lockerId?: string, options?: Partial<LockerCommandParams>): Promise<LockerCommandPayload>;
 }
 
 export type LockerClientType = 'mqtt' | 'mock';

@@ -171,9 +171,8 @@ export class CrossboxApiStack extends cdk.Stack {
       },
     });
     mainTable.grantReadWriteData(memberHandler);
-    if (!isTest) {
-      memberHandler.addToRolePolicy(ssmPolicy);
-    }
+    memberHandler.addToRolePolicy(ssmPolicy);
+    
     const memberIntegration = new HttpLambdaIntegration('MemberIntegration', memberHandler);
 
     this.httpApi.addRoutes({ path: '/member/dashboard', methods: [apigw.HttpMethod.GET], integration: memberIntegration, authorizer: jwtAuthorizer });
@@ -191,7 +190,9 @@ export class CrossboxApiStack extends cdk.Stack {
       environment: {
         ...commonEnv,
         ENTRY_LOGS_TABLE_NAME: entryLogsTable.tableName,
-        LOCKER_CLIENT_TYPE: 'mock',
+        LOCKER_CLIENT_TYPE: isTest ? 'mock' : 'mqtt',
+        SSM_IOT_ENDPOINT_PARAM: '/crossbox/iot/endpoint',
+        SSM_LOCKER_THING_NAME_PARAM: '/crossbox/iot/locker-thing-name',
       },
     });
     mainTable.grantReadWriteData(this.verifyEntryFunction);
@@ -199,6 +200,10 @@ export class CrossboxApiStack extends cdk.Stack {
     this.verifyEntryFunction.addToRolePolicy(new iam.PolicyStatement({
       actions: ['iot:Publish', 'iot:DescribeEndpoint'],
       resources: ['*'],
+    }));
+    this.verifyEntryFunction.addToRolePolicy(new iam.PolicyStatement({
+      actions: ['ssm:GetParameter', 'ssm:GetParameters'],
+      resources: [`arn:aws:ssm:${this.region}:${this.account}:parameter/crossbox/iot/*`],
     }));
 
     // AdminHandler

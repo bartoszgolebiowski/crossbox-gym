@@ -1,27 +1,41 @@
 import { IoTDataPlaneClient, PublishCommand } from '@aws-sdk/client-iot-data-plane';
+import { ILockerConfigProvider, SsmLockerConfigProvider } from './ssm-config-provider';
 import { ILockerClient, LockerCommandParams, LockerCommandPayload } from './types';
 
 export class MqttLockerClient implements ILockerClient {
-  private iotData?: IoTDataPlaneClient;
+  private iotDataClients = new Map<string, IoTDataPlaneClient>();
+  private readonly configProvider: ILockerConfigProvider;
 
-  constructor(private readonly endpoint?: string) {
-    const iotEndpoint = endpoint || process.env.IOT_ENDPOINT;
-    if (iotEndpoint) {
-      this.iotData = new IoTDataPlaneClient({ endpoint: `https://${iotEndpoint}` });
+  constructor(endpointOrConfigProvider?: string | ILockerConfigProvider) {
+    if (typeof endpointOrConfigProvider === 'string') {
+      const endpointStr = endpointOrConfigProvider;
+      this.configProvider = {
+        async getConfig() {
+          return {
+            endpoint: endpointStr,
+            lockerThingName: process.env.LOCKER_THING_NAME || 'crossbox-locker-relay-01',
+          };
+        },
+      };
+    } else if (endpointOrConfigProvider) {
+      this.configProvider = endpointOrConfigProvider;
+    } else {
+      this.configProvider = new SsmLockerConfigProvider();
     }
   }
 
-  private getClient(): IoTDataPlaneClient {
-    if (!this.iotData) {
-      const endpoint = process.env.IOT_ENDPOINT;
-      this.iotData = new IoTDataPlaneClient(endpoint ? { endpoint: `https://${endpoint}` } : {});
-    }
-    return this.iotData;
-  }
+  async openLocker(lockerId?: string, options?: Partial<LockerCommandParams>): Promise<LockerCommandPayload> {
+    const config = await this.configProvider.getConfig();
+    const targetLockerId = (lockerId && lockerId.trim()) ? lockerId.trim() : config.lockerThingName;
 
-  async openLocker(lockerId: string, options?: Partial<LockerCommandParams>): Promise<LockerCommandPayload> {
-    if (!lockerId) {
-      throw new Error('lockerId is required to open locker');
+    if (!targetLockerId) {
+      throw new Error('lockerId or default lockerThingName is required to open locker');
+    }
+
+    let client = this.iotDataClients.get(config.endpoint);
+    if (!client) {
+      client = new IoTDataPlaneClient(config.endpoint ? { endpoint: `https://${config.endpoint}` } : {});
+      this.iotDataClients.set(config.endpoint, client);
     }
 
     const payload: LockerCommandPayload = {
@@ -34,10 +48,9 @@ export class MqttLockerClient implements ILockerClient {
       },
     };
 
-    const topic = `gym/lockers/${lockerId}/command`;
+    const topic = `gym/lockers/${targetLockerId}/command`;
 
     try {
-      const client = this.getClient();
       await client.send(
         new PublishCommand({
           topic,
@@ -47,7 +60,7 @@ export class MqttLockerClient implements ILockerClient {
       );
       console.log(`[MqttLockerClient] Published unlock command to ${topic}:`, payload);
     } catch (err) {
-      console.warn(`[MqttLockerClient] Failed to send MQTT unlock command to locker ${lockerId}:`, err);
+      console.warn(`[MqttLockerClient] Failed to send MQTT unlock command to locker ${targetLockerId}:`, err);
       throw err;
     }
 

@@ -3,6 +3,7 @@ import * as iam from 'aws-cdk-lib/aws-iam';
 import * as iot from 'aws-cdk-lib/aws-iot';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as cr from 'aws-cdk-lib/custom-resources';
 import { Construct } from 'constructs';
 import { CrossboxApiStack } from './api-stack';
@@ -170,6 +171,19 @@ export class CrossboxIotStack extends cdk.Stack {
       sourceArn: `arn:aws:iot:${this.region}:${this.account}:rule/CrossboxQrScannerScanRule`,
     });
 
+    // SSM Parameter Store Parameters for runtime dynamic lookup
+    new ssm.StringParameter(this, 'IotEndpointParameter', {
+      parameterName: '/crossbox/iot/endpoint',
+      stringValue: customResource.getAttString('IotEndpoint'),
+      description: 'AWS IoT Core ATS Data Endpoint URL for Crossbox Gym',
+    });
+
+    new ssm.StringParameter(this, 'LockerThingNameParameter', {
+      parameterName: '/crossbox/iot/locker-thing-name',
+      stringValue: lockThingName,
+      description: 'AWS IoT Locker Relay Thing Name for Crossbox Gym',
+    });
+
     // Stack Outputs
     new cdk.CfnOutput(this, 'SecretNameOutput', {
       value: secretName,
@@ -189,6 +203,51 @@ export class CrossboxIotStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'IotEndpointOutput', {
       value: customResource.getAttString('IotEndpoint'),
       description: 'AWS IoT Core ATS Endpoint URL',
+    });
+
+    new cdk.CfnOutput(this, 'IotEndpoint', {
+      value: customResource.getAttString('IotEndpoint'),
+      description: 'AWS IoT Core ATS Endpoint URL',
+    });
+
+    new cdk.CfnOutput(this, 'SecretName', {
+      value: secretName,
+      description: 'AWS Secrets Manager Secret Name for fetching certificates',
+    });
+
+    new cdk.CfnOutput(this, 'ScannerClientId', {
+      value: thingName,
+      description: 'AWS IoT QR Scanner Client ID / Thing Name',
+    });
+
+    new cdk.CfnOutput(this, 'LockerClientId', {
+      value: lockThingName,
+      description: 'AWS IoT Lock Relay Client ID / Thing Name',
+    });
+
+    new cdk.CfnOutput(this, 'ScannerScanTopic', {
+      value: `gym/scanners/${thingName}/scan`,
+      description: 'MQTT topic for QR scanner to publish scan payloads',
+    });
+
+    new cdk.CfnOutput(this, 'ScannerFeedbackTopic', {
+      value: `gym/scanners/${thingName}/feedback`,
+      description: 'MQTT topic for QR scanner to subscribe for access feedback',
+    });
+
+    new cdk.CfnOutput(this, 'LockerCommandTopic', {
+      value: `gym/lockers/${lockThingName}/command`,
+      description: 'MQTT topic for locker relay to subscribe for unlock commands',
+    });
+
+    new cdk.CfnOutput(this, 'ScannerCertPath', {
+      value: `certs/${thingName}/`,
+      description: 'Local directory path for fetched scanner certificates',
+    });
+
+    new cdk.CfnOutput(this, 'LockerCertPath', {
+      value: `certs/${lockThingName}/`,
+      description: 'Local directory path for fetched locker certificates',
     });
   }
 

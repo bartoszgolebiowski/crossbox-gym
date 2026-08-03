@@ -57,10 +57,8 @@ export function parseIotScanEvent(
   return { valid: true, event: iotEvent, scannerId, lockerId };
 }
 
-export const handler = async (event: any, context?: any, lockerClientOverride?: ILockerClient) => {
-  const lockerClient = (lockerClientOverride && typeof lockerClientOverride.openLocker === 'function')
-    ? lockerClientOverride
-    : createLockerClient();
+export const handler = async (event: any, context?: any) => {
+  const lockerClient = createLockerClient();
 
   const parsed = parseIotScanEvent(event);
   if (!parsed.valid) {
@@ -69,7 +67,7 @@ export const handler = async (event: any, context?: any, lockerClientOverride?: 
   }
 
   const { scannerId, event: iotEvent } = parsed;
-  const lockerId = parsed.lockerId || scannerId;
+  const lockerId = parsed.lockerId || process.env.LOCKER_THING_NAME || 'crossbox-locker-relay-01';
 
   // 1. Verify raw scan payload using provider strategy abstraction
   const verification = await accessService.verifyRawData(iotEvent.payload.raw_data);
