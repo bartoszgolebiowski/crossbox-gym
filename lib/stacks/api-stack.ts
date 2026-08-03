@@ -191,6 +191,7 @@ export class CrossboxApiStack extends cdk.Stack {
       environment: {
         ...commonEnv,
         ENTRY_LOGS_TABLE_NAME: entryLogsTable.tableName,
+        LOCKER_CLIENT_TYPE: 'mock',
       },
     });
     mainTable.grantReadWriteData(this.verifyEntryFunction);

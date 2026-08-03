@@ -55,7 +55,6 @@ export async function getScannerById(tableName: string, scannerId: string): Prom
     FilterExpression: 'scanner_id = :sid AND #status = :status',
     ExpressionAttributeNames: { '#status': 'status' },
     ExpressionAttributeValues: { ':sid': scannerId, ':status': 'active' },
-    Limit: 1,
   }));
   return result.Items?.[0] as ScannerItem | undefined;
 }

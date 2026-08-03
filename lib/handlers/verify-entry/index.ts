@@ -1,7 +1,8 @@
-import { AccessService } from '../shared/providers';
-import { MqttFeedbackPublisher } from '../shared/providers/feedback';
-import { createLockerClient, ILockerClient } from '../shared/providers/lockers';
+import { AccessService } from '../shared/providers/access-service';
+import { MqttFeedbackPublisher } from '../shared/providers/feedback/mqtt-feedback';
+import { createLockerClient, ILockerClient } from '../shared/providers/lockers/index';
 import { IotScanEvent } from '../shared/providers/types';
+
 
 const accessService = new AccessService();
 const feedbackPublisher = new MqttFeedbackPublisher();
@@ -56,8 +57,10 @@ export function parseIotScanEvent(
   return { valid: true, event: iotEvent, scannerId, lockerId };
 }
 
-export const handler = async (event: any, lockerClientOverride?: ILockerClient) => {
-  const lockerClient = lockerClientOverride || createLockerClient();
+export const handler = async (event: any, context?: any, lockerClientOverride?: ILockerClient) => {
+  const lockerClient = (lockerClientOverride && typeof lockerClientOverride.openLocker === 'function')
+    ? lockerClientOverride
+    : createLockerClient();
 
   const parsed = parseIotScanEvent(event);
   if (!parsed.valid) {

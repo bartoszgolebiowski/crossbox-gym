@@ -8,7 +8,9 @@ import { fileURLToPath } from 'node:url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
-const certsDir = path.join(rootDir, 'certs');
+const certsDir = process.argv[2] ? path.resolve(process.argv[2]) : path.join(rootDir, 'certs');
+
+
 
 // Parse .env if present
 if (fs.existsSync('.env')) {

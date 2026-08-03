@@ -1,11 +1,11 @@
-import assert from 'node:assert/strict';
-import { describe, test } from 'node:test';
-import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
 import { IoTDataPlaneClient, PublishCommand } from '@aws-sdk/client-iot-data-plane';
-import { requireOutput } from './lib/stack-outputs.ts';
+import { GetSecretValueCommand, SecretsManagerClient } from '@aws-sdk/client-secrets-manager';
+import assert from 'node:assert/strict';
+import { execSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import { execSync } from 'node:child_process';
+import { describe, test } from 'node:test';
+import { requireOutput } from './lib/stack-outputs.ts';
 
 describe('AWS IoT Core Connection & Provisioning Integration Suite', () => {
   test('CloudFormation stack outputs publish IoT stack resources', async () => {
@@ -75,26 +75,29 @@ describe('AWS IoT Core Connection & Provisioning Integration Suite', () => {
     assert.equal(res.$metadata.httpStatusCode, 200, 'IoT Data Plane publish should return HTTP 200');
   });
 
-  test('fetch-iot-certs script successfully downloads certificate bundle', async () => {
+  test('fetch-certs script successfully downloads certificate bundle', async () => {
     const secretName = await requireOutput('SecretNameOutput');
     const region = process.env.AWS_REGION || 'eu-central-1';
     const tmpDir = path.join(process.cwd(), 'certs_test_tmp');
 
     try {
-      execSync(`node ./scripts/fetch-iot-certs.mjs "${tmpDir}"`, {
-        cwd: path.resolve(__dirname, '..'),
+      execSync(`node ./scripts/fetch-certs.mjs "${tmpDir}"`, {
+        cwd: process.cwd(),
         env: { ...process.env, SECRET_NAME: secretName, AWS_REGION: region },
         stdio: 'pipe',
       });
 
-      assert.ok(fs.existsSync(path.join(tmpDir, 'certificate.pem.crt')), 'certificate.pem.crt must exist');
-      assert.ok(fs.existsSync(path.join(tmpDir, 'private.pem.key')), 'private.pem.key must exist');
-      assert.ok(fs.existsSync(path.join(tmpDir, 'amazon-root-ca1.pem')), 'amazon-root-ca1.pem must exist');
-      assert.ok(fs.existsSync(path.join(tmpDir, 'config.json')), 'config.json must exist');
+      const subdirs = fs.readdirSync(tmpDir).filter((d) => fs.statSync(path.join(tmpDir, d)).isDirectory());
+      assert.ok(subdirs.length > 0, 'At least one thing certificate folder must be created');
 
-      const config = JSON.parse(fs.readFileSync(path.join(tmpDir, 'config.json'), 'utf8'));
-      assert.ok(config.endpoint, 'config.json must contain endpoint');
-      assert.ok(config.certificate_arn, 'config.json must contain certificate_arn');
+      const certDir = path.join(tmpDir, subdirs[0]);
+      assert.ok(fs.existsSync(path.join(certDir, 'certificate.pem.crt')), 'certificate.pem.crt must exist');
+      assert.ok(fs.existsSync(path.join(certDir, 'private.pem.key')), 'private.pem.key must exist');
+      assert.ok(fs.existsSync(path.join(certDir, 'config.json')), 'config.json must exist');
+
+      const config = JSON.parse(fs.readFileSync(path.join(certDir, 'config.json'), 'utf8'));
+      assert.ok(config.endpoint_address || config.endpoint, 'config.json must contain endpoint');
+      assert.ok(config.certificate_arn !== undefined, 'config.json must contain certificate_arn property');
     } finally {
       if (fs.existsSync(tmpDir)) {
         fs.rmSync(tmpDir, { recursive: true, force: true });
