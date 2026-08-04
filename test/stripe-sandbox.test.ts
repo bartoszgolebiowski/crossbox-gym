@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { describe, test, before } from 'node:test';
+import { before, describe, test } from 'node:test';
 import Stripe from 'stripe';
 import { StripePaymentProvider } from '../lib/handlers/shared/providers/payment';
 

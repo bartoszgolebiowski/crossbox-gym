@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { before, describe, test } from 'node:test';
+import { handler as stripeEventHandler } from '../lib/handlers/stripe-webhook/index.ts';
 import { getTestContext } from './lib/test-helpers.ts';
 import { IntegrationTestContext } from './lib/types.ts';
-import { handler as stripeEventHandler } from '../lib/handlers/stripe-webhook/index.ts';
 
 describe('Checkout & EventBridge Lifecycle Test Suite', () => {
   let context: IntegrationTestContext;

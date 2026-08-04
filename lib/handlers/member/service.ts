@@ -1,6 +1,6 @@
 import { signQrPayload } from '../shared/crypto';
-import { PaymentProvider } from '../shared/providers';
 import { ValidationError } from '../shared/http';
+import { PaymentProvider } from '../shared/providers';
 import { MemberRepository } from './repository';
 
 export interface MemberServiceDependencies {

@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { AccessService } from '../lib/handlers/shared/providers';
 import {
-  createLockerClient,
-  MockLockerClient,
-  MqttLockerClient,
-  setLockerClientOverride,
+    createLockerClient,
+    MockLockerClient,
+    MqttLockerClient,
+    setLockerClientOverride,
 } from '../lib/handlers/shared/providers/lockers';
 import { parseIotScanEvent, handler as verifyEntryHandler } from '../lib/handlers/verify-entry';
 

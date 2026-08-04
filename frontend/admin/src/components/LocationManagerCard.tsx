@@ -1,18 +1,18 @@
 import React, { useEffect, useReducer } from 'react';
 import { accessFormReducer, initialAccessFormState, updateAccessFormField } from '../reducers/accessFormReducer';
 import {
-  changeLocationFormField,
-  initialLocationFormState,
-  locationFormReducer,
+    changeLocationFormField,
+    initialLocationFormState,
+    locationFormReducer,
 } from '../reducers/locationFormReducer';
 import { useAdminDispatch, useAdminSelector } from '../store';
 import {
-  createLocationThunk,
-  createScannerThunk,
-  fetchScannersThunk,
-  listLocationsThunk,
-  selectAccessOutput,
-  selectLocationsList,
+    createLocationThunk,
+    createScannerThunk,
+    fetchScannersThunk,
+    listLocationsThunk,
+    selectAccessOutput,
+    selectLocationsList,
 } from '../store/adminSlice';
 
 const fieldLabelClass = 'mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-600';

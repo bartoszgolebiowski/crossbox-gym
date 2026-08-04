@@ -1,11 +1,11 @@
+import { ddb } from '../shared/database';
+import { IMqttFeedbackPublisher } from '../shared/providers';
 import { AccessService } from '../shared/providers/access-service';
 import { MqttFeedbackPublisher } from '../shared/providers/feedback/mqtt-feedback';
+import { ILockerClient } from '../shared/providers/lockers';
 import { createLockerClient } from '../shared/providers/lockers/index';
 import { IotScanEvent } from '../shared/providers/types';
-import { ddb } from '../shared/database';
 import { DynamoDbAccessRepository } from '../shared/repositories';
-import { IMqttFeedbackPublisher } from '../shared/providers';
-import { ILockerClient } from '../shared/providers/lockers';
 import { loadVerifyEntryEnvironment } from './environment';
 
 export interface VerifyEntryDependencies {
