@@ -1,7 +1,10 @@
 import { APIGatewayProxyEventV2, APIGatewayProxyResultV2 } from 'aws-lambda';
 
 export class HttpError extends Error {
-  constructor(public statusCode: number, message: string) {
+  constructor(
+    public statusCode: number,
+    message: string
+  ) {
     super(message);
     this.name = 'HttpError';
   }
@@ -55,12 +58,10 @@ const COMMON_HEADERS = {
   'Access-Control-Allow-Headers': 'Content-Type,Authorization,X-Amz-Date,X-Api-Key,X-Amz-Security-Token',
   'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
   'Access-Control-Allow-Credentials': 'true',
-  'Vary': 'Origin',
+  Vary: 'Origin',
 };
 
-export function withHandler(
-  handler: (event: APIGatewayProxyEventV2) => Promise<any>
-) {
+export function withHandler(handler: (event: APIGatewayProxyEventV2) => Promise<any>) {
   return async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
     // Handle CORS preflight OPTIONS request
     const method = event.requestContext?.http?.method || (event as any).httpMethod;
@@ -104,9 +105,7 @@ export function withHandler(
 export function parseJsonBody(event: APIGatewayProxyEventV2): Record<string, any> {
   if (!event.body) return {};
   try {
-    const bodyStr = event.isBase64Encoded
-      ? Buffer.from(event.body, 'base64').toString('utf-8')
-      : event.body;
+    const bodyStr = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf-8') : event.body;
     return JSON.parse(bodyStr);
   } catch {
     throw new ValidationError('Invalid JSON body');
@@ -162,7 +161,9 @@ export function assertAdmin(event: APIGatewayProxyEventV2): string {
   const claims = extractJwtClaims(event);
   const rawGroups = claims['cognito:groups'] || claims.groups;
   const groupsArray = normaliseGroups(rawGroups);
-  const isGroupAdmin = groupsArray.some((g: string) => typeof g === 'string' && ['admin', 'admins'].includes(g.toLowerCase()));
+  const isGroupAdmin = groupsArray.some(
+    (g: string) => typeof g === 'string' && ['admin', 'admins'].includes(g.toLowerCase())
+  );
   const role = claims['custom:role'] || claims.role;
   const isRoleAdmin = typeof role === 'string' && ['admin', 'admins'].includes(role.toLowerCase());
   if (!isGroupAdmin && !isRoleAdmin) {

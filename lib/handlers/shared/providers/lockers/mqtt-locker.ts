@@ -1,32 +1,30 @@
 import { IoTDataPlaneClient, PublishCommand } from '@aws-sdk/client-iot-data-plane';
-import { ILockerConfigProvider, SsmLockerConfigProvider } from './ssm-config-provider';
+import { ILockerConfigProvider } from './ssm-config-provider';
 import { ILockerClient, LockerCommandParams, LockerCommandPayload } from './types';
 
 export class MqttLockerClient implements ILockerClient {
   private iotDataClients = new Map<string, IoTDataPlaneClient>();
   private readonly configProvider: ILockerConfigProvider;
 
-  constructor(endpointOrConfigProvider?: string | ILockerConfigProvider) {
+  constructor(endpointOrConfigProvider: string | ILockerConfigProvider) {
     if (typeof endpointOrConfigProvider === 'string') {
       const endpointStr = endpointOrConfigProvider;
       this.configProvider = {
         async getConfig() {
           return {
             endpoint: endpointStr,
-            lockerThingName: process.env.LOCKER_THING_NAME || 'crossbox-locker-relay-01',
+            lockerThingName: 'crossbox-locker-relay-01',
           };
         },
       };
-    } else if (endpointOrConfigProvider) {
-      this.configProvider = endpointOrConfigProvider;
     } else {
-      this.configProvider = new SsmLockerConfigProvider();
+      this.configProvider = endpointOrConfigProvider;
     }
   }
 
   async openLocker(lockerId?: string, options?: Partial<LockerCommandParams>): Promise<LockerCommandPayload> {
     const config = await this.configProvider.getConfig();
-    const targetLockerId = (lockerId && lockerId.trim()) ? lockerId.trim() : config.lockerThingName;
+    const targetLockerId = lockerId && lockerId.trim() ? lockerId.trim() : config.lockerThingName;
 
     if (!targetLockerId) {
       throw new Error('lockerId or default lockerThingName is required to open locker');

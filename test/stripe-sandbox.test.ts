@@ -3,32 +3,38 @@ import { describe, test, before } from 'node:test';
 import Stripe from 'stripe';
 import { StripePaymentProvider } from '../lib/handlers/shared/providers/payment';
 
-const STRIPE_SANDBOX_KEY = process.env.STRIPE_TEST_SECRET_KEY || 
-  'rkcs_test_51TwRPa5dQmFRA5QemmI8qMKEbyecixxcCNWfOYBKCHu9wYI1ffWWx4DBT9Apd0boEMTUZshMuiyUMFkLjszEdx00vIuxDoMC';
+const liveStripeTestsEnabled = process.env.RUN_STRIPE_LIVE_TESTS === 'true';
+const describeLiveStripe = liveStripeTestsEnabled ? describe : describe.skip;
 
-describe('Stripe Live Sandbox Integration Test Suite (No Mocks)', () => {
+describeLiveStripe('Stripe Live Sandbox Integration Test Suite (No Mocks)', () => {
   let stripe: Stripe;
   let testCustomerId: string;
   let testPriceId: string;
 
   before(async () => {
-    const keyToUse = process.env.STRIPE_TEST_SECRET_KEY || STRIPE_SANDBOX_KEY;
-    stripe = new Stripe(keyToUse, {
+    const stripeSandboxKey = process.env.STRIPE_TEST_SECRET_KEY;
+    if (!stripeSandboxKey) {
+      throw new Error('STRIPE_TEST_SECRET_KEY is required when RUN_STRIPE_LIVE_TESTS=true');
+    }
+
+    stripe = new Stripe(stripeSandboxKey, {
       apiVersion: '2026-06-24.dahlia' as any,
     });
 
     // 0. Set Tax Settings Head Office Address required by Stripe Tax
-    await stripe.tax.settings.update({
-      head_office: {
-        address: {
-          line1: '350 5th Ave',
-          city: 'New York',
-          state: 'NY',
-          postal_code: '10118',
-          country: 'US',
+    await stripe.tax.settings
+      .update({
+        head_office: {
+          address: {
+            line1: '350 5th Ave',
+            city: 'New York',
+            state: 'NY',
+            postal_code: '10118',
+            country: 'US',
+          },
         },
-      },
-    }).catch(() => {});
+      })
+      .catch(() => {});
 
     // 1. Create a Product & Price in Stripe Sandbox
     const product = await stripe.products.create({
@@ -127,7 +133,7 @@ describe('Stripe Live Sandbox Integration Test Suite (No Mocks)', () => {
   test('StripePaymentProvider methods execute successfully with SSM or direct client', async () => {
     // Override SSM env var logic for local sandbox execution test
     process.env.STRIPE_SECRET_KEY_SSM_PATH = '/crossbox/stripe/secret-key';
-    
+
     // Validate direct SDK instantiation
     const directProvider = new StripePaymentProvider();
     assert.ok(directProvider);
@@ -145,10 +151,10 @@ describe('Stripe Live Sandbox Integration Test Suite (No Mocks)', () => {
           object: {
             customer_details: { email: `live-sandbox-${Date.now()}@crossboxgym.com` },
             subscription: `sub_sandbox_${Date.now()}`,
-            customer: testCustomerId
-          }
-        }
-      }
+            customer: testCustomerId,
+          },
+        },
+      },
     };
 
     // Set fallback table name and environment for local invocation without deployed stack

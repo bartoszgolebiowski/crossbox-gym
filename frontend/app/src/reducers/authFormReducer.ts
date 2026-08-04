@@ -57,7 +57,10 @@ export const setAuthMode = (mode: AuthMode): AuthFormAction => ({
   payload: mode,
 });
 
-export const changeAuthFormField = (field: keyof Omit<AuthFormState, 'authMode' | 'error'>, value: string): AuthFormAction => ({
+export const changeAuthFormField = (
+  field: keyof Omit<AuthFormState, 'authMode' | 'error'>,
+  value: string
+): AuthFormAction => ({
   type: 'CHANGE_FIELD',
   payload: { field, value },
 });

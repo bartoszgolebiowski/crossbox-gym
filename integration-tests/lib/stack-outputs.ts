@@ -8,13 +8,9 @@
  *   const table = await requireOutput("MainTableName");
  */
 
-import {
-  CloudFormationClient,
-  DescribeStacksCommand,
-  type Output,
-} from "@aws-sdk/client-cloudformation";
-import * as fs from "fs";
-import * as path from "path";
+import { CloudFormationClient, DescribeStacksCommand } from '@aws-sdk/client-cloudformation';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export type StackOutputs = Record<string, string>;
 
@@ -26,17 +22,15 @@ function argValue(flag: string): string | undefined {
 }
 
 function resolveStackName(): string {
-  const stackName = argValue("--stack") ?? process.env.STACK_NAME ?? "CrossboxGymDev";
+  const stackName = argValue('--stack') ?? process.env.STACK_NAME ?? 'CrossboxGymDev';
   if (!stackName) {
-    throw new Error(
-      "Missing stack name. Pass --stack <StackName> or set STACK_NAME env var."
-    );
+    throw new Error('Missing stack name. Pass --stack <StackName> or set STACK_NAME env var.');
   }
   return stackName;
 }
 
 function resolveRegion(): string {
-  return argValue("--region") ?? process.env.AWS_REGION ?? "eu-central-1";
+  return argValue('--region') ?? process.env.AWS_REGION ?? 'eu-central-1';
 }
 
 /** Fetches and caches all CfnOutput values for the target stacks. */
@@ -50,9 +44,9 @@ export async function getStackOutputs(): Promise<StackOutputs> {
   // 1. Try reading local cdk-outputs.json first
   let merged: StackOutputs = {};
   try {
-    const outputsPath = path.join(__dirname, "../../cdk-outputs.json");
+    const outputsPath = path.join(__dirname, '../../cdk-outputs.json');
     if (fs.existsSync(outputsPath)) {
-      const data = JSON.parse(fs.readFileSync(outputsPath, "utf8"));
+      const data = JSON.parse(fs.readFileSync(outputsPath, 'utf8'));
       for (const key of Object.keys(data)) {
         merged = { ...merged, ...data[key] };
       }
@@ -89,10 +83,16 @@ export async function getStackOutputs(): Promise<StackOutputs> {
     merged.VerifyEntryFunctionName = merged.ExportsOutputFnGetAttVerifyEntryACD6A33CArnA9006F02;
   }
 
-  const prefix = stackName.replace(/Stack$/, "");
+  const prefix = stackName.replace(/Stack$/, '');
 
   // 2. Query CloudFormation API if required outputs are missing
-  if (!merged.ApiUrl || !merged.UserPoolId || !merged.MainTableName || !merged.SecretNameOutput || !merged.AppCloudFrontUrl) {
+  if (
+    !merged.ApiUrl ||
+    !merged.UserPoolId ||
+    !merged.MainTableName ||
+    !merged.SecretNameOutput ||
+    !merged.AppCloudFrontUrl
+  ) {
     const cfn = new CloudFormationClient({ region });
     const possibleStackNames = [
       `${prefix}FrontendStack`,
@@ -104,9 +104,7 @@ export async function getStackOutputs(): Promise<StackOutputs> {
 
     for (const name of possibleStackNames) {
       try {
-        const { Stacks } = await cfn.send(
-          new DescribeStacksCommand({ StackName: name })
-        );
+        const { Stacks } = await cfn.send(new DescribeStacksCommand({ StackName: name }));
         const stack = Stacks?.[0];
         if (stack && stack.Outputs) {
           for (const o of stack.Outputs) {
@@ -136,9 +134,7 @@ export async function requireOutput(key: string): Promise<string> {
   const outputs = await getStackOutputs();
   const value = outputs[key];
   if (!value) {
-    throw new Error(
-      `Stack output "${key}" not found. Available outputs: ${Object.keys(outputs).join(", ")}`
-    );
+    throw new Error(`Stack output "${key}" not found. Available outputs: ${Object.keys(outputs).join(', ')}`);
   }
   return value;
 }

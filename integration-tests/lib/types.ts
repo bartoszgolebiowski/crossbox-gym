@@ -71,7 +71,7 @@ export interface TestScannerRecord {
   status: 'active' | 'disabled' | 'pending-enrollment';
   reader_adapter: string;
   allowed_qr_providers: string[];
-  assigned_locker_id?: string;
+  assigned_locker_id: string;
   api_key_hash: string;
   scanner_api_key?: string;
 }

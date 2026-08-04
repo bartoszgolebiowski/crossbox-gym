@@ -50,7 +50,9 @@ export const fetchHardwareDevicesThunk = createAsyncThunk(
   'hardwareActivity/fetchDevices',
   async (locationId: string, { rejectWithValue }) => {
     try {
-      const scannersList = await adminApiClient.get<ScannerItem[]>(`/admin/locations/${locationId}/scanners`).catch(() => []);
+      const scannersList = await adminApiClient
+        .get<ScannerItem[]>(`/admin/locations/${locationId}/scanners`)
+        .catch(() => []);
       return {
         scanners: scannersList || [],
       };
@@ -129,12 +131,8 @@ const hardwareActivitySlice = createSlice({
   },
 });
 
-export const {
-  setSelectedLocationId,
-  setSelectedDeviceId,
-  setTimeWindow,
-  setSearchFilter,
-} = hardwareActivitySlice.actions;
+export const { setSelectedLocationId, setSelectedDeviceId, setTimeWindow, setSearchFilter } =
+  hardwareActivitySlice.actions;
 
 export const selectHardwareActivityState = (state: { hardwareActivity: HardwareActivityState }) =>
   state.hardwareActivity;

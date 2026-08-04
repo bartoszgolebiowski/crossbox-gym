@@ -13,16 +13,8 @@ import {
 export function HardwareActivityCard() {
   const dispatch = useAdminDispatch();
   const locations = useAdminSelector((state) => state.adminOps.locationsList);
-  const {
-    selectedLocationId,
-    scanners,
-    selectedDeviceId,
-    timeWindow,
-    activityData,
-    isLoading,
-    error,
-    searchFilter,
-  } = useAdminSelector(selectHardwareActivityState);
+  const { selectedLocationId, scanners, selectedDeviceId, timeWindow, activityData, isLoading, error, searchFilter } =
+    useAdminSelector(selectHardwareActivityState);
 
   // Automatically select first location when available
   useEffect(() => {
@@ -69,12 +61,19 @@ export function HardwareActivityCard() {
           <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
             <span className="p-2 rounded-lg bg-teal-50 border border-teal-200 text-teal-700">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+                />
               </svg>
             </span>
             Hardware Activity & Usage Analytics
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">Track usage metrics and scan/unlock logs for location scanners.</p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Track usage metrics and scan/unlock logs for location scanners.
+          </p>
         </div>
         <button
           type="button"
@@ -82,7 +81,12 @@ export function HardwareActivityCard() {
           className="flex items-center gap-1.5 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-3 py-1.5 rounded-md transition cursor-pointer"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
           </svg>
           Refresh Logs
         </button>
@@ -225,14 +229,14 @@ export function HardwareActivityCard() {
                       {new Date(item.timestamp).toLocaleString()}
                     </td>
                     <td className="px-3.5 py-2.5 font-semibold text-slate-900">{item.user_id}</td>
-                    <td className="px-3.5 py-2.5 font-mono text-slate-600">{item.scanner_id || item.device_id || '-'}</td>
+                    <td className="px-3.5 py-2.5 font-mono text-slate-600">
+                      {item.scanner_id || item.device_id || '-'}
+                    </td>
                     <td className="px-3.5 py-2.5 text-slate-600">{item.qr_provider_id || 'basic-subscription'}</td>
                     <td className="px-3.5 py-2.5 text-right">
                       <span
                         className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider ${
-                          item.result === 'success'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : 'bg-rose-100 text-rose-800'
+                          item.result === 'success' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
                         }`}
                       >
                         {item.result}

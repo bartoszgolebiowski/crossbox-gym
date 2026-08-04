@@ -1,17 +1,13 @@
 import { expect, test } from '@playwright/test';
 import { requireOutput } from '../integration-tests/lib/stack-outputs.ts';
 import {
-    cleanupTestLocation,
-    cleanupTestUser,
-    cleanupTestUserByEmail,
-    createTestUserSession,
-    getTestContext,
+  cleanupTestLocation,
+  cleanupTestUser,
+  cleanupTestUserByEmail,
+  createTestUserSession,
+  getTestContext,
 } from '../integration-tests/lib/test-helpers.ts';
-import type {
-    IntegrationTestContext,
-    TestLocationRecord,
-    TestUserSession,
-} from '../integration-tests/lib/types.ts';
+import type { IntegrationTestContext, TestLocationRecord, TestUserSession } from '../integration-tests/lib/types.ts';
 
 function toHttpsUrl(domainOrUrl: string): string {
   return domainOrUrl.startsWith('http') ? domainOrUrl : `https://${domainOrUrl}`;
@@ -152,7 +148,9 @@ test.describe('Deployed CrossBox browser flows', () => {
 
     const output = page.locator('pre').filter({ hasText: locationName });
     await expect(output).toBeVisible();
-    const location = JSON.parse(await output.textContent() || '{}') as Omit<TestLocationRecord, 'locationId'> & { locationId?: string };
+    const location = JSON.parse((await output.textContent()) || '{}') as Omit<TestLocationRecord, 'locationId'> & {
+      locationId?: string;
+    };
     const locationId = location.locationId || location.PK?.replace(/^LOC#/, '');
     createdLocation = { ...location, locationId } as TestLocationRecord;
     expect(createdLocation.locationId).toBeTruthy();

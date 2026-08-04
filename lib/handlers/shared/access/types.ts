@@ -27,11 +27,13 @@ export interface ScannerItem {
   PK: string;
   SK: string;
   scanner_id: string;
+  device_id: string;
   location_id: string;
   name: string;
   status: ScannerStatus;
   reader_adapter: HardwareAdapterId;
   allowed_qr_providers: QrProviderId[];
+  assigned_locker_id: string;
   api_key_hash?: string;
   api_key_last_rotated_at?: string;
   hardware_metadata?: Record<string, string>;

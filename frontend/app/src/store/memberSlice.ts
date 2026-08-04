@@ -42,48 +42,39 @@ const initialState: MemberState = {
   checkoutStatus: null,
 };
 
-export const fetchDashboardThunk = createAsyncThunk(
-  'member/fetchDashboard',
-  async (_, { rejectWithValue }) => {
-    try {
-      const data = await apiClient.get<DashboardData>('/member/dashboard');
-      return data;
-    } catch (err: any) {
-      return rejectWithValue(err.message || 'Failed to load dashboard.');
-    }
+export const fetchDashboardThunk = createAsyncThunk('member/fetchDashboard', async (_, { rejectWithValue }) => {
+  try {
+    const data = await apiClient.get<DashboardData>('/member/dashboard');
+    return data;
+  } catch (err: any) {
+    return rejectWithValue(err.message || 'Failed to load dashboard.');
   }
-);
+});
 
-export const generateQRThunk = createAsyncThunk(
-  'member/generateQR',
-  async (_, { rejectWithValue }) => {
-    try {
-      const data = await apiClient.post<{ qr_code: string; expires_in: number; message?: string }>('/member/qr');
-      if (data?.qr_code) {
-        const qrImage = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(data.qr_code)}`;
-        return {
-          qrUrl: qrImage,
-          qrInfo: `✅ Signed HMAC Pass Valid (Expires in ${data.expires_in}s)`,
-        };
-      }
-      return rejectWithValue(data?.message || 'Active subscription required for turnstile access');
-    } catch (err: any) {
-      return rejectWithValue(err.message || 'Failed to generate QR pass.');
+export const generateQRThunk = createAsyncThunk('member/generateQR', async (_, { rejectWithValue }) => {
+  try {
+    const data = await apiClient.post<{ qr_code: string; expires_in: number; message?: string }>('/member/qr');
+    if (data?.qr_code) {
+      const qrImage = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(data.qr_code)}`;
+      return {
+        qrUrl: qrImage,
+        qrInfo: `✅ Signed HMAC Pass Valid (Expires in ${data.expires_in}s)`,
+      };
     }
+    return rejectWithValue(data?.message || 'Active subscription required for turnstile access');
+  } catch (err: any) {
+    return rejectWithValue(err.message || 'Failed to generate QR pass.');
   }
-);
+});
 
-export const fetchInvoicesThunk = createAsyncThunk(
-  'member/fetchInvoices',
-  async (_, { rejectWithValue }) => {
-    try {
-      const data = await apiClient.get<{ invoices: Invoice[] }>('/member/invoices');
-      return data.invoices || [];
-    } catch (err: any) {
-      return rejectWithValue(err.message || 'Failed to fetch invoices.');
-    }
+export const fetchInvoicesThunk = createAsyncThunk('member/fetchInvoices', async (_, { rejectWithValue }) => {
+  try {
+    const data = await apiClient.get<{ invoices: Invoice[] }>('/member/invoices');
+    return data.invoices || [];
+  } catch (err: any) {
+    return rejectWithValue(err.message || 'Failed to fetch invoices.');
   }
-);
+});
 
 export interface CreateCheckoutSessionInput {
   customerEmail: string;

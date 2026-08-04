@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { before, describe, test } from 'node:test';
-import { getTestContext, fetchDynamoItem } from './lib/test-helpers.ts';
+import { getTestContext } from './lib/test-helpers.ts';
 import { IntegrationTestContext } from './lib/types.ts';
 import { handler as stripeEventHandler } from '../lib/handlers/stripe-webhook/index.ts';
 
@@ -21,12 +21,12 @@ describe('Checkout & EventBridge Lifecycle Test Suite', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        customerEmail: `test-${Date.now()}@example.com`
-      })
+        customerEmail: `test-${Date.now()}@example.com`,
+      }),
     });
 
     assert.equal(res.status, 200);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     assert.ok(data.url, 'Expected checkout URL');
   });
 
@@ -44,10 +44,10 @@ describe('Checkout & EventBridge Lifecycle Test Suite', () => {
           object: {
             customer_details: { email: testEmail },
             subscription: subId,
-            customer: customerId
-          }
-        }
-      }
+            customer: customerId,
+          },
+        },
+      },
     };
 
     const res = await stripeEventHandler(eventBridgeEnvelope);
@@ -63,8 +63,14 @@ describe('Checkout & EventBridge Lifecycle Test Suite', () => {
       'detail-type': 'checkout.session.completed',
       detail: {
         type: 'checkout.session.completed',
-        data: { object: { customer_details: { email: `sub-update-${Date.now()}@example.com` }, subscription: subId, customer: 'cus_123' } }
-      }
+        data: {
+          object: {
+            customer_details: { email: `sub-update-${Date.now()}@example.com` },
+            subscription: subId,
+            customer: 'cus_123',
+          },
+        },
+      },
     });
 
     // Update to past_due
@@ -73,8 +79,8 @@ describe('Checkout & EventBridge Lifecycle Test Suite', () => {
       'detail-type': 'customer.subscription.updated',
       detail: {
         type: 'customer.subscription.updated',
-        data: { object: { id: subId, status: 'past_due' } }
-      }
+        data: { object: { id: subId, status: 'past_due' } },
+      },
     });
 
     assert.equal(res.received, true);
@@ -88,8 +94,14 @@ describe('Checkout & EventBridge Lifecycle Test Suite', () => {
       'detail-type': 'checkout.session.completed',
       detail: {
         type: 'checkout.session.completed',
-        data: { object: { customer_details: { email: `sub-del-${Date.now()}@example.com` }, subscription: subId, customer: 'cus_123' } }
-      }
+        data: {
+          object: {
+            customer_details: { email: `sub-del-${Date.now()}@example.com` },
+            subscription: subId,
+            customer: 'cus_123',
+          },
+        },
+      },
     });
 
     const res = await stripeEventHandler({
@@ -97,8 +109,8 @@ describe('Checkout & EventBridge Lifecycle Test Suite', () => {
       'detail-type': 'customer.subscription.deleted',
       detail: {
         type: 'customer.subscription.deleted',
-        data: { object: { id: subId, status: 'canceled' } }
-      }
+        data: { object: { id: subId, status: 'canceled' } },
+      },
     });
 
     assert.equal(res.received, true);
@@ -112,8 +124,14 @@ describe('Checkout & EventBridge Lifecycle Test Suite', () => {
       'detail-type': 'checkout.session.completed',
       detail: {
         type: 'checkout.session.completed',
-        data: { object: { customer_details: { email: `inv-user-${Date.now()}@example.com` }, subscription: subId, customer: 'cus_123' } }
-      }
+        data: {
+          object: {
+            customer_details: { email: `inv-user-${Date.now()}@example.com` },
+            subscription: subId,
+            customer: 'cus_123',
+          },
+        },
+      },
     });
 
     const res = await stripeEventHandler({
@@ -132,10 +150,10 @@ describe('Checkout & EventBridge Lifecycle Test Suite', () => {
             tax: 916,
             currency: 'usd',
             status: 'paid',
-            status_transitions: { paid_at: Math.floor(Date.now() / 1000) }
-          }
-        }
-      }
+            status_transitions: { paid_at: Math.floor(Date.now() / 1000) },
+          },
+        },
+      },
     });
 
     assert.equal(res.received, true);
@@ -150,13 +168,12 @@ describe('Checkout & EventBridge Lifecycle Test Suite', () => {
         data: {
           object: {
             id: `in_fail_${Date.now()}`,
-            customer_email: `fail-user-${Date.now()}@example.com`
-          }
-        }
-      }
+            customer_email: `fail-user-${Date.now()}@example.com`,
+          },
+        },
+      },
     });
 
     assert.equal(res.received, true);
   });
 });
-

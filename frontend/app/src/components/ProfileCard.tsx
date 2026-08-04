@@ -1,11 +1,11 @@
-import React from "react";
-import { useAppDispatch, useAppSelector } from "../store";
+import React from 'react';
+import { useAppDispatch, useAppSelector } from '../store';
 import {
   createCheckoutSessionThunk,
   createPortalSessionThunk,
   selectCheckoutStatus,
   selectDashboard,
-} from "../store/memberSlice";
+} from '../store/memberSlice';
 
 interface ProfileCardProps {
   email: string | null;
@@ -15,20 +15,22 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ email }) => {
   const dispatch = useAppDispatch();
   const dashboard = useAppSelector(selectDashboard);
   const checkoutStatus = useAppSelector(selectCheckoutStatus);
-  const membershipActive = dashboard?.subscription?.status === "ACTIVE";
+  const membershipActive = dashboard?.subscription?.status === 'ACTIVE';
 
   const handleCheckout = () => {
     if (!email) {
-      console.error("Email is required for checkout session.");
+      console.error('Email is required for checkout session.');
       return;
     }
     const origin = window.location.origin;
-    dispatch(createCheckoutSessionThunk({
-      customerEmail: email,
-      successUrl: `${origin}/checkout/success`,
-      cancelUrl: `${origin}/checkout/cancel`,
-      redirectUrl: `${origin}/checkout/redirect`,
-    }));
+    dispatch(
+      createCheckoutSessionThunk({
+        customerEmail: email,
+        successUrl: `${origin}/checkout/success`,
+        cancelUrl: `${origin}/checkout/cancel`,
+        redirectUrl: `${origin}/checkout/redirect`,
+      })
+    );
   };
 
   const handlePortal = () => {
@@ -41,12 +43,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ email }) => {
         {/* Title */}
         <div className="flex items-center gap-2.5 font-bold text-base text-stone-900 mb-5">
           <span className="p-2 rounded-md bg-rose-50 text-rose-800 border border-rose-200">
-            <svg
-              className="w-5 h-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -62,37 +59,26 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ email }) => {
         {dashboard ? (
           <div className="space-y-3 bg-stone-100 rounded-md p-4 border border-stone-200">
             <div className="flex items-center justify-between pb-2 border-b border-stone-200">
-              <span className="text-xs text-stone-500 font-medium">
-                Account email
-              </span>
-              <span className="text-xs font-medium text-stone-800">
-                {dashboard.user?.email || email}
-              </span>
+              <span className="text-xs text-stone-500 font-medium">Account email</span>
+              <span className="text-xs font-medium text-stone-800">{dashboard.user?.email || email}</span>
             </div>
 
             <div className="flex items-center justify-between py-2 border-b border-stone-200">
-              <span className="text-xs text-stone-500 font-medium">
-                Pass status
-              </span>
-              {dashboard.subscription?.status === "ACTIVE" ? (
+              <span className="text-xs text-stone-500 font-medium">Pass status</span>
+              {dashboard.subscription?.status === 'ACTIVE' ? (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-700">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-600"></span>{" "}
-                  Active Pass
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-600"></span> Active Pass
                 </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-700">
-                  {dashboard.subscription?.status || "Inactive"}
+                  {dashboard.subscription?.status || 'Inactive'}
                 </span>
               )}
             </div>
 
             <div className="flex items-center justify-between pt-1">
-              <span className="text-xs text-stone-500 font-medium">
-                Accessible gyms
-              </span>
-              <span className="text-xs font-medium text-rose-800">
-                {dashboard.locations?.length || 0} Location(s)
-              </span>
+              <span className="text-xs text-stone-500 font-medium">Accessible gyms</span>
+              <span className="text-xs font-medium text-rose-800">{dashboard.locations?.length || 0} Location(s)</span>
             </div>
           </div>
         ) : (
@@ -109,12 +95,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ email }) => {
             onClick={handleCheckout}
             className="w-full py-2.5 px-4 rounded-md font-medium text-xs text-white bg-rose-800 hover:bg-rose-700 transition-colors cursor-pointer flex items-center justify-center gap-2 shadow-sm"
           >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -130,12 +111,7 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ email }) => {
           onClick={handlePortal}
           className="w-full py-2.5 px-4 rounded-md font-medium text-xs text-stone-700 bg-white hover:bg-stone-100 border border-stone-300 transition-colors cursor-pointer flex items-center justify-center gap-2"
         >
-          <svg
-            className="w-4 h-4 text-slate-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
+          <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"

@@ -1,0 +1,6 @@
+cdk.out
+cdk.out.*
+coverage
+frontend/*/dist
+node_modules
+certs

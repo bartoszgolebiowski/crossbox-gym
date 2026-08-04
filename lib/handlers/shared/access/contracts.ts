@@ -1,10 +1,4 @@
-import {
-  HardwareAdapterId,
-  QrClassification,
-  QrProviderId,
-  ScanContent,
-  ScanEnvelope,
-} from './types';
+import { HardwareAdapterId, QrClassification, QrProviderId, ScanContent, ScanEnvelope } from './types';
 
 /** Converts reader-specific hardware output into the scanner-neutral scan envelope. */
 export interface ScannerReader {

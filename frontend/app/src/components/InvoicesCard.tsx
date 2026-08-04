@@ -13,7 +13,12 @@ export const InvoicesCard: React.FC = () => {
         <div className="flex items-center gap-2.5 font-bold text-base text-stone-900">
           <span className="p-2 rounded-md bg-amber-50 text-amber-700 border border-amber-200">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+              />
             </svg>
           </span>
           <span>Tax Invoices & Billing History</span>
@@ -26,14 +31,20 @@ export const InvoicesCard: React.FC = () => {
         <div className="flex items-center justify-center py-8 text-slate-400 gap-2">
           <svg className="w-5 h-5 animate-spin text-amber-400" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            <path
+              className="opacity-75"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+            ></path>
           </svg>
           <span className="text-xs">Loading tax invoices...</span>
         </div>
       ) : invoices.length === 0 ? (
         <div className="text-center py-8 px-4 bg-stone-100 rounded-md border border-stone-200">
           <p className="text-sm text-stone-800 font-medium">No tax invoices generated yet.</p>
-          <p className="text-xs text-stone-500 mt-1">Invoices will automatically appear after completing subscription payments.</p>
+          <p className="text-xs text-stone-500 mt-1">
+            Invoices will automatically appear after completing subscription payments.
+          </p>
         </div>
       ) : (
         <div className="space-y-2.5">
@@ -43,9 +54,14 @@ export const InvoicesCard: React.FC = () => {
               className="bg-stone-100 p-3.5 rounded-md border border-stone-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3"
             >
               <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-md bg-amber-50 flex items-center justify-center text-amber-700 shrink-0">
+                <div className="w-8 h-8 rounded-md bg-amber-50 flex items-center justify-center text-amber-700 shrink-0">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"
+                    />
                   </svg>
                 </div>
                 <div>
@@ -53,7 +69,9 @@ export const InvoicesCard: React.FC = () => {
                   <div className="text-[11px] text-stone-500 flex items-center gap-2 mt-0.5">
                     <span>Date: {new Date(inv.createdAt).toLocaleDateString()}</span>
                     <span>•</span>
-                    <span>Tax: ${(inv.tax / 100).toFixed(2)} {inv.currency?.toUpperCase()}</span>
+                    <span>
+                      Tax: ${(inv.tax / 100).toFixed(2)} {inv.currency?.toUpperCase()}
+                    </span>
                   </div>
                 </div>
               </div>

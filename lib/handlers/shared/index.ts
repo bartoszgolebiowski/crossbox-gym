@@ -7,4 +7,3 @@ export * from './providers';
 export * from './providers/feedback';
 export * from './providers/lockers';
 export * from './types';
-

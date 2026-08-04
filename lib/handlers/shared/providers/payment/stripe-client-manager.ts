@@ -1,9 +1,6 @@
 import { SSMClient, GetParameterCommand } from '@aws-sdk/client-ssm';
 import Stripe from 'stripe';
-import {
-  getStripeSecretKeySsmPath,
-  getStripeWebhookSecretSsmPath,
-} from '../../config';
+import { getStripeSecretKeySsmPath, getStripeWebhookSecretSsmPath } from '../../config';
 
 let stripeClient: Stripe | null = null;
 let webhookSecret: string | null = null;

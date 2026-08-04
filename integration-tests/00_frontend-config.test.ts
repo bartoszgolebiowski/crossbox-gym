@@ -21,7 +21,7 @@ describe('deployed frontend runtime configuration', () => {
       const response = await fetch(new URL('/config.json', site));
       assert.equal(response.ok, true, `${site.origin}/config.json should be available`);
 
-      const config = await response.json() as { ApiUrl?: string };
+      const config = (await response.json()) as { ApiUrl?: string };
       assert.equal(config.ApiUrl?.replace(/\/+$/, ''), expectedApiUrl);
       assert.notEqual(new URL(config.ApiUrl!).origin, site.origin);
     }

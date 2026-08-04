@@ -97,7 +97,8 @@ export class CrossboxIotStack extends cdk.Stack {
     // 3. Secrets Manager Secret for storing X.509 Certs & Keys
     this.certSecret = new secretsmanager.Secret(this, 'CrossboxIotCertSecret', {
       secretName,
-      description: 'mTLS X.509 Device Certificate & Private Key for Crossbox Gym IoT devices (QR Scanner and Shelly Lock Relay)',
+      description:
+        'mTLS X.509 Device Certificate & Private Key for Crossbox Gym IoT devices (QR Scanner and Shelly Lock Relay)',
       removalPolicy: isTest ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN,
     });
 

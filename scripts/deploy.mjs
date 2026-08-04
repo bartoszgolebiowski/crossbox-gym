@@ -64,7 +64,10 @@ if (fs.existsSync('.env')) {
         if (trimmed && !trimmed.startsWith('#')) {
           const [k, ...v] = trimmed.split('=');
           if (k && !process.env[k.trim()]) {
-            process.env[k.trim()] = v.join('=').trim().replace(/^["']|["']$/g, '');
+            process.env[k.trim()] = v
+              .join('=')
+              .trim()
+              .replace(/^["']|["']$/g, '');
           }
         }
       }
@@ -84,7 +87,7 @@ const { values, positionals } = parseArgs({
   strict: false,
 });
 
-const rawStacks = values.stacks || positionals.find(p => !p.startsWith('-')) || process.env.STACKS || 'all';
+const rawStacks = values.stacks || positionals.find((p) => !p.startsWith('-')) || process.env.STACKS || 'all';
 const rawPrefix = values.stackPrefix || process.env.STACK_PREFIX || process.env.STACK_NAME || 'CrossboxGymDev';
 const prefix = rawPrefix.replace(/Stack$/, '');
 
@@ -100,8 +103,11 @@ let selectedStacks = [];
 if (rawStacks.toLowerCase() === 'all' || rawStacks.trim() === '*') {
   selectedStacks = [`${prefix}DataStack`, `${prefix}ApiStack`, `${prefix}FrontendStack`, `${prefix}IotStack`].join(' ');
 } else {
-  const parts = rawStacks.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
-  const matched = parts.map(p => stackMap[p] || `${prefix}${p.charAt(0).toUpperCase() + p.slice(1)}Stack`);
+  const parts = rawStacks
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  const matched = parts.map((p) => stackMap[p] || `${prefix}${p.charAt(0).toUpperCase() + p.slice(1)}Stack`);
   selectedStacks = matched.join(' ');
 }
 

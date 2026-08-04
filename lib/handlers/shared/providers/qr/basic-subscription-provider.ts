@@ -1,5 +1,3 @@
-import { getConfigItem, getUserSubscription } from '../../database';
-import { getMainTableName } from '../../config';
 import { signQrPayload } from '../../crypto';
 import { IProvider, ProviderId, VerificationResult } from '../types';
 
@@ -10,36 +8,32 @@ interface BasicQrPayload {
 }
 
 export type KeyFetcher = () => Promise<{ currentKey: string; previousKey?: string }>;
-export type SubscriptionFetcher = (userId: string) => Promise<{ status: string; grace_period_end?: string } | undefined>;
+export type SubscriptionFetcher = (
+  userId: string
+) => Promise<{ status: string; grace_period_end?: string } | undefined>;
+
+const missingKeyFetcher: KeyFetcher = async () => {
+  throw new Error('QR signing-key fetcher is required');
+};
+
+const missingSubscriptionFetcher: SubscriptionFetcher = async () => {
+  throw new Error('Subscription fetcher is required');
+};
 
 export class BasicSubscriptionProvider implements IProvider {
   readonly id: ProviderId = 'basic-subscription';
 
   constructor(
-    private readonly keyFetcher?: KeyFetcher,
-    private readonly subscriptionFetcher?: SubscriptionFetcher
+    private readonly keyFetcher: KeyFetcher = missingKeyFetcher,
+    private readonly subscriptionFetcher: SubscriptionFetcher = missingSubscriptionFetcher
   ) {}
 
   private async getKeys(): Promise<{ currentKey: string; previousKey?: string }> {
-    if (this.keyFetcher) {
-      return this.keyFetcher();
-    }
-    const tableName = getMainTableName();
-    const [current, previous] = await Promise.all([
-      getConfigItem(tableName, 'HMAC_CURRENT_KEY'),
-      getConfigItem(tableName, 'HMAC_PREVIOUS_KEY'),
-    ]);
-    return {
-      currentKey: current || process.env.HMAC_CURRENT_KEY || 'default_key',
-      previousKey: previous || process.env.HMAC_PREVIOUS_KEY,
-    };
+    return this.keyFetcher();
   }
 
   private async getSubscription(userId: string) {
-    if (this.subscriptionFetcher) {
-      return this.subscriptionFetcher(userId);
-    }
-    return getUserSubscription(getMainTableName(), userId);
+    return this.subscriptionFetcher(userId);
   }
 
   canHandle(rawData: string): boolean {
@@ -60,11 +54,16 @@ export class BasicSubscriptionProvider implements IProvider {
     try {
       const payload = JSON.parse(rawData) as Partial<BasicQrPayload>;
 
-      if (typeof payload.user_id !== 'string' || typeof payload.timestamp !== 'number' || typeof payload.hmac !== 'string') {
+      if (
+        typeof payload.user_id !== 'string' ||
+        typeof payload.timestamp !== 'number' ||
+        typeof payload.hmac !== 'string'
+      ) {
         return { success: false, reason: 'invalid_payload_structure' };
       }
 
-      const now = typeof context?.nowSeconds === 'number' ? (context.nowSeconds as number) : Math.floor(Date.now() / 1000);
+      const now =
+        typeof context?.nowSeconds === 'number' ? (context.nowSeconds as number) : Math.floor(Date.now() / 1000);
       if (Math.abs(now - payload.timestamp) > 60) {
         return { success: false, reason: 'qr_expired' };
       }

@@ -8,9 +8,7 @@ export const Footer: React.FC = () => {
           <span className="w-2 h-2 rounded-full bg-teal-600"></span>
           <span className="text-slate-700 font-medium">CrossBox Administrator System Active</span>
         </div>
-        <p className="text-slate-500">
-          &copy; {new Date().getFullYear()} CrossBox Gym Management System.
-        </p>
+        <p className="text-slate-500">&copy; {new Date().getFullYear()} CrossBox Gym Management System.</p>
       </div>
     </footer>
   );

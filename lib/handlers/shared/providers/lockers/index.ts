@@ -1,7 +1,7 @@
 import { ILockerClient } from './types';
 import { MockLockerClient } from './mock-locker';
 import { MqttLockerClient } from './mqtt-locker';
-import { ILockerConfigProvider } from './ssm-config-provider';
+import { ILockerConfigProvider, LockerConfig, SsmLockerConfigProvider } from './ssm-config-provider';
 
 export * from './types';
 export * from './mock-locker';
@@ -15,15 +15,26 @@ export function setLockerClientOverride(client?: ILockerClient): void {
 }
 
 export function createLockerClient(
-  type?: string,
-  configProviderOrEndpoint?: string | ILockerConfigProvider
+  type: string,
+  configProviderOrEndpoint?: string | ILockerConfigProvider | LockerConfig
 ): ILockerClient {
   if (lockerClientOverrideInstance) {
     return lockerClientOverrideInstance;
   }
-  const clientType = type || process.env.LOCKER_CLIENT_TYPE || 'mqtt';
-  if (clientType === 'mock') {
+  if (type === 'mock') {
     return new MockLockerClient();
   }
-  return new MqttLockerClient(configProviderOrEndpoint);
+  if (!configProviderOrEndpoint) {
+    throw new Error('Locker configuration is required for MQTT clients');
+  }
+  if (typeof configProviderOrEndpoint === 'string' || 'getConfig' in configProviderOrEndpoint) {
+    return new MqttLockerClient(configProviderOrEndpoint);
+  }
+  return new MqttLockerClient(
+    new SsmLockerConfigProvider({
+      endpointParameterName: '/crossbox/iot/endpoint',
+      lockerThingNameParameterName: '/crossbox/iot/locker-thing-name',
+      fallbackConfig: configProviderOrEndpoint,
+    })
+  );
 }

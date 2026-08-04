@@ -4,15 +4,17 @@ export interface MemberOverrideFormState {
 }
 
 export type MemberOverrideFormAction =
-  | { type: 'CHANGE_FIELD'; payload: { field: keyof MemberOverrideFormState; value: string } }
-  | { type: 'RESET_FORM' };
+  { type: 'CHANGE_FIELD'; payload: { field: keyof MemberOverrideFormState; value: string } } | { type: 'RESET_FORM' };
 
 export const initialMemberOverrideFormState: MemberOverrideFormState = {
   overrideUserId: '',
   overrideAction: 'suspend',
 };
 
-export function memberOverrideFormReducer(state: MemberOverrideFormState, action: MemberOverrideFormAction): MemberOverrideFormState {
+export function memberOverrideFormReducer(
+  state: MemberOverrideFormState,
+  action: MemberOverrideFormAction
+): MemberOverrideFormState {
   switch (action.type) {
     case 'CHANGE_FIELD':
       return {
@@ -27,7 +29,10 @@ export function memberOverrideFormReducer(state: MemberOverrideFormState, action
 }
 
 // Action Creators
-export const changeMemberOverrideFormField = (field: keyof MemberOverrideFormState, value: string): MemberOverrideFormAction => ({
+export const changeMemberOverrideFormField = (
+  field: keyof MemberOverrideFormState,
+  value: string
+): MemberOverrideFormAction => ({
   type: 'CHANGE_FIELD',
   payload: { field, value },
 });

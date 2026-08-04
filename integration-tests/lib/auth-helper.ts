@@ -1,7 +1,4 @@
-import { 
-  CognitoIdentityProviderClient, 
-  AdminInitiateAuthCommand 
-} from '@aws-sdk/client-cognito-identity-provider';
+import { CognitoIdentityProviderClient, AdminInitiateAuthCommand } from '@aws-sdk/client-cognito-identity-provider';
 import { requireOutput } from './stack-outputs.ts';
 
 let cachedToken: string | undefined;
@@ -17,15 +14,17 @@ export async function getAdminIdToken(): Promise<string> {
   const adminPassword = process.env.ADMIN_PASSWORD || 'Admin123!';
 
   const cognito = new CognitoIdentityProviderClient({ region });
-  const authRes = await cognito.send(new AdminInitiateAuthCommand({
-    UserPoolId: userPoolId,
-    ClientId: clientId,
-    AuthFlow: 'ADMIN_USER_PASSWORD_AUTH',
-    AuthParameters: {
-      USERNAME: adminEmail,
-      PASSWORD: adminPassword,
-    },
-  }));
+  const authRes = await cognito.send(
+    new AdminInitiateAuthCommand({
+      UserPoolId: userPoolId,
+      ClientId: clientId,
+      AuthFlow: 'ADMIN_USER_PASSWORD_AUTH',
+      AuthParameters: {
+        USERNAME: adminEmail,
+        PASSWORD: adminPassword,
+      },
+    })
+  );
 
   const token = authRes.AuthenticationResult?.IdToken;
   if (!token) {

@@ -13,11 +13,11 @@ describe('Auth Registration & Password Reset Unit Tests', () => {
       requestContext: {
         http: {
           method: 'POST',
-          path: '/auth/register'
-        }
+          path: '/auth/register',
+        },
       },
       body: JSON.stringify({ email: 'test@example.com' }),
-      isBase64Encoded: false
+      isBase64Encoded: false,
     };
 
     const response: any = await authHandler(event);
@@ -36,11 +36,11 @@ describe('Auth Registration & Password Reset Unit Tests', () => {
       requestContext: {
         http: {
           method: 'POST',
-          path: '/auth/forgot-password'
-        }
+          path: '/auth/forgot-password',
+        },
       },
       body: JSON.stringify({}),
-      isBase64Encoded: false
+      isBase64Encoded: false,
     };
 
     const response: any = await authHandler(event);
@@ -59,11 +59,11 @@ describe('Auth Registration & Password Reset Unit Tests', () => {
       requestContext: {
         http: {
           method: 'POST',
-          path: '/auth/confirm-forgot-password'
-        }
+          path: '/auth/confirm-forgot-password',
+        },
       },
       body: JSON.stringify({ email: 'test@example.com' }),
-      isBase64Encoded: false
+      isBase64Encoded: false,
     };
 
     const response: any = await authHandler(event);

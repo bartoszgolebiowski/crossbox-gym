@@ -4,17 +4,15 @@ import { IMqttFeedbackPublisher, MqttFeedbackPayload } from '..';
 export class MqttFeedbackPublisher implements IMqttFeedbackPublisher {
   private iotData?: IoTDataPlaneClient;
 
-  constructor(private readonly endpoint?: string) {
-    const iotEndpoint = endpoint || process.env.IOT_ENDPOINT;
-    if (iotEndpoint) {
-      this.iotData = new IoTDataPlaneClient({ endpoint: `https://${iotEndpoint}` });
+  constructor(endpoint?: string) {
+    if (endpoint) {
+      this.iotData = new IoTDataPlaneClient({ endpoint: `https://${endpoint}` });
     }
   }
 
   private getClient(): IoTDataPlaneClient {
     if (!this.iotData) {
-      const endpoint = process.env.IOT_ENDPOINT;
-      this.iotData = new IoTDataPlaneClient(endpoint ? { endpoint: `https://${endpoint}` } : {});
+      this.iotData = new IoTDataPlaneClient({});
     }
     return this.iotData;
   }
@@ -31,7 +29,10 @@ export class MqttFeedbackPublisher implements IMqttFeedbackPublisher {
           payload: Buffer.from(JSON.stringify(feedback)),
         })
       );
-      console.log(`[MqttFeedbackPublisher] Successfully published feedback to gym/scanners/${scannerId}/feedback:`, feedback);
+      console.log(
+        `[MqttFeedbackPublisher] Successfully published feedback to gym/scanners/${scannerId}/feedback:`,
+        feedback
+      );
     } catch (err) {
       console.warn(`[MqttFeedbackPublisher] Failed to send MQTT feedback to scanner ${scannerId}:`, err);
     }

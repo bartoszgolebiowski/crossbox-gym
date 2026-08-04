@@ -22,21 +22,28 @@ export class CognitoIdentityProvider implements IdentityProvider {
   async ensureUser(userPoolId: string, email: string): Promise<string> {
     try {
       const tempPassword = generateStrongTemporaryPassword();
-      const createRes = await this.cognito.send(new AdminCreateUserCommand({
-        UserPoolId: userPoolId,
-        Username: email,
-        TemporaryPassword: tempPassword,
-        MessageAction: 'SUPPRESS',
-        UserAttributes: [{ Name: 'email', Value: email }, { Name: 'email_verified', Value: 'true' }]
-      }));
-      return createRes.User?.Attributes?.find(a => a.Name === 'sub')?.Value || '';
+      const createRes = await this.cognito.send(
+        new AdminCreateUserCommand({
+          UserPoolId: userPoolId,
+          Username: email,
+          TemporaryPassword: tempPassword,
+          MessageAction: 'SUPPRESS',
+          UserAttributes: [
+            { Name: 'email', Value: email },
+            { Name: 'email_verified', Value: 'true' },
+          ],
+        })
+      );
+      return createRes.User?.Attributes?.find((a) => a.Name === 'sub')?.Value || '';
     } catch (e: any) {
       if (e.name === 'UsernameExistsException') {
-        const existingUser = await this.cognito.send(new AdminGetUserCommand({
-          UserPoolId: userPoolId,
-          Username: email
-        }));
-        return existingUser.UserAttributes?.find(a => a.Name === 'sub')?.Value || '';
+        const existingUser = await this.cognito.send(
+          new AdminGetUserCommand({
+            UserPoolId: userPoolId,
+            Username: email,
+          })
+        );
+        return existingUser.UserAttributes?.find((a) => a.Name === 'sub')?.Value || '';
       }
       throw e;
     }

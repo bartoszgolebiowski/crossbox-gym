@@ -14,11 +14,11 @@ describe('Member PWA Test Suite', () => {
 
   test('GET /member/dashboard returns profile, active subscription, and gym locations', async () => {
     const res = await fetch(`${context.apiUrl}/member/dashboard`, {
-      headers: { 'Authorization': `Bearer ${memberSession.idToken}` }
+      headers: { Authorization: `Bearer ${memberSession.idToken}` },
     });
 
     assert.equal(res.status, 200);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     assert.ok(data.user, 'Expected user profile');
     assert.ok(Array.isArray(data.locations), 'Expected locations array');
   });
@@ -28,13 +28,13 @@ describe('Member PWA Test Suite', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${memberSession.idToken}`
+        Authorization: `Bearer ${memberSession.idToken}`,
       },
-      body: JSON.stringify({ terms_version: 'v1.0' })
+      body: JSON.stringify({ terms_version: 'v1.0' }),
     });
 
     assert.equal(res.status, 200);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     assert.ok(data.message.includes('Consent recorded'));
   });
 
@@ -43,12 +43,12 @@ describe('Member PWA Test Suite', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${memberSession.idToken}`
-      }
+        Authorization: `Bearer ${memberSession.idToken}`,
+      },
     });
 
     assert.equal(res.status, 200);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     assert.ok(data.qr_code, 'Expected qr_code payload');
     const qrObj = JSON.parse(data.qr_code);
     assert.ok(qrObj.hmac, 'Expected HMAC signature in QR payload');
@@ -59,12 +59,12 @@ describe('Member PWA Test Suite', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${memberSession.idToken}`
-      }
+        Authorization: `Bearer ${memberSession.idToken}`,
+      },
     });
 
     assert.equal(res.status, 200);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     assert.ok(data.url, 'Expected portal URL');
   });
 

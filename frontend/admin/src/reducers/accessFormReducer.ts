@@ -1,6 +1,7 @@
 export interface AccessFormState {
   locationId: string;
   scannerName: string;
+  assignedLockerId: string;
   scannerId: string;
   isCustomLocation: boolean;
 }
@@ -13,6 +14,7 @@ export type AccessFormAction =
 export const initialAccessFormState: AccessFormState = {
   locationId: '',
   scannerName: '',
+  assignedLockerId: '',
   scannerId: '',
   isCustomLocation: false,
 };
@@ -36,10 +38,7 @@ export function accessFormReducer(state: AccessFormState, action: AccessFormActi
   }
 }
 
-export const updateAccessFormField = (
-  field: keyof AccessFormState,
-  value: string | boolean
-): AccessFormAction => ({
+export const updateAccessFormField = (field: keyof AccessFormState, value: string | boolean): AccessFormAction => ({
   type: 'UPDATE_FIELD',
   payload: { field, value },
 });

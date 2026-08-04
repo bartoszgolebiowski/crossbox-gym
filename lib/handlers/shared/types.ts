@@ -40,8 +40,8 @@ export interface LocationItem {
   name: string;
   address: string;
   created_at: string;
-  GSI1PK: string;  // LOCATIONS
-  GSI1SK: string;  // LOC#<id>
+  GSI1PK: string; // LOCATIONS
+  GSI1SK: string; // LOC#<id>
 }
 
 // Device item (PK=LOC#<id>, SK=DEV#<device_id>)
@@ -103,13 +103,13 @@ export interface EntryLogItem {
   device_id: string;
   ttl: number;
   // AntiPassbackIndex GSI
-  AntiPassbackPK: string;  // USER#<id>#LOC#<loc_id>
+  AntiPassbackPK: string; // USER#<id>#LOC#<loc_id>
 }
 
 // AuditLog item
 export interface AuditLogItem {
-  PK: string;  // AUDIT#<admin_id>
-  SK: string;  // <timestamp>#<audit_id>
+  PK: string; // AUDIT#<admin_id>
+  SK: string; // <timestamp>#<audit_id>
   audit_id: string;
   admin_id: string;
   action_type: 'remote_unlock' | 'suspend_account' | 'extend_grace' | 'hmac_rotation';

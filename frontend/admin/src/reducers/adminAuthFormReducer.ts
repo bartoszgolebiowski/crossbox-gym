@@ -4,8 +4,7 @@ export interface AdminAuthFormState {
 }
 
 export type AdminAuthFormAction =
-  | { type: 'CHANGE_FIELD'; payload: { field: keyof AdminAuthFormState; value: string } }
-  | { type: 'RESET_FORM' };
+  { type: 'CHANGE_FIELD'; payload: { field: keyof AdminAuthFormState; value: string } } | { type: 'RESET_FORM' };
 
 export const initialAdminAuthFormState: AdminAuthFormState = {
   inputEmail: '',

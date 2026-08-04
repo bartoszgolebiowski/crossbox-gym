@@ -1,15 +1,15 @@
 import { PaymentProvider } from '../types';
 
 export class MockPaymentProvider implements PaymentProvider {
-  async createCheckoutSession(params: any): Promise<{ url: string }> {
+  async createCheckoutSession(_params: any): Promise<{ url: string }> {
     return { url: 'https://mock.stripe.com/checkout' };
   }
-  
-  async createPortalSession(params: any): Promise<{ url: string }> {
+
+  async createPortalSession(_params: any): Promise<{ url: string }> {
     return { url: 'https://mock.stripe.com/portal' };
   }
 
-  async listInvoices(params: { customerId: string }): Promise<Array<any>> {
+  async listInvoices(_params: { customerId: string }): Promise<Array<any>> {
     return [
       {
         id: 'in_mock_123',
@@ -19,12 +19,12 @@ export class MockPaymentProvider implements PaymentProvider {
         tax: 916,
         currency: 'usd',
         status: 'paid',
-        createdAt: new Date().toISOString()
-      }
+        createdAt: new Date().toISOString(),
+      },
     ];
   }
-  
-  async constructWebhookEvent(payload: string, signature: string): Promise<any> {
+
+  async constructWebhookEvent(payload: string, _signature: string): Promise<any> {
     // Basic mock parser
     return JSON.parse(payload);
   }

@@ -10,7 +10,8 @@ import {
 } from '../store/adminSlice';
 
 const fieldLabelClass = 'mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-600';
-const selectClass = 'w-full rounded-md border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition focus:border-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-700/20 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed cursor-pointer';
+const selectClass =
+  'w-full rounded-md border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition focus:border-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-700/20 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed cursor-pointer';
 
 export const RemoteOpsCard: React.FC = () => {
   const dispatch = useAdminDispatch();
@@ -93,7 +94,9 @@ export const RemoteOpsCard: React.FC = () => {
         {/* Location Selector */}
         {locationsList.length > 0 && (
           <div className="mb-4">
-            <label className={fieldLabelClass} htmlFor="remote-location-select">Active Location</label>
+            <label className={fieldLabelClass} htmlFor="remote-location-select">
+              Active Location
+            </label>
             <select
               id="remote-location-select"
               className={selectClass}
@@ -114,7 +117,9 @@ export const RemoteOpsCard: React.FC = () => {
 
         {/* Lock Dropdown Select */}
         <div className="mb-5">
-          <label className={fieldLabelClass} htmlFor="turnstile-device-id">Target Lock / Turnstile</label>
+          <label className={fieldLabelClass} htmlFor="turnstile-device-id">
+            Target Lock / Turnstile
+          </label>
           <select
             id="turnstile-device-id"
             className={selectClass}
@@ -144,7 +149,12 @@ export const RemoteOpsCard: React.FC = () => {
             disabled={!canUnlock}
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
+              />
             </svg>
             <span>Remote Turnstile Unlock Signal</span>
           </button>

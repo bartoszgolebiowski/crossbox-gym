@@ -27,17 +27,14 @@ export const bootstrapConfigThunk = createAsyncThunk<AppConfig>(
   }
 );
 
-export const retryConfigThunk = createAsyncThunk<AppConfig>(
-  'config/retryConfig',
-  async (_, { rejectWithValue }) => {
-    apiClient.resetConfig();
-    try {
-      return await apiClient.fetchConfig();
-    } catch (err: any) {
-      return rejectWithValue(err.message || 'Failed to load runtime configuration.');
-    }
+export const retryConfigThunk = createAsyncThunk<AppConfig>('config/retryConfig', async (_, { rejectWithValue }) => {
+  apiClient.resetConfig();
+  try {
+    return await apiClient.fetchConfig();
+  } catch (err: any) {
+    return rejectWithValue(err.message || 'Failed to load runtime configuration.');
   }
-);
+});
 
 const configSlice = createSlice({
   name: 'config',

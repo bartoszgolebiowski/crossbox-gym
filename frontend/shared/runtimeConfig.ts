@@ -46,7 +46,7 @@ export async function loadRuntimeConfig({
       throw new Error(`Runtime configuration request failed with HTTP ${response.status}.`);
     }
 
-    const config = await response.json() as Omit<RuntimeConfig, 'ApiUrl'> & { ApiUrl?: unknown };
+    const config = (await response.json()) as Omit<RuntimeConfig, 'ApiUrl'> & { ApiUrl?: unknown };
     return { ...config, ApiUrl: normalizeApiUrl(config.ApiUrl) };
   } catch (error) {
     if (fallbackApiUrl) {

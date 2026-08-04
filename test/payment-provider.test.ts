@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { MockPaymentProvider, StripePaymentProvider, createPaymentProvider } from '../lib/handlers/shared/providers/payment';
+import {
+  MockPaymentProvider,
+  StripePaymentProvider,
+  createPaymentProvider,
+} from '../lib/handlers/shared/providers/payment';
 
 describe('Stripe Payment Service & Provider Unit Tests (No Deployment Required)', () => {
   test('createPaymentProvider creates MockPaymentProvider when type is "mock"', () => {
@@ -20,7 +24,7 @@ describe('Stripe Payment Service & Provider Unit Tests (No Deployment Required)'
       successUrl: 'https://localhost/success',
       cancelUrl: 'https://localhost/cancel',
       customerEmail: 'member@example.com',
-      enableTax: true
+      enableTax: true,
     });
 
     assert.ok(res.url);
@@ -31,7 +35,7 @@ describe('Stripe Payment Service & Provider Unit Tests (No Deployment Required)'
     const provider = createPaymentProvider('mock');
     const res = await provider.createPortalSession({
       customerId: 'cus_mock_123',
-      returnUrl: 'https://localhost/dashboard'
+      returnUrl: 'https://localhost/dashboard',
     });
 
     assert.ok(res.url);
@@ -43,7 +47,7 @@ describe('Stripe Payment Service & Provider Unit Tests (No Deployment Required)'
 
     assert.ok(Array.isArray(invoices));
     assert.ok(invoices.length > 0);
-    
+
     const firstInv = invoices[0];
     assert.ok(firstInv.id);
     assert.ok(firstInv.number);
@@ -62,9 +66,9 @@ describe('Stripe Payment Service & Provider Unit Tests (No Deployment Required)'
           id: 'in_test_999',
           total: 4900,
           tax: 916,
-          customer: 'cus_test_123'
-        }
-      }
+          customer: 'cus_test_123',
+        },
+      },
     });
 
     const event = await provider.constructWebhookEvent(payload, 'mock_sig');

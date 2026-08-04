@@ -5,7 +5,6 @@ import { CrossboxDataStack } from '../lib/stacks/data-stack';
 import { CrossboxFrontendStack } from '../lib/stacks/frontend-stack';
 import { CrossboxIotStack } from '../lib/stacks/iot-stack';
 
-
 if (fs.existsSync('.env')) {
   try {
     if (typeof (process as any).loadEnvFile === 'function') {
@@ -17,7 +16,10 @@ if (fs.existsSync('.env')) {
         if (trimmed && !trimmed.startsWith('#')) {
           const [k, ...v] = trimmed.split('=');
           if (k && !process.env[k.trim()]) {
-            process.env[k.trim()] = v.join('=').trim().replace(/^["']|["']$/g, '');
+            process.env[k.trim()] = v
+              .join('=')
+              .trim()
+              .replace(/^["']|["']$/g, '');
           }
         }
       }
@@ -29,10 +31,11 @@ if (fs.existsSync('.env')) {
 
 const app = new cdk.App();
 
-const rawStackName = app.node.tryGetContext('stackName') || 
-                   (app.node.tryGetContext('stackPrefix') ? `${app.node.tryGetContext('stackPrefix')}Stack` : null) || 
-                   process.env.STACK_NAME || 
-                   'CrossboxGymDevStack';
+const rawStackName =
+  app.node.tryGetContext('stackName') ||
+  (app.node.tryGetContext('stackPrefix') ? `${app.node.tryGetContext('stackPrefix')}Stack` : null) ||
+  process.env.STACK_NAME ||
+  'CrossboxGymDevStack';
 
 const prefix = rawStackName.replace(/Stack$/, '');
 const isTest = app.node.tryGetContext('isTestEnvironment') === 'true' || process.env.IS_TEST === 'true';
@@ -69,4 +72,3 @@ new CrossboxIotStack(app, `${prefix}IotStack`, {
   apiStack,
   env,
 });
-

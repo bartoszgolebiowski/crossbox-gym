@@ -2,9 +2,7 @@ export interface RemoteOpsFormState {
   unlockDeviceId: string;
 }
 
-export type RemoteOpsFormAction =
-  | { type: 'SET_DEVICE_ID'; payload: string }
-  | { type: 'RESET_FORM' };
+export type RemoteOpsFormAction = { type: 'SET_DEVICE_ID'; payload: string } | { type: 'RESET_FORM' };
 
 export const initialRemoteOpsFormState: RemoteOpsFormState = {
   unlockDeviceId: '',

@@ -40,13 +40,9 @@ export const CheckoutResultLayout: React.FC<CheckoutResultLayoutProps> = ({
 
         <div className="mt-7 border-t border-line pt-5">
           <p className="text-xs text-muted">
-            {countdownLabel}{' '}
-            <strong className="tabular-nums text-ink">{seconds}</strong> seconds.
+            {countdownLabel} <strong className="tabular-nums text-ink">{seconds}</strong> seconds.
           </p>
-          <a
-            href="/"
-            className="mt-4 inline-block text-sm font-semibold text-primary hover:underline"
-          >
+          <a href="/" className="mt-4 inline-block text-sm font-semibold text-primary hover:underline">
             Go to dashboard now
           </a>
         </div>

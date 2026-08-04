@@ -2,6 +2,7 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { adminApiClient } from '../services/apiClient';
 
 export interface LocationItem {
+  PK: string;
   location_id: string;
   name: string;
   address: string;
@@ -55,17 +56,14 @@ export const createLocationThunk = createAsyncThunk(
   }
 );
 
-export const listLocationsThunk = createAsyncThunk(
-  'adminOps/listLocations',
-  async (_, { rejectWithValue }) => {
-    try {
-      const data = await adminApiClient.get('/admin/locations');
-      return JSON.stringify(data, null, 2);
-    } catch (err: any) {
-      return rejectWithValue(`Error: ${err.message}`);
-    }
+export const listLocationsThunk = createAsyncThunk('adminOps/listLocations', async (_, { rejectWithValue }) => {
+  try {
+    const data = await adminApiClient.get('/admin/locations');
+    return JSON.stringify(data, null, 2);
+  } catch (err: any) {
+    return rejectWithValue(`Error: ${err.message}`);
   }
-);
+});
 
 export const fetchScannersThunk = createAsyncThunk(
   'adminOps/fetchScanners',
@@ -93,9 +91,14 @@ export const fetchDevicesThunk = createAsyncThunk(
 
 export const createScannerThunk = createAsyncThunk(
   'adminOps/createScanner',
-  async (payload: { locationId: string; name: string }, { rejectWithValue, dispatch }) => {
+  async (payload: { locationId: string; name: string; assignedLockerId: string }, { rejectWithValue, dispatch }) => {
     try {
-      const data = await adminApiClient.post(`/admin/locations/${payload.locationId}/scanners`, { name: payload.name, reader_adapter: 'mock', allowed_qr_providers: ['basic-subscription', 'mock'] });
+      const data = await adminApiClient.post(`/admin/locations/${payload.locationId}/scanners`, {
+        name: payload.name,
+        assigned_locker_id: payload.assignedLockerId,
+        reader_adapter: 'mock',
+        allowed_qr_providers: ['basic-subscription', 'mock'],
+      });
       dispatch(fetchScannersThunk(payload.locationId));
       return JSON.stringify(data, null, 2);
     } catch (err: any) {
@@ -124,17 +127,14 @@ export const remoteUnlockThunk = createAsyncThunk(
   }
 );
 
-export const rotateHMACThunk = createAsyncThunk(
-  'adminOps/rotateHMAC',
-  async (_, { rejectWithValue }) => {
-    try {
-      const data = await adminApiClient.post('/admin/hmac/rotate');
-      return JSON.stringify(data, null, 2);
-    } catch (err: any) {
-      return rejectWithValue(`Error: ${err.message}`);
-    }
+export const rotateHMACThunk = createAsyncThunk('adminOps/rotateHMAC', async (_, { rejectWithValue }) => {
+  try {
+    const data = await adminApiClient.post('/admin/hmac/rotate');
+    return JSON.stringify(data, null, 2);
+  } catch (err: any) {
+    return rejectWithValue(`Error: ${err.message}`);
   }
-);
+});
 
 export const memberOverrideThunk = createAsyncThunk(
   'adminOps/memberOverride',
@@ -172,7 +172,9 @@ const adminSlice = createSlice({
           if (Array.isArray(parsed)) {
             state.locationsList = parsed;
           }
-        } catch (e) {}
+        } catch {
+          state.locationsList = [];
+        }
       })
       .addCase(listLocationsThunk.rejected, (state, action) => {
         state.locationOutput = action.payload as string;

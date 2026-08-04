@@ -84,19 +84,48 @@ export class CrossboxApiStack extends cdk.Stack {
       },
     });
     mainTable.grantReadWriteData(authHandler);
-    authHandler.addToRolePolicy(new iam.PolicyStatement({
-      actions: ['cognito-idp:AdminCreateUser', 'cognito-idp:AdminGetUser', 'cognito-idp:AdminSetUserPassword', 'cognito-idp:AdminInitiateAuth', 'cognito-idp:AdminResetUserPassword'],
-      resources: [userPool.userPoolArn],
-    }));
+    authHandler.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: [
+          'cognito-idp:AdminCreateUser',
+          'cognito-idp:AdminGetUser',
+          'cognito-idp:AdminSetUserPassword',
+          'cognito-idp:AdminInitiateAuth',
+          'cognito-idp:AdminResetUserPassword',
+        ],
+        resources: [userPool.userPoolArn],
+      })
+    );
     const authIntegration = new HttpLambdaIntegration('AuthIntegration', authHandler);
 
     this.httpApi.addRoutes({ path: '/auth/register', methods: [apigw.HttpMethod.POST], integration: authIntegration });
     this.httpApi.addRoutes({ path: '/auth/login', methods: [apigw.HttpMethod.POST], integration: authIntegration });
-    this.httpApi.addRoutes({ path: '/auth/forgot-password', methods: [apigw.HttpMethod.POST], integration: authIntegration });
-    this.httpApi.addRoutes({ path: '/auth/confirm-forgot-password', methods: [apigw.HttpMethod.POST], integration: authIntegration });
-    this.httpApi.addRoutes({ path: '/auth/set-password', methods: [apigw.HttpMethod.POST], integration: authIntegration, authorizer: jwtAuthorizer });
-    this.httpApi.addRoutes({ path: '/auth/magic-link', methods: [apigw.HttpMethod.POST], integration: authIntegration });
-    this.httpApi.addRoutes({ path: '/auth/magic-link/verify', methods: [apigw.HttpMethod.GET], integration: authIntegration });
+    this.httpApi.addRoutes({
+      path: '/auth/forgot-password',
+      methods: [apigw.HttpMethod.POST],
+      integration: authIntegration,
+    });
+    this.httpApi.addRoutes({
+      path: '/auth/confirm-forgot-password',
+      methods: [apigw.HttpMethod.POST],
+      integration: authIntegration,
+    });
+    this.httpApi.addRoutes({
+      path: '/auth/set-password',
+      methods: [apigw.HttpMethod.POST],
+      integration: authIntegration,
+      authorizer: jwtAuthorizer,
+    });
+    this.httpApi.addRoutes({
+      path: '/auth/magic-link',
+      methods: [apigw.HttpMethod.POST],
+      integration: authIntegration,
+    });
+    this.httpApi.addRoutes({
+      path: '/auth/magic-link/verify',
+      methods: [apigw.HttpMethod.GET],
+      integration: authIntegration,
+    });
 
     // CheckoutHandler
     const checkoutHandler = new nodejs.NodejsFunction(this, 'CheckoutHandler', {
@@ -114,7 +143,11 @@ export class CrossboxApiStack extends cdk.Stack {
       checkoutHandler.addToRolePolicy(ssmPolicy);
     }
     const checkoutIntegration = new HttpLambdaIntegration('CheckoutIntegration', checkoutHandler);
-    this.httpApi.addRoutes({ path: '/checkout/session', methods: [apigw.HttpMethod.POST], integration: checkoutIntegration });
+    this.httpApi.addRoutes({
+      path: '/checkout/session',
+      methods: [apigw.HttpMethod.POST],
+      integration: checkoutIntegration,
+    });
 
     // StripeWebhookHandler
     const stripeWebhookHandler = new nodejs.NodejsFunction(this, 'StripeWebhookHandler', {
@@ -128,10 +161,12 @@ export class CrossboxApiStack extends cdk.Stack {
       },
     });
     mainTable.grantReadWriteData(stripeWebhookHandler);
-    stripeWebhookHandler.addToRolePolicy(new iam.PolicyStatement({
-      actions: ['cognito-idp:AdminCreateUser', 'cognito-idp:AdminGetUser', 'cognito-idp:AdminResetUserPassword'],
-      resources: [userPool.userPoolArn],
-    }));
+    stripeWebhookHandler.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['cognito-idp:AdminCreateUser', 'cognito-idp:AdminGetUser', 'cognito-idp:AdminResetUserPassword'],
+        resources: [userPool.userPoolArn],
+      })
+    );
     if (!isTest) {
       stripeWebhookHandler.addToRolePolicy(ssmPolicy);
     }
@@ -172,14 +207,39 @@ export class CrossboxApiStack extends cdk.Stack {
     });
     mainTable.grantReadWriteData(memberHandler);
     memberHandler.addToRolePolicy(ssmPolicy);
-    
+
     const memberIntegration = new HttpLambdaIntegration('MemberIntegration', memberHandler);
 
-    this.httpApi.addRoutes({ path: '/member/dashboard', methods: [apigw.HttpMethod.GET], integration: memberIntegration, authorizer: jwtAuthorizer });
-    this.httpApi.addRoutes({ path: '/member/consent', methods: [apigw.HttpMethod.POST], integration: memberIntegration, authorizer: jwtAuthorizer });
-    this.httpApi.addRoutes({ path: '/member/qr', methods: [apigw.HttpMethod.POST], integration: memberIntegration, authorizer: jwtAuthorizer });
-    this.httpApi.addRoutes({ path: '/member/portal-session', methods: [apigw.HttpMethod.POST], integration: memberIntegration, authorizer: jwtAuthorizer });
-    this.httpApi.addRoutes({ path: '/member/invoices', methods: [apigw.HttpMethod.GET], integration: memberIntegration, authorizer: jwtAuthorizer });
+    this.httpApi.addRoutes({
+      path: '/member/dashboard',
+      methods: [apigw.HttpMethod.GET],
+      integration: memberIntegration,
+      authorizer: jwtAuthorizer,
+    });
+    this.httpApi.addRoutes({
+      path: '/member/consent',
+      methods: [apigw.HttpMethod.POST],
+      integration: memberIntegration,
+      authorizer: jwtAuthorizer,
+    });
+    this.httpApi.addRoutes({
+      path: '/member/qr',
+      methods: [apigw.HttpMethod.POST],
+      integration: memberIntegration,
+      authorizer: jwtAuthorizer,
+    });
+    this.httpApi.addRoutes({
+      path: '/member/portal-session',
+      methods: [apigw.HttpMethod.POST],
+      integration: memberIntegration,
+      authorizer: jwtAuthorizer,
+    });
+    this.httpApi.addRoutes({
+      path: '/member/invoices',
+      methods: [apigw.HttpMethod.GET],
+      integration: memberIntegration,
+      authorizer: jwtAuthorizer,
+    });
 
     // VerifyEntry
     this.verifyEntryFunction = new nodejs.NodejsFunction(this, 'VerifyEntry', {
@@ -197,14 +257,18 @@ export class CrossboxApiStack extends cdk.Stack {
     });
     mainTable.grantReadWriteData(this.verifyEntryFunction);
     entryLogsTable.grantReadWriteData(this.verifyEntryFunction);
-    this.verifyEntryFunction.addToRolePolicy(new iam.PolicyStatement({
-      actions: ['iot:Publish', 'iot:DescribeEndpoint'],
-      resources: ['*'],
-    }));
-    this.verifyEntryFunction.addToRolePolicy(new iam.PolicyStatement({
-      actions: ['ssm:GetParameter', 'ssm:GetParameters'],
-      resources: [`arn:aws:ssm:${this.region}:${this.account}:parameter/crossbox/iot/*`],
-    }));
+    this.verifyEntryFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['iot:Publish', 'iot:DescribeEndpoint'],
+        resources: ['*'],
+      })
+    );
+    this.verifyEntryFunction.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['ssm:GetParameter', 'ssm:GetParameters'],
+        resources: [`arn:aws:ssm:${this.region}:${this.account}:parameter/crossbox/iot/*`],
+      })
+    );
 
     // AdminHandler
     const adminHandler = new nodejs.NodejsFunction(this, 'AdminHandler', {
@@ -221,10 +285,12 @@ export class CrossboxApiStack extends cdk.Stack {
     mainTable.grantReadWriteData(adminHandler);
     auditLogsTable.grantWriteData(adminHandler);
     entryLogsTable.grantReadData(adminHandler);
-    adminHandler.addToRolePolicy(new iam.PolicyStatement({
-      actions: ['iot:Publish', 'iot:DescribeEndpoint'],
-      resources: ['*'],
-    }));
+    adminHandler.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['iot:Publish', 'iot:DescribeEndpoint'],
+        resources: ['*'],
+      })
+    );
 
     const adminIntegration = new HttpLambdaIntegration('AdminIntegration', adminHandler);
     const adminRoutes = [

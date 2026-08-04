@@ -5,7 +5,7 @@ import { randomBytes } from 'crypto';
 import { getAuditLogsTableName, getEntryLogsTableName, getMainTableName } from '../shared/config';
 import { hashApiKey } from '../shared/crypto';
 import { ddb } from '../shared/database';
-import { assertAdmin, NotFoundError, parseJsonBody, withHandler } from '../shared/http';
+import { assertAdmin, NotFoundError, parseJsonBody, ValidationError, withHandler } from '../shared/http';
 import { createMqttPublisher } from '../shared/providers/feedback';
 import { ConfigItem } from '../shared/types';
 
@@ -18,38 +18,44 @@ const syncLocationsToS3 = async () => {
   const assetsBucket = process.env.STATIC_ASSETS_BUCKET_NAME;
   if (!assetsBucket) return;
 
-  const result = await ddb.send(new QueryCommand({
-    TableName: MAIN_TABLE,
-    IndexName: 'GSI1',
-    KeyConditionExpression: 'GSI1PK = :pk',
-    ExpressionAttributeValues: { ':pk': 'LOCATIONS' }
-  }));
+  const result = await ddb.send(
+    new QueryCommand({
+      TableName: MAIN_TABLE,
+      IndexName: 'GSI1',
+      KeyConditionExpression: 'GSI1PK = :pk',
+      ExpressionAttributeValues: { ':pk': 'LOCATIONS' },
+    })
+  );
 
   const locations = result.Items || [];
-  await s3.send(new PutObjectCommand({
-    Bucket: assetsBucket,
-    Key: 'public/locations.json',
-    Body: JSON.stringify(locations),
-    ContentType: 'application/json'
-  }));
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: assetsBucket,
+      Key: 'public/locations.json',
+      Body: JSON.stringify(locations),
+      ContentType: 'application/json',
+    })
+  );
 };
 
 const logAudit = async (adminId: string, actionType: string, details: Record<string, any>) => {
   const timestamp = new Date().toISOString();
   const auditId = randomBytes(8).toString('hex');
   try {
-    await ddb.send(new PutCommand({
-      TableName: AUDIT_LOGS_TABLE,
-      Item: {
-        PK: `AUDIT#${adminId}`,
-        SK: `${timestamp}#${auditId}`,
-        audit_id: auditId,
-        admin_id: adminId,
-        action_type: actionType,
-        timestamp,
-        ...details
-      }
-    }));
+    await ddb.send(
+      new PutCommand({
+        TableName: AUDIT_LOGS_TABLE,
+        Item: {
+          PK: `AUDIT#${adminId}`,
+          SK: `${timestamp}#${auditId}`,
+          audit_id: auditId,
+          admin_id: adminId,
+          action_type: actionType,
+          timestamp,
+          ...details,
+        },
+      })
+    );
   } catch (err) {
     console.error('AuditLog write failed:', err);
   }
@@ -63,12 +69,14 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
 
   // GET /admin/locations
   if (method === 'GET' && path === '/admin/locations') {
-    const result = await ddb.send(new QueryCommand({
-      TableName: MAIN_TABLE,
-      IndexName: 'GSI1',
-      KeyConditionExpression: 'GSI1PK = :pk',
-      ExpressionAttributeValues: { ':pk': 'LOCATIONS' }
-    }));
+    const result = await ddb.send(
+      new QueryCommand({
+        TableName: MAIN_TABLE,
+        IndexName: 'GSI1',
+        KeyConditionExpression: 'GSI1PK = :pk',
+        ExpressionAttributeValues: { ':pk': 'LOCATIONS' },
+      })
+    );
     return result.Items || [];
   }
 
@@ -84,7 +92,7 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
       address: body.address,
       created_at: now,
       GSI1PK: 'LOCATIONS',
-      GSI1SK: `LOC#${locationId}`
+      GSI1SK: `LOC#${locationId}`,
     };
 
     await ddb.send(new PutCommand({ TableName: MAIN_TABLE, Item: item }));
@@ -97,13 +105,15 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
   if (method === 'PUT' && /^\/admin\/locations\/[^/]+$/.test(path)) {
     const id = path.split('/')[3];
     const body = parseJsonBody(event);
-    await ddb.send(new UpdateCommand({
-      TableName: MAIN_TABLE,
-      Key: { PK: `LOC#${id}`, SK: 'METADATA' },
-      UpdateExpression: 'SET #name = :name, address = :address',
-      ExpressionAttributeNames: { '#name': 'name' },
-      ExpressionAttributeValues: { ':name': body.name, ':address': body.address }
-    }));
+    await ddb.send(
+      new UpdateCommand({
+        TableName: MAIN_TABLE,
+        Key: { PK: `LOC#${id}`, SK: 'METADATA' },
+        UpdateExpression: 'SET #name = :name, address = :address',
+        ExpressionAttributeNames: { '#name': 'name' },
+        ExpressionAttributeValues: { ':name': body.name, ':address': body.address },
+      })
+    );
     await logAudit(adminId, 'update_location', { target_id: id });
     await syncLocationsToS3();
     return { message: 'Location updated' };
@@ -120,11 +130,13 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
 
   if (method === 'GET' && /^\/admin\/locations\/[^/]+\/scanners$/.test(path)) {
     const locationId = path.split('/')[3];
-    const result = await ddb.send(new QueryCommand({
-      TableName: MAIN_TABLE,
-      KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
-      ExpressionAttributeValues: { ':pk': `LOC#${locationId}`, ':sk': 'SCANNER#' },
-    }));
+    const result = await ddb.send(
+      new QueryCommand({
+        TableName: MAIN_TABLE,
+        KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
+        ExpressionAttributeValues: { ':pk': `LOC#${locationId}`, ':sk': 'SCANNER#' },
+      })
+    );
     return result.Items || [];
   }
 
@@ -134,15 +146,21 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     const scannerId = randomBytes(8).toString('hex');
     const scannerApiKey = randomBytes(32).toString('hex');
     const now = new Date().toISOString();
+    const assignedLockerId = typeof body.assigned_locker_id === 'string' ? body.assigned_locker_id.trim() : '';
+    if (!assignedLockerId) {
+      throw new ValidationError('assigned_locker_id is required when registering a scanner');
+    }
     const item = {
       PK: `LOC#${locationId}`,
       SK: `SCANNER#${scannerId}`,
       scanner_id: scannerId,
+      device_id: scannerId,
       location_id: locationId,
       name: body.name || `Scanner ${scannerId}`,
       status: 'active',
       reader_adapter: body.reader_adapter || 'mock',
       allowed_qr_providers: body.allowed_qr_providers || ['basic-subscription', 'mock'],
+      assigned_locker_id: assignedLockerId,
       api_key_hash: hashApiKey(scannerApiKey),
       api_key_last_rotated_at: now,
       hardware_metadata: body.hardware_metadata,
@@ -161,11 +179,15 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     const scannerId = queryParams.scanner_id;
     const entryLogsTable = getEntryLogsTableName();
 
-    const scanResult = await ddb.send(new ScanCommand({
-      TableName: entryLogsTable,
-      FilterExpression: 'location_id = :locId OR location_id = :locPk',
-      ExpressionAttributeValues: { ':locId': locationId, ':locPk': `LOC#${locationId}` },
-    })).catch(() => ({ Items: [] }));
+    const scanResult = await ddb
+      .send(
+        new ScanCommand({
+          TableName: entryLogsTable,
+          FilterExpression: 'location_id = :locId OR location_id = :locPk',
+          ExpressionAttributeValues: { ':locId': locationId, ':locPk': `LOC#${locationId}` },
+        })
+      )
+      .catch(() => ({ Items: [] }));
 
     let items = (scanResult.Items || []) as Array<Record<string, any>>;
 
@@ -194,7 +216,7 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
       const dayKey = date.toISOString().slice(0, 10);
 
       const jan1 = new Date(date.getFullYear(), 0, 1);
-      const weekNum = Math.ceil((((date.getTime() - jan1.getTime()) / 86400000) + jan1.getDay() + 1) / 7);
+      const weekNum = Math.ceil(((date.getTime() - jan1.getTime()) / 86400000 + jan1.getDay() + 1) / 7);
       const weekKey = `${date.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
 
       hourly_stats[hourKey] = (hourly_stats[hourKey] || 0) + 1;
@@ -217,11 +239,13 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
   // GET /admin/locations/{id}/devices
   if (method === 'GET' && path.includes('/devices')) {
     const locationId = path.split('/')[3];
-    const result = await ddb.send(new QueryCommand({
-      TableName: MAIN_TABLE,
-      KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
-      ExpressionAttributeValues: { ':pk': `LOC#${locationId}`, ':sk': 'DEV#' }
-    }));
+    const result = await ddb.send(
+      new QueryCommand({
+        TableName: MAIN_TABLE,
+        KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
+        ExpressionAttributeValues: { ':pk': `LOC#${locationId}`, ':sk': 'DEV#' },
+      })
+    );
     return result.Items || [];
   }
 
@@ -253,7 +277,7 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
       connection_params: body.connection_params,
       api_key_hash: apiKeyHash,
       status: 'active',
-      created_at: new Date().toISOString()
+      created_at: new Date().toISOString(),
     };
 
     await ddb.send(new PutCommand({ TableName: MAIN_TABLE, Item: item }));
@@ -266,15 +290,24 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
     const newKey = randomBytes(32).toString('hex');
 
     // Get current key using GetCommand
-    const currentKeyRes = await ddb.send(new GetCommand({
-      TableName: MAIN_TABLE,
-      Key: { PK: 'CONFIG#HMAC_CURRENT_KEY', SK: 'CONFIG' }
-    }));
+    const currentKeyRes = await ddb.send(
+      new GetCommand({
+        TableName: MAIN_TABLE,
+        Key: { PK: 'CONFIG#HMAC_CURRENT_KEY', SK: 'CONFIG' },
+      })
+    );
     const currentKey = (currentKeyRes.Item as ConfigItem)?.value || 'default_key';
 
     // Move current to previous, set new as current
-    await ddb.send(new PutCommand({ TableName: MAIN_TABLE, Item: { PK: 'CONFIG#HMAC_PREVIOUS_KEY', SK: 'CONFIG', value: currentKey } }));
-    await ddb.send(new PutCommand({ TableName: MAIN_TABLE, Item: { PK: 'CONFIG#HMAC_CURRENT_KEY', SK: 'CONFIG', value: newKey } }));
+    await ddb.send(
+      new PutCommand({
+        TableName: MAIN_TABLE,
+        Item: { PK: 'CONFIG#HMAC_PREVIOUS_KEY', SK: 'CONFIG', value: currentKey },
+      })
+    );
+    await ddb.send(
+      new PutCommand({ TableName: MAIN_TABLE, Item: { PK: 'CONFIG#HMAC_CURRENT_KEY', SK: 'CONFIG', value: newKey } })
+    );
 
     await logAudit(adminId, 'hmac_rotation', {});
     return { message: 'HMAC keys rotated successfully' };
@@ -282,22 +315,26 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
 
   // GET /admin/members
   if (method === 'GET' && path === '/admin/members') {
-    const result = await ddb.send(new ScanCommand({
-      TableName: MAIN_TABLE,
-      FilterExpression: 'begins_with(PK, :userPrefix) AND SK = :profile',
-      ExpressionAttributeValues: { ':userPrefix': 'USER#', ':profile': 'PROFILE' }
-    }));
+    const result = await ddb.send(
+      new ScanCommand({
+        TableName: MAIN_TABLE,
+        FilterExpression: 'begins_with(PK, :userPrefix) AND SK = :profile',
+        ExpressionAttributeValues: { ':userPrefix': 'USER#', ':profile': 'PROFILE' },
+      })
+    );
     return result.Items || [];
   }
 
   // GET /admin/members/{id}
   if (method === 'GET' && path.startsWith('/admin/members/')) {
     const userId = path.split('/')[3];
-    const result = await ddb.send(new QueryCommand({
-      TableName: MAIN_TABLE,
-      KeyConditionExpression: 'PK = :pk',
-      ExpressionAttributeValues: { ':pk': `USER#${userId}` }
-    }));
+    const result = await ddb.send(
+      new QueryCommand({
+        TableName: MAIN_TABLE,
+        KeyConditionExpression: 'PK = :pk',
+        ExpressionAttributeValues: { ':pk': `USER#${userId}` },
+      })
+    );
     return result.Items || [];
   }
 
@@ -318,21 +355,25 @@ export const handler = withHandler(async (event: APIGatewayProxyEventV2) => {
       graceEnd = new Date(Date.now() + days * 86400000).toISOString();
     }
 
-    const subs = await ddb.send(new QueryCommand({
-      TableName: MAIN_TABLE,
-      KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
-      ExpressionAttributeValues: { ':pk': `USER#${userId}`, ':sk': 'SUB#' }
-    }));
+    const subs = await ddb.send(
+      new QueryCommand({
+        TableName: MAIN_TABLE,
+        KeyConditionExpression: 'PK = :pk AND begins_with(SK, :sk)',
+        ExpressionAttributeValues: { ':pk': `USER#${userId}`, ':sk': 'SUB#' },
+      })
+    );
 
     if (subs.Items && subs.Items.length > 0) {
       const subSk = subs.Items[0].SK;
-      await ddb.send(new UpdateCommand({
-        TableName: MAIN_TABLE,
-        Key: { PK: `USER#${userId}`, SK: subSk },
-        UpdateExpression: 'SET #st = :st, grace_period_end = :ge, GSI1PK = :gsi',
-        ExpressionAttributeNames: { '#st': 'status' },
-        ExpressionAttributeValues: { ':st': newStatus, ':ge': graceEnd, ':gsi': `STATUS#${newStatus}` }
-      }));
+      await ddb.send(
+        new UpdateCommand({
+          TableName: MAIN_TABLE,
+          Key: { PK: `USER#${userId}`, SK: subSk },
+          UpdateExpression: 'SET #st = :st, grace_period_end = :ge, GSI1PK = :gsi',
+          ExpressionAttributeNames: { '#st': 'status' },
+          ExpressionAttributeValues: { ':st': newStatus, ':ge': graceEnd, ':gsi': `STATUS#${newStatus}` },
+        })
+      );
     }
 
     await logAudit(adminId, action === 'suspend' ? 'suspend_account' : 'extend_grace', { target_id: userId, action });

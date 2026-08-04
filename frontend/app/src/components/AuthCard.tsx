@@ -1,12 +1,28 @@
 import React, { useReducer } from 'react';
-import { authFormReducer, AuthMode, changeAuthFormField, initialAuthFormState, setAuthFormError, setAuthMode } from '../reducers/authFormReducer';
+import {
+  authFormReducer,
+  AuthMode,
+  changeAuthFormField,
+  initialAuthFormState,
+  setAuthFormError,
+  setAuthMode,
+} from '../reducers/authFormReducer';
 import { useAppDispatch, useAppSelector } from '../store';
-import { clearAuthMessages, confirmForgotPasswordThunk, forgotPasswordThunk, loginThunk, registerThunk, selectAuth } from '../store/authSlice';
+import {
+  clearAuthMessages,
+  confirmForgotPasswordThunk,
+  forgotPasswordThunk,
+  loginThunk,
+  registerThunk,
+  selectAuth,
+} from '../store/authSlice';
 import { fetchDashboardThunk, fetchInvoicesThunk } from '../store/memberSlice';
 
 const fieldLabelClass = 'mb-2 block text-sm font-medium text-stone-700';
-const fieldClass = 'w-full rounded-md border border-stone-300 bg-[#fffdf8] px-3.5 py-3 text-sm text-stone-900 shadow-sm placeholder:text-stone-400 transition focus:border-rose-700 focus:outline-none focus:ring-4 focus:ring-rose-800/10';
-const submitButtonClass = 'mt-1 flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-rose-800 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50';
+const fieldClass =
+  'w-full rounded-md border border-stone-300 bg-[#fffdf8] px-3.5 py-3 text-sm text-stone-900 shadow-sm placeholder:text-stone-400 transition focus:border-rose-700 focus:outline-none focus:ring-4 focus:ring-rose-800/10';
+const submitButtonClass =
+  'mt-1 flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-rose-800 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50';
 
 export const AuthCard: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -20,7 +36,10 @@ export const AuthCard: React.FC = () => {
     dispatchForm(setAuthMode(mode));
   };
 
-  const handleFieldChange = (field: 'inputEmail' | 'inputPassword' | 'inputCode' | 'newPassword' | 'confirmPassword', value: string) => {
+  const handleFieldChange = (
+    field: 'inputEmail' | 'inputPassword' | 'inputCode' | 'newPassword' | 'confirmPassword',
+    value: string
+  ) => {
     dispatchForm(changeAuthFormField(field, value));
   };
 
@@ -70,7 +89,12 @@ export const AuthCard: React.FC = () => {
         <div className="mb-8 text-center">
           <div className="inline-flex items-center justify-center w-10 h-10 rounded-md bg-rose-50 text-rose-800 border border-rose-200 mb-3">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
             </svg>
           </div>
           <h2 className="text-xl font-bold text-stone-900 tracking-tight">
@@ -140,7 +164,9 @@ export const AuthCard: React.FC = () => {
         {authMode === 'login' && (
           <form onSubmit={handleLogin} className="space-y-5">
             <div>
-              <label className={fieldLabelClass} htmlFor="login-email">Email Address</label>
+              <label className={fieldLabelClass} htmlFor="login-email">
+                Email Address
+              </label>
               <input
                 id="login-email"
                 type="email"
@@ -154,7 +180,9 @@ export const AuthCard: React.FC = () => {
             </div>
 
             <div>
-              <label className={fieldLabelClass} htmlFor="login-password">Password</label>
+              <label className={fieldLabelClass} htmlFor="login-password">
+                Password
+              </label>
               <input
                 id="login-password"
                 type="password"
@@ -167,11 +195,7 @@ export const AuthCard: React.FC = () => {
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className={submitButtonClass}
-            >
+            <button type="submit" disabled={loading} className={submitButtonClass}>
               {loading ? 'Signing In...' : 'Sign In to Portal'}
             </button>
           </form>
@@ -180,7 +204,9 @@ export const AuthCard: React.FC = () => {
         {authMode === 'register' && (
           <form onSubmit={handleRegister} className="space-y-5">
             <div>
-              <label className={fieldLabelClass} htmlFor="register-email">Email Address</label>
+              <label className={fieldLabelClass} htmlFor="register-email">
+                Email Address
+              </label>
               <input
                 id="register-email"
                 type="email"
@@ -194,7 +220,9 @@ export const AuthCard: React.FC = () => {
             </div>
 
             <div>
-              <label className={fieldLabelClass} htmlFor="register-password">Password</label>
+              <label className={fieldLabelClass} htmlFor="register-password">
+                Password
+              </label>
               <input
                 id="register-password"
                 type="password"
@@ -208,7 +236,9 @@ export const AuthCard: React.FC = () => {
             </div>
 
             <div>
-              <label className={fieldLabelClass} htmlFor="register-confirm-password">Confirm Password</label>
+              <label className={fieldLabelClass} htmlFor="register-confirm-password">
+                Confirm Password
+              </label>
               <input
                 id="register-confirm-password"
                 type="password"
@@ -221,11 +251,7 @@ export const AuthCard: React.FC = () => {
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className={submitButtonClass}
-            >
+            <button type="submit" disabled={loading} className={submitButtonClass}>
               {loading ? 'Creating Account...' : 'Create Member Account'}
             </button>
           </form>
@@ -234,7 +260,9 @@ export const AuthCard: React.FC = () => {
         {authMode === 'forgot' && (
           <form onSubmit={handleForgotPassword} className="space-y-5">
             <div>
-              <label className={fieldLabelClass} htmlFor="forgot-email">Account Email Address</label>
+              <label className={fieldLabelClass} htmlFor="forgot-email">
+                Account Email Address
+              </label>
               <input
                 id="forgot-email"
                 type="email"
@@ -247,11 +275,7 @@ export const AuthCard: React.FC = () => {
               />
             </div>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className={submitButtonClass}
-            >
+            <button type="submit" disabled={loading} className={submitButtonClass}>
               {loading ? 'Sending Reset Code...' : 'Send Verification Code'}
             </button>
             <button
@@ -267,7 +291,9 @@ export const AuthCard: React.FC = () => {
         {authMode === 'reset' && (
           <form onSubmit={handleResetPassword} className="space-y-5">
             <div>
-              <label className={fieldLabelClass} htmlFor="reset-email">Account Email</label>
+              <label className={fieldLabelClass} htmlFor="reset-email">
+                Account Email
+              </label>
               <input
                 id="reset-email"
                 type="email"
@@ -279,7 +305,9 @@ export const AuthCard: React.FC = () => {
               />
             </div>
             <div>
-              <label className={fieldLabelClass} htmlFor="reset-code">Verification Code</label>
+              <label className={fieldLabelClass} htmlFor="reset-code">
+                Verification Code
+              </label>
               <input
                 id="reset-code"
                 type="text"
@@ -292,7 +320,9 @@ export const AuthCard: React.FC = () => {
               />
             </div>
             <div>
-              <label className={fieldLabelClass} htmlFor="reset-password">New Password</label>
+              <label className={fieldLabelClass} htmlFor="reset-password">
+                New Password
+              </label>
               <input
                 id="reset-password"
                 type="password"
@@ -305,7 +335,9 @@ export const AuthCard: React.FC = () => {
               />
             </div>
             <div>
-              <label className={fieldLabelClass} htmlFor="reset-confirm-password">Confirm New Password</label>
+              <label className={fieldLabelClass} htmlFor="reset-confirm-password">
+                Confirm New Password
+              </label>
               <input
                 id="reset-confirm-password"
                 type="password"
@@ -317,11 +349,7 @@ export const AuthCard: React.FC = () => {
                 required
               />
             </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className={submitButtonClass}
-            >
+            <button type="submit" disabled={loading} className={submitButtonClass}>
               {loading ? 'Confirming Reset...' : 'Set New Password'}
             </button>
           </form>

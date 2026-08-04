@@ -81,26 +81,42 @@ export default function App() {
               <div className="bg-[#fffdf8] p-5 flex items-center gap-4">
                 <div className="w-10 h-10 rounded-md bg-rose-50 text-rose-800 flex items-center justify-center shrink-0">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"
+                    />
                   </svg>
                 </div>
                 <div>
                   <div className="text-xs text-stone-500 font-medium">Turnstile pass</div>
-                  <div className={`text-sm font-semibold mt-0.5 ${membershipActive ? 'text-emerald-700' : 'text-stone-700'}`}>
+                  <div
+                    className={`text-sm font-semibold mt-0.5 ${membershipActive ? 'text-emerald-700' : 'text-stone-700'}`}
+                  >
                     {membershipActive ? 'Active & ready' : 'Membership required'}
                   </div>
                 </div>
               </div>
 
               <div className="bg-[#fffdf8] p-5 flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-md flex items-center justify-center shrink-0 ${membershipActive ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-600'}`}>
+                <div
+                  className={`w-10 h-10 rounded-md flex items-center justify-center shrink-0 ${membershipActive ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-600'}`}
+                >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
+                    />
                   </svg>
                 </div>
                 <div>
                   <div className="text-xs text-stone-500 font-medium">Membership status</div>
-                  <div className={`text-sm font-semibold mt-0.5 ${membershipActive ? 'text-emerald-700' : 'text-stone-700'}`}>
+                  <div
+                    className={`text-sm font-semibold mt-0.5 ${membershipActive ? 'text-emerald-700' : 'text-stone-700'}`}
+                  >
                     {membershipStatus}
                   </div>
                 </div>
@@ -109,7 +125,12 @@ export default function App() {
               <div className="bg-[#fffdf8] p-5 flex items-center gap-4">
                 <div className="w-10 h-10 rounded-md bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="2"
+                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
+                    />
                   </svg>
                 </div>
                 <div>

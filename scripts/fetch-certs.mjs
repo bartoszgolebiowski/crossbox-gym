@@ -10,8 +10,6 @@ const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 const certsDir = process.argv[2] ? path.resolve(process.argv[2]) : path.join(rootDir, 'certs');
 
-
-
 // Parse .env if present
 if (fs.existsSync('.env')) {
   try {
@@ -24,12 +22,17 @@ if (fs.existsSync('.env')) {
         if (trimmed && !trimmed.startsWith('#')) {
           const [k, ...v] = trimmed.split('=');
           if (k && !process.env[k.trim()]) {
-            process.env[k.trim()] = v.join('=').trim().replace(/^["']|["']$/g, '');
+            process.env[k.trim()] = v
+              .join('=')
+              .trim()
+              .replace(/^["']|["']$/g, '');
           }
         }
       }
     }
-  } catch (e) {}
+  } catch {
+    // Continue with the existing environment when the optional .env file cannot be read.
+  }
 }
 
 const region = process.env.AWS_REGION || 'eu-central-1';
@@ -60,7 +63,9 @@ async function main() {
           knownThings[1].secretName = iotOutputs.SecretNameOutput;
         }
       }
-    } catch (e) {}
+    } catch {
+      // Continue with the configured certificate defaults when cached outputs are unavailable.
+    }
   }
 
   // Ensure root certs directory exists

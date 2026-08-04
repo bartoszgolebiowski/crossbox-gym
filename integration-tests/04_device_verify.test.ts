@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
-import { getTestContext, createTestUserSession, createTestLocation, createMockScanner, generateTestQRPayload, cleanupTestLocation, scanMockDevice } from './lib/test-helpers.ts';
+import {
+  getTestContext,
+  createTestUserSession,
+  createTestLocation,
+  createMockScanner,
+  generateTestQRPayload,
+  cleanupTestLocation,
+  scanMockDevice,
+} from './lib/test-helpers.ts';
 import { IntegrationTestContext, TestUserSession, TestLocationRecord, TestScannerRecord } from './lib/types.ts';
 
 describe('Turnstile Entry & Device Verification Test Suite', () => {
@@ -63,11 +71,12 @@ describe('Turnstile Entry & Device Verification Test Suite', () => {
 
   test('VerifyEntry Lambda with tampered HMAC returns denied invalid_hmac', async () => {
     const tamperedUser = await createTestUserSession(context, { role: 'member', withActiveSubscription: true });
-    const qrPayload = await generateTestQRPayload(context, tamperedUser.userId, { customHmacKey: 'invalid_secret_key' });
+    const qrPayload = await generateTestQRPayload(context, tamperedUser.userId, {
+      customHmacKey: 'invalid_secret_key',
+    });
     const data = await scanMockDevice(context, testScanner.scanner_api_key!, qrPayload, testScanner.scanner_id);
 
     assert.equal(data.result, 'denied');
     assert.equal(data.reason, 'invalid_hmac');
   });
 });
-

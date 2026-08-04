@@ -1,12 +1,12 @@
 import { CloudFormationClient, ListStackResourcesCommand } from '@aws-sdk/client-cloudformation';
 import {
-    AdminAddUserToGroupCommand,
-    AdminCreateUserCommand,
-    AdminDeleteUserCommand,
-    AdminGetUserCommand,
-    AdminInitiateAuthCommand,
-    AdminSetUserPasswordCommand,
-    CognitoIdentityProviderClient
+  AdminAddUserToGroupCommand,
+  AdminCreateUserCommand,
+  AdminDeleteUserCommand,
+  AdminGetUserCommand,
+  AdminInitiateAuthCommand,
+  AdminSetUserPasswordCommand,
+  CognitoIdentityProviderClient,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda';
@@ -14,14 +14,13 @@ import { BatchWriteCommand, DynamoDBDocumentClient, GetCommand, PutCommand, Quer
 import { createHmac, randomBytes } from 'crypto';
 import { requireOutput } from './stack-outputs.ts';
 import {
-    IntegrationTestContext,
-    TestDeviceInput,
-    TestDeviceRecord,
-    TestLocationInput,
-    TestLocationRecord,
-    TestLockerRecord,
-    TestScannerRecord,
-    TestUserSession,
+  IntegrationTestContext,
+  TestDeviceInput,
+  TestDeviceRecord,
+  TestLocationInput,
+  TestLocationRecord,
+  TestScannerRecord,
+  TestUserSession,
 } from './types.ts';
 
 let cachedContext: IntegrationTestContext | undefined;
@@ -36,9 +35,14 @@ export async function getTestContext(): Promise<IntegrationTestContext> {
   const entryLogsTableName = await requireOutput('EntryLogsTableName');
   const auditLogsTableName = await requireOutput('AuditLogsTableName');
   const unlockQueueUrl = await requireOutput('UnlockQueueUrl').catch(() => undefined);
-  const staticBucketName = await requireOutput('StaticBucketName').catch(() => requireOutput('AdminBucketName')).catch(() => requireOutput('AppBucketName')).catch(() => '');
+  const staticBucketName = await requireOutput('StaticBucketName')
+    .catch(() => requireOutput('AdminBucketName'))
+    .catch(() => requireOutput('AppBucketName'))
+    .catch(() => '');
   const stripeEventBusName = await requireOutput('StripeEventBusName').catch(() => undefined);
-  const unlockOutboxDispatcherFunctionName = await requireOutput('UnlockOutboxDispatcherFunctionName').catch(() => undefined);
+  const unlockOutboxDispatcherFunctionName = await requireOutput('UnlockOutboxDispatcherFunctionName').catch(
+    () => undefined
+  );
   const verifyEntryFunctionName = await requireOutput('VerifyEntryFunctionName').catch(() => undefined);
   const region = process.env.AWS_REGION || 'eu-central-1';
 
@@ -54,7 +58,7 @@ export async function getTestContext(): Promise<IntegrationTestContext> {
     stripeEventBusName,
     unlockOutboxDispatcherFunctionName,
     verifyEntryFunctionName,
-    region
+    region,
   };
 
   return cachedContext;
@@ -79,15 +83,17 @@ export async function createTestUserSession(
     const email = 'admin@crossboxgym.com';
     const password = 'Admin123!';
 
-    const authRes = await cognito.send(new AdminInitiateAuthCommand({
-      UserPoolId: context.userPoolId,
-      ClientId: context.userPoolClientId,
-      AuthFlow: 'ADMIN_USER_PASSWORD_AUTH',
-      AuthParameters: {
-        USERNAME: email,
-        PASSWORD: password
-      }
-    }));
+    const authRes = await cognito.send(
+      new AdminInitiateAuthCommand({
+        UserPoolId: context.userPoolId,
+        ClientId: context.userPoolClientId,
+        AuthFlow: 'ADMIN_USER_PASSWORD_AUTH',
+        AuthParameters: {
+          USERNAME: email,
+          PASSWORD: password,
+        },
+      })
+    );
 
     const authResult = authRes.AuthenticationResult;
     if (!authResult || !authResult.IdToken || !authResult.AccessToken) {
@@ -101,49 +107,57 @@ export async function createTestUserSession(
       idToken: authResult.IdToken,
       accessToken: authResult.AccessToken,
       refreshToken: authResult.RefreshToken || '',
-      role: 'admin'
+      role: 'admin',
     };
   }
 
   const email = options?.email || `test-user-${Date.now()}-${Math.random().toString(36).substring(2, 7)}@example.com`;
   const password = options?.password || 'TestPass123!';
 
-  const createRes = await cognito.send(new AdminCreateUserCommand({
-    UserPoolId: context.userPoolId,
-    Username: email,
-    UserAttributes: [
-      { Name: 'email', Value: email },
-      { Name: 'email_verified', Value: 'true' }
-    ],
-    MessageAction: 'SUPPRESS'
-  }));
-
-  const userId = createRes.User?.Attributes?.find(a => a.Name === 'sub')?.Value || '';
-
-  await cognito.send(new AdminSetUserPasswordCommand({
-    UserPoolId: context.userPoolId,
-    Username: email,
-    Password: password,
-    Permanent: true
-  }));
-
-  if (role === 'admin') {
-    await cognito.send(new AdminAddUserToGroupCommand({
+  const createRes = await cognito.send(
+    new AdminCreateUserCommand({
       UserPoolId: context.userPoolId,
       Username: email,
-      GroupName: 'admins'
-    }));
+      UserAttributes: [
+        { Name: 'email', Value: email },
+        { Name: 'email_verified', Value: 'true' },
+      ],
+      MessageAction: 'SUPPRESS',
+    })
+  );
+
+  const userId = createRes.User?.Attributes?.find((a) => a.Name === 'sub')?.Value || '';
+
+  await cognito.send(
+    new AdminSetUserPasswordCommand({
+      UserPoolId: context.userPoolId,
+      Username: email,
+      Password: password,
+      Permanent: true,
+    })
+  );
+
+  if (role === 'admin') {
+    await cognito.send(
+      new AdminAddUserToGroupCommand({
+        UserPoolId: context.userPoolId,
+        Username: email,
+        GroupName: 'admins',
+      })
+    );
   }
 
-  const authRes = await cognito.send(new AdminInitiateAuthCommand({
-    UserPoolId: context.userPoolId,
-    ClientId: context.userPoolClientId,
-    AuthFlow: 'ADMIN_USER_PASSWORD_AUTH',
-    AuthParameters: {
-      USERNAME: email,
-      PASSWORD: password
-    }
-  }));
+  const authRes = await cognito.send(
+    new AdminInitiateAuthCommand({
+      UserPoolId: context.userPoolId,
+      ClientId: context.userPoolClientId,
+      AuthFlow: 'ADMIN_USER_PASSWORD_AUTH',
+      AuthParameters: {
+        USERNAME: email,
+        PASSWORD: password,
+      },
+    })
+  );
 
   const authResult = authRes.AuthenticationResult;
   if (!authResult || !authResult.IdToken || !authResult.AccessToken) {
@@ -151,37 +165,41 @@ export async function createTestUserSession(
   }
 
   // Seed DynamoDB profile
-  await ddb.send(new PutCommand({
-    TableName: context.mainTableName,
-    Item: {
-      PK: `USER#${userId}`,
-      SK: 'PROFILE',
-      email,
-      cognito_sub: userId,
-      role,
-      password_set: true,
-      created_at: now,
-      GSI1PK: 'USERS',
-      GSI1SK: `USER#${userId}`
-    }
-  }));
-
-  if (options?.withActiveSubscription ?? true) {
-    const subId = `sub_test_${Date.now()}_${randomBytes(4).toString('hex')}`;
-    await ddb.send(new PutCommand({
+  await ddb.send(
+    new PutCommand({
       TableName: context.mainTableName,
       Item: {
         PK: `USER#${userId}`,
-        SK: `SUB#${subId}`,
-        stripe_subscription_id: subId,
-        stripe_customer_id: `cus_${userId}`,
-        status: 'ACTIVE',
+        SK: 'PROFILE',
+        email,
+        cognito_sub: userId,
+        role,
+        password_set: true,
         created_at: now,
-        updated_at: now,
-        GSI1PK: 'STATUS#ACTIVE',
-        GSI1SK: `SUB#${subId}`
-      }
-    }));
+        GSI1PK: 'USERS',
+        GSI1SK: `USER#${userId}`,
+      },
+    })
+  );
+
+  if (options?.withActiveSubscription ?? true) {
+    const subId = `sub_test_${Date.now()}_${randomBytes(4).toString('hex')}`;
+    await ddb.send(
+      new PutCommand({
+        TableName: context.mainTableName,
+        Item: {
+          PK: `USER#${userId}`,
+          SK: `SUB#${subId}`,
+          stripe_subscription_id: subId,
+          stripe_customer_id: `cus_${userId}`,
+          status: 'ACTIVE',
+          created_at: now,
+          updated_at: now,
+          GSI1PK: 'STATUS#ACTIVE',
+          GSI1SK: `SUB#${subId}`,
+        },
+      })
+    );
   }
 
   return {
@@ -191,7 +209,7 @@ export async function createTestUserSession(
     idToken: authResult.IdToken,
     accessToken: authResult.AccessToken,
     refreshToken: authResult.RefreshToken || '',
-    role
+    role,
   };
 }
 
@@ -207,9 +225,9 @@ export async function createTestLocation(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${adminToken}`
+      Authorization: `Bearer ${adminToken}`,
     },
-    body: JSON.stringify({ name, address })
+    body: JSON.stringify({ name, address }),
   });
 
   if (res.status !== 201 && res.status !== 200) {
@@ -242,14 +260,14 @@ export async function createTestDevice(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${adminToken}`
+      Authorization: `Bearer ${adminToken}`,
     },
     body: JSON.stringify({
       name,
       type,
       connection_params,
-      api_key: rawApiKey
-    })
+      api_key: rawApiKey,
+    }),
   });
 
   if (res.status !== 201 && res.status !== 200) {
@@ -265,7 +283,7 @@ export async function createMockScanner(
   context: IntegrationTestContext,
   adminToken: string,
   locationId: string,
-  options?: { name?: string; allowedQrProviders?: string[] },
+  options?: { name?: string; allowedQrProviders?: string[]; assignedLockerId?: string }
 ): Promise<TestScannerRecord> {
   const response = await fetch(`${context.apiUrl}/admin/locations/${locationId}/scanners`, {
     method: 'POST',
@@ -274,12 +292,13 @@ export async function createMockScanner(
       name: options?.name || `Mock Scanner ${Date.now()}`,
       reader_adapter: 'mock',
       allowed_qr_providers: options?.allowedQrProviders || ['mock'],
+      assigned_locker_id: options?.assignedLockerId || 'crossbox-locker-relay-01',
     }),
   });
   if (response.status !== 200 && response.status !== 201) {
     throw new Error(`Failed to create mock scanner (${response.status}): ${await response.text()}`);
   }
-  const scanner = await response.json() as TestScannerRecord;
+  const scanner = (await response.json()) as TestScannerRecord;
   if (!scanner.scanner_id || !scanner.scanner_api_key) {
     throw new Error('Mock scanner creation did not return a scanner ID and one-time scanner API key');
   }
@@ -299,10 +318,12 @@ export async function generateTestQRPayload(
   let hmacKey = options?.customHmacKey;
 
   if (!hmacKey) {
-    const keyRes = await ddb.send(new GetCommand({
-      TableName: context.mainTableName,
-      Key: { PK: 'CONFIG#HMAC_CURRENT_KEY', SK: 'CONFIG' }
-    }));
+    const keyRes = await ddb.send(
+      new GetCommand({
+        TableName: context.mainTableName,
+        Key: { PK: 'CONFIG#HMAC_CURRENT_KEY', SK: 'CONFIG' },
+      })
+    );
     hmacKey = keyRes.Item?.value || 'default_key';
   }
 
@@ -313,7 +334,7 @@ export async function generateTestQRPayload(
   return JSON.stringify({
     user_id: userId,
     timestamp,
-    hmac
+    hmac,
   });
 }
 
@@ -324,10 +345,12 @@ export async function fetchDynamoItem(
   sk: string
 ): Promise<Record<string, any> | undefined> {
   const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({ region: context.region }));
-  const res = await ddb.send(new GetCommand({
-    TableName: tableName,
-    Key: { PK: pk, SK: sk }
-  }));
+  const res = await ddb.send(
+    new GetCommand({
+      TableName: tableName,
+      Key: { PK: pk, SK: sk },
+    })
+  );
   return res.Item;
 }
 
@@ -338,56 +361,60 @@ export async function cleanupTestLocation(
 ): Promise<void> {
   await fetch(`${context.apiUrl}/admin/locations/${locationId}`, {
     method: 'DELETE',
-    headers: { 'Authorization': `Bearer ${adminToken}` }
+    headers: { Authorization: `Bearer ${adminToken}` },
   });
 }
 
-export async function cleanupTestUser(
-  context: IntegrationTestContext,
-  user: TestUserSession,
-): Promise<void> {
+export async function cleanupTestUser(context: IntegrationTestContext, user: TestUserSession): Promise<void> {
   await cleanupTestUserByEmail(context, user.email);
 }
 
-export async function cleanupTestUserByEmail(
-  context: IntegrationTestContext,
-  email: string,
-): Promise<void> {
+export async function cleanupTestUserByEmail(context: IntegrationTestContext, email: string): Promise<void> {
   const cognito = new CognitoIdentityProviderClient({ region: context.region });
   const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({ region: context.region }));
-  const userResponse = await cognito.send(new AdminGetUserCommand({
-    UserPoolId: context.userPoolId,
-    Username: email,
-  })).catch(() => undefined);
+  const userResponse = await cognito
+    .send(
+      new AdminGetUserCommand({
+        UserPoolId: context.userPoolId,
+        Username: email,
+      })
+    )
+    .catch(() => undefined);
   const userId = userResponse?.UserAttributes?.find((attribute) => attribute.Name === 'sub')?.Value;
 
   if (!userId) {
     return;
   }
 
-  const records = await ddb.send(new QueryCommand({
-    TableName: context.mainTableName,
-    KeyConditionExpression: 'PK = :pk',
-    ExpressionAttributeValues: { ':pk': `USER#${userId}` },
-    ProjectionExpression: 'PK, SK',
-  }));
+  const records = await ddb.send(
+    new QueryCommand({
+      TableName: context.mainTableName,
+      KeyConditionExpression: 'PK = :pk',
+      ExpressionAttributeValues: { ':pk': `USER#${userId}` },
+      ProjectionExpression: 'PK, SK',
+    })
+  );
 
   const deleteRequests = (records.Items ?? []).map((item) => ({
     DeleteRequest: { Key: { PK: item.PK, SK: item.SK } },
   }));
 
   for (let index = 0; index < deleteRequests.length; index += 25) {
-    await ddb.send(new BatchWriteCommand({
-      RequestItems: {
-        [context.mainTableName]: deleteRequests.slice(index, index + 25),
-      },
-    }));
+    await ddb.send(
+      new BatchWriteCommand({
+        RequestItems: {
+          [context.mainTableName]: deleteRequests.slice(index, index + 25),
+        },
+      })
+    );
   }
 
-  await cognito.send(new AdminDeleteUserCommand({
-    UserPoolId: context.userPoolId,
-    Username: email,
-  }));
+  await cognito.send(
+    new AdminDeleteUserCommand({
+      UserPoolId: context.userPoolId,
+      Username: email,
+    })
+  );
 }
 
 export async function deleteDynamoPartition(
@@ -396,18 +423,22 @@ export async function deleteDynamoPartition(
   pk: string
 ): Promise<void> {
   const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({ region: context.region }));
-  const records = await ddb.send(new QueryCommand({
-    TableName: tableName,
-    KeyConditionExpression: 'PK = :pk',
-    ExpressionAttributeValues: { ':pk': pk },
-    ProjectionExpression: 'PK, SK',
-  }));
+  const records = await ddb.send(
+    new QueryCommand({
+      TableName: tableName,
+      KeyConditionExpression: 'PK = :pk',
+      ExpressionAttributeValues: { ':pk': pk },
+      ProjectionExpression: 'PK, SK',
+    })
+  );
 
   const requests = (records.Items || []).map((item) => ({ DeleteRequest: { Key: item } }));
   for (let offset = 0; offset < requests.length; offset += 25) {
-    await ddb.send(new BatchWriteCommand({
-      RequestItems: { [tableName]: requests.slice(offset, offset + 25) }
-    }));
+    await ddb.send(
+      new BatchWriteCommand({
+        RequestItems: { [tableName]: requests.slice(offset, offset + 25) },
+      })
+    );
   }
 }
 
@@ -416,15 +447,22 @@ export async function dispatchUnlockOutbox(context: IntegrationTestContext): Pro
 
   if (!dispatcherFunctionName) {
     const stackArgumentIndex = process.argv.indexOf('--stack');
-    const stackName = (stackArgumentIndex >= 0 ? process.argv[stackArgumentIndex + 1] : undefined) || process.env.STACK_NAME || 'CrossboxGymDev';
+    const stackName =
+      (stackArgumentIndex >= 0 ? process.argv[stackArgumentIndex + 1] : undefined) ||
+      process.env.STACK_NAME ||
+      'CrossboxGymDev';
     const apiStackName = `${stackName.replace(/Stack$/, '')}ApiStack`;
     const cloudFormation = new CloudFormationClient({ region: context.region });
     let nextToken: string | undefined;
     let dispatcherResource: { PhysicalResourceId?: string } | undefined;
 
     do {
-      const resources = await cloudFormation.send(new ListStackResourcesCommand({ StackName: apiStackName, NextToken: nextToken }));
-      dispatcherResource = resources.StackResourceSummaries?.find((resource) => resource.LogicalResourceId?.startsWith('UnlockOutboxDispatcher'));
+      const resources = await cloudFormation.send(
+        new ListStackResourcesCommand({ StackName: apiStackName, NextToken: nextToken })
+      );
+      dispatcherResource = resources.StackResourceSummaries?.find((resource) =>
+        resource.LogicalResourceId?.startsWith('UnlockOutboxDispatcher')
+      );
       nextToken = resources.NextToken;
     } while (!dispatcherResource && nextToken);
 
@@ -436,10 +474,12 @@ export async function dispatchUnlockOutbox(context: IntegrationTestContext): Pro
   }
 
   const lambda = new LambdaClient({ region: context.region });
-  const response = await lambda.send(new InvokeCommand({
-    FunctionName: dispatcherFunctionName,
-    InvocationType: 'RequestResponse'
-  }));
+  const response = await lambda.send(
+    new InvokeCommand({
+      FunctionName: dispatcherFunctionName,
+      InvocationType: 'RequestResponse',
+    })
+  );
 
   if (response.FunctionError) {
     const payload = response.Payload ? Buffer.from(response.Payload).toString('utf-8') : '';
@@ -482,4 +522,3 @@ export async function scanMockDevice(
   const resultStr = Buffer.from(response.Payload).toString('utf-8');
   return JSON.parse(resultStr);
 }
-

@@ -18,16 +18,18 @@ export interface PaymentProvider {
 
   createPortalSession(params: { customerId: string; returnUrl: string }): Promise<{ url: string }>;
 
-  listInvoices(params: { customerId: string }): Promise<Array<{
-    id: string;
-    number: string | null;
-    pdfUrl: string | null;
-    total: number;
-    tax: number;
-    currency: string;
-    status: string | null;
-    createdAt: string;
-  }>>;
+  listInvoices(params: { customerId: string }): Promise<
+    Array<{
+      id: string;
+      number: string | null;
+      pdfUrl: string | null;
+      total: number;
+      tax: number;
+      currency: string;
+      status: string | null;
+      createdAt: string;
+    }>
+  >;
 
   constructWebhookEvent(payload: string | Buffer, signature: string): Promise<any>;
 }
@@ -68,6 +70,7 @@ export interface VerificationResult {
 export interface CommitResult {
   success: boolean;
   entryId?: string;
+  lockerId?: string;
   reason?: string;
 }
 

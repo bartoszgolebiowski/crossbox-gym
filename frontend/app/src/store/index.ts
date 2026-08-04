@@ -20,11 +20,14 @@ export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 
 // Pure bootstrap function to be invoked explicitly in main.tsx
 export const bootstrapApp = () => {
-  return store.dispatch(bootstrapConfigThunk()).unwrap().then(() => {
-    const token = store.getState().auth.token;
-    if (token) {
-      store.dispatch(fetchDashboardThunk());
-      store.dispatch(fetchInvoicesThunk());
-    }
-  });
+  return store
+    .dispatch(bootstrapConfigThunk())
+    .unwrap()
+    .then(() => {
+      const token = store.getState().auth.token;
+      if (token) {
+        store.dispatch(fetchDashboardThunk());
+        store.dispatch(fetchInvoicesThunk());
+      }
+    });
 };

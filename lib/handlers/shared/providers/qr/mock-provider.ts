@@ -7,7 +7,7 @@ export class MockProvider implements IProvider {
     return typeof rawData === 'string' && rawData.startsWith('mock:');
   }
 
-  async verify(rawData: string, context?: Record<string, unknown>): Promise<VerificationResult> {
+  async verify(rawData: string, _context?: Record<string, unknown>): Promise<VerificationResult> {
     if (!this.canHandle(rawData)) {
       return { success: false, reason: 'unrecognized_format' };
     }

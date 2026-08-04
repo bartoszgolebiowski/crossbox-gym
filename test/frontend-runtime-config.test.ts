@@ -5,10 +5,14 @@ import { loadRuntimeConfig, normalizeApiUrl } from '../frontend/shared/runtimeCo
 describe('frontend runtime configuration', () => {
   test('uses and normalizes the API Gateway URL in config.json', async () => {
     const config = await loadRuntimeConfig({
-      fetchConfig: async () => new Response(JSON.stringify({
-        ApiUrl: 'https://example.execute-api.eu-central-1.amazonaws.com/',
-        UserPoolId: 'pool-id',
-      }), { status: 200 }),
+      fetchConfig: async () =>
+        new Response(
+          JSON.stringify({
+            ApiUrl: 'https://example.execute-api.eu-central-1.amazonaws.com/',
+            UserPoolId: 'pool-id',
+          }),
+          { status: 200 }
+        ),
     });
 
     assert.equal(config.ApiUrl, 'https://example.execute-api.eu-central-1.amazonaws.com');
@@ -17,10 +21,11 @@ describe('frontend runtime configuration', () => {
 
   test('rejects empty ApiUrl rather than using the site origin', async () => {
     await assert.rejects(
-      () => loadRuntimeConfig({
-        fetchConfig: async () => new Response(JSON.stringify({ ApiUrl: '' }), { status: 200 }),
-      }),
-      /missing ApiUrl/i,
+      () =>
+        loadRuntimeConfig({
+          fetchConfig: async () => new Response(JSON.stringify({ ApiUrl: '' }), { status: 200 }),
+        }),
+      /missing ApiUrl/i
     );
   });
 
@@ -42,12 +47,13 @@ describe('frontend runtime configuration', () => {
 
   test('does not substitute a browser origin when config loading fails', async () => {
     await assert.rejects(
-      () => loadRuntimeConfig({
-        fetchConfig: async () => {
-          throw new Error('network unavailable');
-        },
-      }),
-      /cannot contact its API/i,
+      () =>
+        loadRuntimeConfig({
+          fetchConfig: async () => {
+            throw new Error('network unavailable');
+          },
+        }),
+      /cannot contact its API/i
     );
   });
 });

@@ -13,7 +13,7 @@ export class TildeV130Provider implements IProvider {
     const serialNumber = parts[1] || '';
     const headerCode = parts[2] || '';
     const kvString = parts[3] || '';
-    
+
     const keyValues: Record<string, string> = {};
     if (kvString) {
       for (const pair of kvString.split('|')) {
@@ -56,8 +56,8 @@ export class TildeV130Provider implements IProvider {
         const month = parseInt(validUntilStr.substring(4, 6), 10) - 1;
         const day = parseInt(validUntilStr.substring(6, 8), 10);
         const validUntil = new Date(Date.UTC(year, month, day, 23, 59, 59));
-        
-        const now = (context?.now instanceof Date) ? (context.now as Date) : new Date();
+
+        const now = context?.now instanceof Date ? (context.now as Date) : new Date();
         if (now > validUntil) {
           return { success: false, reason: 'credential_expired' };
         }

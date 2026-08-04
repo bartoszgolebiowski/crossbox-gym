@@ -63,9 +63,7 @@ test('4. DefaultProviderClassifier selects provider accurately', async () => {
     new MockProvider(),
   ]);
 
-  const tildeResult = await classifier.classify(
-    '1.3.0~2608020462743830~2;~1=20240512001055|4=087082551159|~sig'
-  );
+  const tildeResult = await classifier.classify('1.3.0~2608020462743830~2;~1=20240512001055|4=087082551159|~sig');
   assert.strictEqual(tildeResult.status, 'recognized');
   assert.strictEqual(tildeResult.providerId, 'tilde-v1-3-0');
 

@@ -4,8 +4,7 @@ export interface LocationFormState {
 }
 
 export type LocationFormAction =
-  | { type: 'CHANGE_FIELD'; payload: { field: keyof LocationFormState; value: string } }
-  | { type: 'RESET_FORM' };
+  { type: 'CHANGE_FIELD'; payload: { field: keyof LocationFormState; value: string } } | { type: 'RESET_FORM' };
 
 export const initialLocationFormState: LocationFormState = {
   locName: '',

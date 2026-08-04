@@ -1,7 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { AccessService } from '../lib/handlers/shared/providers';
-import { createLockerClient, MockLockerClient, MqttLockerClient, setLockerClientOverride } from '../lib/handlers/shared/providers/lockers';
+import {
+  createLockerClient,
+  MockLockerClient,
+  MqttLockerClient,
+  setLockerClientOverride,
+} from '../lib/handlers/shared/providers/lockers';
 import { parseIotScanEvent, handler as verifyEntryHandler } from '../lib/handlers/verify-entry';
 
 test('Locker Client Suite - 1. MockLockerClient builds correct payload and topic', async () => {
@@ -51,7 +56,7 @@ test('Locker Client Suite - 3. createLockerClient factory handles type selection
   assert.ok(mqttClient instanceof MqttLockerClient);
 });
 
-test('Locker Client Suite - 4. parseIotScanEvent extracts lockerId when provided', () => {
+test('Locker Client Suite - 4. parseIotScanEvent ignores an untrusted lockerId when provided', () => {
   const scanEvent = {
     event_id: 'evt-123',
     client_id: 'scanner-01',
@@ -67,7 +72,7 @@ test('Locker Client Suite - 4. parseIotScanEvent extracts lockerId when provided
   assert.strictEqual(parsed.valid, true);
   if (parsed.valid) {
     assert.strictEqual(parsed.scannerId, 'scanner-01');
-    assert.strictEqual(parsed.lockerId, 'locker-777');
+    assert.equal('lockerId' in parsed, false);
   }
 });
 
@@ -77,7 +82,7 @@ test('Locker Client Suite - 5. verifyEntryHandler sends feedback to scanner and 
 
   const originalCommitAccess = AccessService.prototype.commitAccess;
   AccessService.prototype.commitAccess = async (_scannerId: string, _credential: any) => {
-    return { success: true, entryId: 'test-entry-123' };
+    return { success: true, entryId: 'test-entry-123', lockerId: 'assigned-locker-02' };
   };
 
   try {
@@ -87,7 +92,7 @@ test('Locker Client Suite - 5. verifyEntryHandler sends feedback to scanner and 
     const scanEvent = {
       event_id: 'evt-456',
       client_id: 'scanner-02',
-      lockerId: 'locker-02',
+      lockerId: 'untrusted-locker-id',
       timestamp: Math.floor(Date.now() / 1000),
       payload: {
         raw_data: 'mock:user_xyz',
@@ -99,7 +104,7 @@ test('Locker Client Suite - 5. verifyEntryHandler sends feedback to scanner and 
 
     assert.strictEqual(result.result, 'success');
     assert.strictEqual(result.action, 'open_gate');
-    assert.strictEqual(result.lockerId, 'locker-02');
+    assert.strictEqual(result.lockerId, 'assigned-locker-02');
     assert.deepStrictEqual(result.lockerPayload, {
       id: 1,
       method: 'Switch.Set',
@@ -111,7 +116,7 @@ test('Locker Client Suite - 5. verifyEntryHandler sends feedback to scanner and 
     });
 
     assert.strictEqual(mockLockerClient.sentCommands.length, 1);
-    assert.strictEqual(mockLockerClient.sentCommands[0].topic, 'gym/lockers/locker-02/command');
+    assert.strictEqual(mockLockerClient.sentCommands[0].topic, 'gym/lockers/assigned-locker-02/command');
   } finally {
     setLockerClientOverride(undefined);
     AccessService.prototype.commitAccess = originalCommitAccess;

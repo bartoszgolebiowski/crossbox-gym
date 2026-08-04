@@ -18,12 +18,12 @@ describe('Auth & Account Setup Test Suite', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: adminSession.email,
-        password: adminSession.password
-      })
+        password: adminSession.password,
+      }),
     });
 
     assert.equal(res.status, 200);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     assert.ok(data.accessToken, 'Expected accessToken');
     assert.ok(data.idToken, 'Expected idToken');
   });
@@ -34,8 +34,8 @@ describe('Auth & Account Setup Test Suite', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: adminSession.email,
-        password: 'WrongPassword123!'
-      })
+        password: 'WrongPassword123!',
+      }),
     });
 
     assert.equal(res.status, 401);
@@ -49,7 +49,7 @@ describe('Auth & Account Setup Test Suite', () => {
       const res = await fetch(`${context.apiUrl}/auth/magic-link`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: targetEmail })
+        body: JSON.stringify({ email: targetEmail }),
       });
       assert.equal(res.status, 200);
     }
@@ -58,10 +58,10 @@ describe('Auth & Account Setup Test Suite', () => {
     const res = await fetch(`${context.apiUrl}/auth/magic-link`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: targetEmail })
+      body: JSON.stringify({ email: targetEmail }),
     });
     assert.equal(res.status, 400);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     const msg = data.error || data.message || '';
     assert.ok(msg.toLowerCase().includes('limit') || msg.toLowerCase().includes('rate'));
   });
@@ -71,7 +71,7 @@ describe('Auth & Account Setup Test Suite', () => {
     await fetch(`${context.apiUrl}/auth/magic-link`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email })
+      body: JSON.stringify({ email }),
     });
 
     // Invalid token verify attempt
@@ -85,13 +85,13 @@ describe('Auth & Account Setup Test Suite', () => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${memberSession.idToken}`
+        Authorization: `Bearer ${memberSession.idToken}`,
       },
-      body: JSON.stringify({ newPassword: 'NewSecurePassword123!' })
+      body: JSON.stringify({ newPassword: 'NewSecurePassword123!' }),
     });
 
     assert.equal(res.status, 200);
-    const data = await res.json() as any;
+    const data = (await res.json()) as any;
     assert.ok(data.message.includes('Password updated'));
   });
 });

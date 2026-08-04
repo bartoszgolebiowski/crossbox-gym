@@ -4,10 +4,10 @@ import { SubscriptionItem } from '../../shared/types';
 import { WebhookContext } from '../context';
 
 const STATUS_MAP: Record<string, string> = {
-  'active': 'ACTIVE',
-  'past_due': 'PAST_DUE',
-  'canceled': 'CANCELED',
-  'unpaid': 'SUSPENDED'
+  active: 'ACTIVE',
+  past_due: 'PAST_DUE',
+  canceled: 'CANCELED',
+  unpaid: 'SUSPENDED',
 };
 
 /**
@@ -19,19 +19,20 @@ export async function handleSubscriptionUpdated(
   eventType: string,
   ctx: WebhookContext
 ): Promise<void> {
-  const status = eventType === 'customer.subscription.deleted'
-    ? 'CANCELED'
-    : (STATUS_MAP[subscription.status] || 'EXPIRED');
+  const status =
+    eventType === 'customer.subscription.deleted' ? 'CANCELED' : STATUS_MAP[subscription.status] || 'EXPIRED';
 
   const subscriptionId = subscription.id;
 
   // Look up subscription using StripeSubIndex GSI
-  const subQueryRes = await ddb.send(new QueryCommand({
-    TableName: ctx.mainTableName,
-    IndexName: 'StripeSubIndex',
-    KeyConditionExpression: 'stripe_subscription_id = :subId',
-    ExpressionAttributeValues: { ':subId': subscriptionId }
-  }));
+  const subQueryRes = await ddb.send(
+    new QueryCommand({
+      TableName: ctx.mainTableName,
+      IndexName: 'StripeSubIndex',
+      KeyConditionExpression: 'stripe_subscription_id = :subId',
+      ExpressionAttributeValues: { ':subId': subscriptionId },
+    })
+  );
 
   if (!subQueryRes.Items || subQueryRes.Items.length === 0) {
     return;
@@ -45,7 +46,7 @@ export async function handleSubscriptionUpdated(
   const exprAttrValues: Record<string, any> = {
     ':status': status,
     ':now': nowIso,
-    ':gsi': `STATUS#${status}`
+    ':gsi': `STATUS#${status}`,
   };
 
   if (status === 'PAST_DUE') {
@@ -55,11 +56,13 @@ export async function handleSubscriptionUpdated(
     exprAttrValues[':graceEnd'] = graceEndIso;
   }
 
-  await ddb.send(new UpdateCommand({
-    TableName: ctx.mainTableName,
-    Key: { PK: subItem.PK, SK: subItem.SK },
-    UpdateExpression: updateExpr,
-    ExpressionAttributeNames: exprAttrNames,
-    ExpressionAttributeValues: exprAttrValues
-  }));
+  await ddb.send(
+    new UpdateCommand({
+      TableName: ctx.mainTableName,
+      Key: { PK: subItem.PK, SK: subItem.SK },
+      UpdateExpression: updateExpr,
+      ExpressionAttributeNames: exprAttrNames,
+      ExpressionAttributeValues: exprAttrValues,
+    })
+  );
 }

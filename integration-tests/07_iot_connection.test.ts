@@ -27,9 +27,7 @@ describe('AWS IoT Core Connection & Provisioning Integration Suite', () => {
     const region = process.env.AWS_REGION || 'eu-central-1';
 
     const secretsClient = new SecretsManagerClient({ region });
-    const secretResponse = await secretsClient.send(
-      new GetSecretValueCommand({ SecretId: secretName })
-    );
+    const secretResponse = await secretsClient.send(new GetSecretValueCommand({ SecretId: secretName }));
 
     assert.ok(secretResponse.SecretString, 'SecretString must exist');
     const payload = JSON.parse(secretResponse.SecretString);

@@ -1,9 +1,4 @@
-import {
-  getMainTableName,
-  getFrontendUrl,
-  getUserPoolId,
-  getIdentityProvider,
-} from '../shared/config';
+import { getMainTableName, getFrontendUrl, getUserPoolId, getIdentityProvider } from '../shared/config';
 import { IdentityProvider, createIdentityProvider } from '../shared/providers';
 
 /**

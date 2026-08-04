@@ -20,14 +20,21 @@ function getFrontendOutputs() {
     try {
       const outputs = JSON.parse(fs.readFileSync(outputsPath, 'utf8'));
       frontend = Object.entries(outputs).find(([stackName]) => stackName.endsWith('FrontendStack'))?.[1];
-    } catch (e) {}
+    } catch {
+      // Fall back to CloudFormation when the local output cache is unavailable.
+    }
   }
 
   if (!frontend || typeof frontend !== 'object') {
     try {
       const region = process.env.AWS_REGION || 'eu-central-1';
-      const stackName = (process.env.STACK_NAME ? process.env.STACK_NAME.replace(/Stack$/, '') : 'CrossboxGymDev') + 'FrontendStack';
-      const outputJson = execFileSync('aws', ['cloudformation', 'describe-stacks', '--stack-name', stackName, '--region', region, '--output', 'json'], { encoding: 'utf8' });
+      const stackName =
+        (process.env.STACK_NAME ? process.env.STACK_NAME.replace(/Stack$/, '') : 'CrossboxGymDev') + 'FrontendStack';
+      const outputJson = execFileSync(
+        'aws',
+        ['cloudformation', 'describe-stacks', '--stack-name', stackName, '--region', region, '--output', 'json'],
+        { encoding: 'utf8' }
+      );
       const parsed = JSON.parse(outputJson);
       const outputs = parsed.Stacks?.[0]?.Outputs || [];
       frontend = {};
@@ -41,7 +48,15 @@ function getFrontendOutputs() {
     }
   }
 
-  const required = ['ApiUrl', 'UserPoolId', 'UserPoolClientId', 'AppBucketName', 'AdminBucketName', 'AppDistributionId', 'AdminDistributionId'];
+  const required = [
+    'ApiUrl',
+    'UserPoolId',
+    'UserPoolClientId',
+    'AppBucketName',
+    'AdminBucketName',
+    'AppDistributionId',
+    'AdminDistributionId',
+  ];
   for (const key of required) {
     if (typeof frontend[key] !== 'string' || !frontend[key]) {
       throw new Error(`Frontend stack output ${key} is missing. Run npm run deploy -- -s frontend first.`);

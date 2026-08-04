@@ -16,7 +16,9 @@ export const Header: React.FC<HeaderProps> = ({ token, email, onLogout }) => {
             CB
           </div>
           <div className="flex items-center gap-2">
-            <span className="whitespace-nowrap text-sm font-bold tracking-tight text-slate-900 sm:text-base">CrossBox Admin</span>
+            <span className="whitespace-nowrap text-sm font-bold tracking-tight text-slate-900 sm:text-base">
+              CrossBox Admin
+            </span>
             <span className="hidden rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 text-[11px] font-medium text-teal-700 sm:inline-flex">
               Admin Console
             </span>
