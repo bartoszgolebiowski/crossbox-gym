@@ -4,11 +4,37 @@ import { GetSecretValueCommand, ListSecretsCommand, SecretsManagerClient } from 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { fetchCertsEnvSchema, validateEnv } from './lib/env.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 const certsDir = process.argv[2] ? path.resolve(process.argv[2]) : path.join(rootDir, 'certs');
+
+// Load the central IoT fleet configuration that drives the IoT stack.
+const fleetConfigPath = path.join(rootDir, 'lib', 'config', 'iot-fleet.json');
+const fleetConfig = JSON.parse(fs.readFileSync(fleetConfigPath, 'utf8'));
+
+function getFleetDevices() {
+  return (fleetConfig.devices || []).map((device) => ({
+    id: device.id,
+    thingName: device.thingName,
+    secretName: fleetConfig.secretName,
+    outputNames: device.outputs || {},
+  }));
+}
+
+function extractDeviceCert(parsed, thingName) {
+  // New per-device format: { "thingName": { certificate_pem, ... } }
+  if (parsed && typeof parsed === 'object' && parsed[thingName]?.certificate_pem) {
+    return parsed[thingName];
+  }
+  // Legacy flat format: { certificate_pem, ... }
+  if (parsed?.certificate_pem) {
+    return parsed;
+  }
+  return null;
+}
 
 // Parse .env if present
 if (fs.existsSync('.env')) {
@@ -35,7 +61,8 @@ if (fs.existsSync('.env')) {
   }
 }
 
-const region = process.env.AWS_REGION || 'eu-central-1';
+const env = validateEnv(fetchCertsEnvSchema, process.env);
+const region = env.AWS_REGION;
 const client = new SecretsManagerClient({ region });
 
 async function main() {
@@ -43,28 +70,37 @@ async function main() {
   console.log(`📌 Region       : ${region}`);
   console.log(`📁 Target Dir   : ${certsDir}\n`);
 
-  // Known IoT Things to partition certificates for
-  const knownThings = [
-    { thingName: 'crossbox-qr-scanner-01', secretName: 'crossbox-gym/iot/certs' },
-    { thingName: 'crossbox-locker-relay-01', secretName: 'crossbox-gym/iot/certs' },
-  ];
+  // Known IoT Things are derived from the central fleet config.
+  const knownThings = getFleetDevices();
 
-  // Try fetching secret names from cdk-outputs.json if available
+  // Try fetching secret names and overrides from cdk-outputs.json if available.
   const outputsPath = path.join(rootDir, 'cdk-outputs.json');
   if (fs.existsSync(outputsPath)) {
     try {
       const outputs = JSON.parse(fs.readFileSync(outputsPath, 'utf8'));
       const iotOutputs = Object.entries(outputs).find(([k]) => k.endsWith('IotStack'))?.[1];
       if (iotOutputs) {
-        if (iotOutputs.ThingNameOutput) knownThings[0].thingName = iotOutputs.ThingNameOutput;
-        if (iotOutputs.LockerThingNameOutput) knownThings[1].thingName = iotOutputs.LockerThingNameOutput;
+        for (const knownThing of knownThings) {
+          const thingOutputName = knownThing.outputNames.thingName;
+          if (thingOutputName && iotOutputs[thingOutputName]) {
+            knownThing.thingName = iotOutputs[thingOutputName];
+          }
+        }
         if (iotOutputs.SecretNameOutput) {
-          knownThings[0].secretName = iotOutputs.SecretNameOutput;
-          knownThings[1].secretName = iotOutputs.SecretNameOutput;
+          for (const knownThing of knownThings) {
+            knownThing.secretName = iotOutputs.SecretNameOutput;
+          }
         }
       }
     } catch {
       // Continue with the configured certificate defaults when cached outputs are unavailable.
+    }
+  }
+
+    // Allow environment override of the IoT certificate secret name (used by integration tests).
+  if (env.SECRET_NAME_IOT) {
+    for (const knownThing of knownThings) {
+      knownThing.secretName = env.SECRET_NAME_IOT;
     }
   }
 
@@ -96,8 +132,9 @@ async function main() {
         const val = await client.send(new GetSecretValueCommand({ SecretId: s.Name }));
         if (val.SecretString) {
           const parsed = JSON.parse(val.SecretString);
-          if (parsed.certificate_pem && parsed.private_key) {
-            secretPayload = parsed;
+          const deviceCert = extractDeviceCert(parsed, knownThing.thingName);
+          if (deviceCert?.certificate_pem && deviceCert?.private_key) {
+            secretPayload = deviceCert;
             break;
           }
         }

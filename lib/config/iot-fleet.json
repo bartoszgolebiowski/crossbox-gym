@@ -1,0 +1,51 @@
+{
+  "policyName": "crossbox-gym-iot-policy",
+  "secretName": "crossbox-gym/iot/certs",
+  "topicNamespace": "gym",
+  "scannerTopicRule": {
+    "name": "CrossboxQrScannerScanRule",
+    "sql": "SELECT *, topic(3) as scannerId FROM 'gym/scanners/+/scan'"
+  },
+  "devices": [
+    {
+      "id": "qr-scanner",
+      "thingName": "crossbox-qr-scanner-01",
+      "type": "scanner",
+      "deviceType": "HDWR-HD360-QR-Scanner",
+      "attributes": {
+        "version": "1.0.0"
+      },
+      "isCertPrimary": true,
+      "topics": {
+        "scan": "gym/scanners/{thingName}/scan",
+        "feedback": "gym/scanners/{thingName}/feedback"
+      },
+      "outputs": {
+        "thingName": "ThingNameOutput",
+        "scanTopic": "ScannerScanTopic",
+        "feedbackTopic": "ScannerFeedbackTopic",
+        "certPath": "ScannerCertPath"
+      }
+    },
+    {
+      "id": "locker-relay",
+      "thingName": "crossbox-locker-relay-01",
+      "type": "locker",
+      "deviceType": "Shelly-Plus-1-Mini-Gen3",
+      "attributes": {
+        "version": "1.0.0"
+      },
+      "topics": {
+        "command": "gym/lockers/{thingName}/command"
+      },
+      "ssm": {
+        "thingNameParameter": true
+      },
+      "outputs": {
+        "thingName": "LockerThingNameOutput",
+        "commandTopic": "LockerCommandTopic",
+        "certPath": "LockerCertPath"
+      }
+    }
+  ]
+}

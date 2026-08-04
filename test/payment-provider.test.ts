@@ -56,24 +56,4 @@ describe('Stripe Payment Service & Provider Unit Tests (No Deployment Required)'
     assert.equal(typeof firstInv.tax, 'number');
     assert.equal(firstInv.status, 'paid');
   });
-
-  test('MockPaymentProvider.constructWebhookEvent parses raw payload', async () => {
-    const provider = createPaymentProvider('mock');
-    const payload = JSON.stringify({
-      type: 'invoice.paid',
-      data: {
-        object: {
-          id: 'in_test_999',
-          total: 4900,
-          tax: 916,
-          customer: 'cus_test_123',
-        },
-      },
-    });
-
-    const event = await provider.constructWebhookEvent(payload, 'mock_sig');
-    assert.equal(event.type, 'invoice.paid');
-    assert.equal(event.data.object.id, 'in_test_999');
-    assert.equal(event.data.object.tax, 916);
-  });
 });

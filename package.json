@@ -24,7 +24,8 @@
     "test:ui:install": "playwright install chromium",
     "test:ui": "playwright test",
     "seed": "tsx scripts/seed-admin.ts",
-    "fetch:certs": "node scripts/fetch-certs.mjs"
+    "fetch:certs": "node scripts/fetch-certs.mjs",
+    "push:stripe-secret": "node scripts/push-stripe-secret.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
@@ -66,6 +67,7 @@
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-redux": "^9.2.0",
-    "stripe": "latest"
+    "stripe": "latest",
+    "zod": "^4.4.3"
   }
 }

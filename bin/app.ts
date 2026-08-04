@@ -4,6 +4,7 @@ import { CrossboxApiStack } from '../lib/stacks/api-stack';
 import { CrossboxDataStack } from '../lib/stacks/data-stack';
 import { CrossboxFrontendStack } from '../lib/stacks/frontend-stack';
 import { CrossboxIotStack } from '../lib/stacks/iot-stack';
+import { validateCdkEnv } from './env';
 
 if (fs.existsSync('.env')) {
   try {
@@ -31,18 +32,20 @@ if (fs.existsSync('.env')) {
 
 const app = new cdk.App();
 
+const validatedEnv = validateCdkEnv(process.env);
+
 const rawStackName =
   app.node.tryGetContext('stackName') ||
   (app.node.tryGetContext('stackPrefix') ? `${app.node.tryGetContext('stackPrefix')}Stack` : null) ||
-  process.env.STACK_NAME ||
+  validatedEnv.STACK_NAME ||
   'CrossboxGymDevStack';
 
 const prefix = rawStackName.replace(/Stack$/, '');
-const isTest = app.node.tryGetContext('isTestEnvironment') === 'true' || process.env.IS_TEST === 'true';
+const isTest = app.node.tryGetContext('isTestEnvironment') === 'true' || validatedEnv.IS_TEST;
 
 const env = {
-  account: process.env.CDK_DEFAULT_ACCOUNT || process.env.AWS_ACCOUNT_ID,
-  region: process.env.CDK_DEFAULT_REGION || process.env.AWS_REGION || 'eu-central-1',
+  account: validatedEnv.AWS_ACCOUNT_ID,
+  region: validatedEnv.AWS_REGION,
 };
 
 // 1. Data Stack (Tables, Cognito, SQS)
@@ -55,6 +58,7 @@ const dataStack = new CrossboxDataStack(app, `${prefix}DataStack`, {
 const apiStack = new CrossboxApiStack(app, `${prefix}ApiStack`, {
   isTest,
   dataStack,
+  partnerBusName: app.node.tryGetContext('stripePartnerBusName') || validatedEnv.STRIPE_PARTNER_BUS_NAME,
   env,
 });
 

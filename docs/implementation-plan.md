@@ -303,6 +303,7 @@ Ordered build sequence. Each step depends on the resources listed. Within a sing
   - Handler: `src/handlers/checkout.handler`
   - Environment variables:
     - `PAYMENT_PROVIDER` — `stripe` | `mock`
+  - Imported config:
     - `STRIPE_SECRET_KEY_SSM_PATH` — `/crossbox/stripe/secret-key` (read at init)
 - **IAM permissions:**
   - `ssm:GetParameter` on `arn:aws:ssm:*:*:parameter/crossbox/stripe/secret-key` (when `PAYMENT_PROVIDER=stripe`)
@@ -327,8 +328,8 @@ Ordered build sequence. Each step depends on the resources listed. Within a sing
     - `MAIN_TABLE_NAME`
     - `USER_POOL_ID`
     - `PAYMENT_PROVIDER` — `stripe` | `mock`
+  - Imported config:
     - `STRIPE_SECRET_KEY_SSM_PATH` — `/crossbox/stripe/secret-key`
-    - `STRIPE_WEBHOOK_SECRET_SSM_PATH` — `/crossbox/stripe/webhook-secret`
 - **IAM permissions:**
   - `dynamodb:PutItem`, `UpdateItem`, `GetItem` on `MainTable`
   - `dynamodb:Query` on `MainTable` `EmailIndex`, `StripeSubIndex` GSIs
@@ -355,6 +356,7 @@ Ordered build sequence. Each step depends on the resources listed. Within a sing
   - Environment variables:
     - `MAIN_TABLE_NAME`
     - `PAYMENT_PROVIDER` — `stripe` | `mock`
+  - Imported config:
     - `STRIPE_SECRET_KEY_SSM_PATH`
 - **IAM permissions:**
   - `dynamodb:GetItem`, `Query`, `PutItem` on `MainTable` (user, subscription, consent, config, locations via GSI1)
@@ -467,12 +469,11 @@ Ordered build sequence. Each step depends on the resources listed. Within a sing
 | Secret / Config | Storage | Access Method | Used By |
 |---|---|---|---|
 | Stripe secret key | SSM Parameter Store: `/crossbox/stripe/secret-key` (SecureString) | Lambda reads at cold start via SDK. Cached in memory. | `CheckoutHandler`, `StripeWebhookHandler`, `MemberHandler` |
-| Stripe webhook secret | SSM Parameter Store: `/crossbox/stripe/webhook-secret` (SecureString) | Lambda reads at cold start. | `StripeWebhookHandler` |
 | HMAC signing keys | DynamoDB `MainTable` (`CONFIG#HMAC_CURRENT_KEY`, `CONFIG#HMAC_PREVIOUS_KEY`) | `GetItem` at runtime per request. | `VerifyEntry`, `MemberHandler` (QR gen), `AdminHandler` (rotation) |
 | SES sender email | Lambda environment variable: `SES_SENDER_EMAIL` | Direct env var read. | `AuthHandler`, `StripeWebhookHandler`, `GraceExpiryCron` |
 
 **Pre-deployment prerequisites:**
-1. Create SSM SecureString parameters manually: `/crossbox/stripe/secret-key`, `/crossbox/stripe/webhook-secret`
+1. Create SSM SecureString parameters manually: `/crossbox/stripe/secret-key`
 2. Verify SES domain identity (DNS records)
 3. Seed initial HMAC key in DynamoDB MainTable (`CONFIG#HMAC_CURRENT_KEY`)
 

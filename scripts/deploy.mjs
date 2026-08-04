@@ -3,6 +3,7 @@
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import { parseArgs } from 'node:util';
+import { deployEnvSchema, validateEnv } from './lib/env.mjs';
 
 function run(command, args) {
   return new Promise((resolve, reject) => {
@@ -87,8 +88,9 @@ const { values, positionals } = parseArgs({
   strict: false,
 });
 
-const rawStacks = values.stacks || positionals.find((p) => !p.startsWith('-')) || process.env.STACKS || 'all';
-const rawPrefix = values.stackPrefix || process.env.STACK_PREFIX || process.env.STACK_NAME || 'CrossboxGymDev';
+const env = validateEnv(deployEnvSchema, process.env);
+const rawStacks = values.stacks || positionals.find((p) => !p.startsWith('-')) || env.STACKS;
+const rawPrefix = values.stackPrefix || env.STACK_NAME || 'CrossboxGymDev';
 const prefix = rawPrefix.replace(/Stack$/, '');
 
 const stackMap = {

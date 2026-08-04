@@ -1,8 +1,8 @@
 import { createWebhookContext } from './context';
 import { handleCheckoutSessionCompleted } from './events/checkout-session-completed';
-import { handleSubscriptionUpdated } from './events/subscription-updated';
 import { handleInvoicePaid } from './events/invoice-paid';
 import { handleInvoicePaymentFailed } from './events/invoice-payment-failed';
+import { handleSubscriptionUpdated } from './events/subscription-updated';
 
 export const handler = async (event: any): Promise<any> => {
   const ctx = createWebhookContext();
@@ -11,9 +11,6 @@ export const handler = async (event: any): Promise<any> => {
   let stripeEvent = event;
   if (event.detail && typeof event.detail === 'object') {
     stripeEvent = event.detail;
-  } else if (event.body) {
-    const rawBody = event.isBase64Encoded ? Buffer.from(event.body, 'base64').toString('utf8') : event.body;
-    stripeEvent = typeof rawBody === 'string' ? JSON.parse(rawBody) : rawBody;
   }
 
   const eventType = stripeEvent.type || event['detail-type'];

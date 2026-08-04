@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { before, describe, test } from 'node:test';
 import Stripe from 'stripe';
+import { validateLambdaEnv } from '../lib/handlers/shared/config';
 import { StripePaymentProvider } from '../lib/handlers/shared/providers/payment';
 
-const liveStripeTestsEnabled = process.env.RUN_STRIPE_LIVE_TESTS === 'true';
+const liveStripeTestsEnabled = (process.env.RUN_STRIPE_LIVE_TESTS ?? '') === 'true';
 const describeLiveStripe = liveStripeTestsEnabled ? describe : describe.skip;
 
 describeLiveStripe('Stripe Live Sandbox Integration Test Suite (No Mocks)', () => {
@@ -12,9 +13,10 @@ describeLiveStripe('Stripe Live Sandbox Integration Test Suite (No Mocks)', () =
   let testPriceId: string;
 
   before(async () => {
-    const stripeSandboxKey = process.env.STRIPE_TEST_SECRET_KEY;
+    const lambdaEnv = validateLambdaEnv(process.env);
+    const stripeSandboxKey = lambdaEnv.STRIPE_SECRET_KEY;
     if (!stripeSandboxKey) {
-      throw new Error('STRIPE_TEST_SECRET_KEY is required when RUN_STRIPE_LIVE_TESTS=true');
+      throw new Error('STRIPE_SECRET_KEY is required when RUN_STRIPE_LIVE_TESTS=true');
     }
 
     stripe = new Stripe(stripeSandboxKey, {
@@ -131,9 +133,6 @@ describeLiveStripe('Stripe Live Sandbox Integration Test Suite (No Mocks)', () =
   });
 
   test('StripePaymentProvider methods execute successfully with SSM or direct client', async () => {
-    // Override SSM env var logic for local sandbox execution test
-    process.env.STRIPE_SECRET_KEY_SSM_PATH = '/crossbox/stripe/secret-key';
-
     // Validate direct SDK instantiation
     const directProvider = new StripePaymentProvider();
     assert.ok(directProvider);
@@ -158,11 +157,20 @@ describeLiveStripe('Stripe Live Sandbox Integration Test Suite (No Mocks)', () =
     };
 
     // Set fallback table name and environment for local invocation without deployed stack
-    process.env.MAIN_TABLE_NAME = process.env.MAIN_TABLE_NAME || 'CrossboxGymMainTable';
-    process.env.USER_POOL_ID = process.env.USER_POOL_ID || 'mock_pool_id';
-    process.env.FRONTEND_URL = process.env.FRONTEND_URL || 'https://d3klturtfk9dxr.cloudfront.net';
-    process.env.PAYMENT_PROVIDER = 'mock';
-    process.env.IDENTITY_PROVIDER = 'mock';
+    const baseEnv = process.env;
+    process.env = {
+      ...baseEnv,
+      MAIN_TABLE_NAME: baseEnv.MAIN_TABLE_NAME || 'CrossboxGymMainTable',
+      ENTRY_LOGS_TABLE_NAME: baseEnv.ENTRY_LOGS_TABLE_NAME || 'CrossboxGymEntryLogsTable',
+      AUDIT_LOGS_TABLE_NAME: baseEnv.AUDIT_LOGS_TABLE_NAME || 'CrossboxGymAuditLogsTable',
+      USER_POOL_ID: baseEnv.USER_POOL_ID || 'mock_pool_id',
+      USER_POOL_CLIENT_ID: baseEnv.USER_POOL_CLIENT_ID || 'mock_client_id',
+      FRONTEND_URL: baseEnv.FRONTEND_URL || 'https://d3klturtfk9dxr.cloudfront.net',
+      PAYMENT_PROVIDER: 'mock',
+      IDENTITY_PROVIDER: 'mock',
+      STRIPE_SECRET_KEY: baseEnv.STRIPE_SECRET_KEY || 'sk_test_mock',
+      STRIPE_SANDBOX: 'true',
+    };
 
     const result = await stripeEventHandler(eventBridgeEnvelope);
     assert.equal(result.received, true);

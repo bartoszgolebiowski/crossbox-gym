@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { integrationTestEnvSchema, validateEnv } from './lib/env.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,9 +28,9 @@ function getFrontendOutputs() {
 
   if (!frontend || typeof frontend !== 'object') {
     try {
-      const region = process.env.AWS_REGION || 'eu-central-1';
-      const stackName =
-        (process.env.STACK_NAME ? process.env.STACK_NAME.replace(/Stack$/, '') : 'CrossboxGymDev') + 'FrontendStack';
+      const env = validateEnv(integrationTestEnvSchema, process.env);
+      const region = env.AWS_REGION;
+      const stackName = (env.STACK_NAME ? env.STACK_NAME.replace(/Stack$/, '') : 'CrossboxGymDev') + 'FrontendStack';
       const outputJson = execFileSync(
         'aws',
         ['cloudformation', 'describe-stacks', '--stack-name', stackName, '--region', region, '--output', 'json'],

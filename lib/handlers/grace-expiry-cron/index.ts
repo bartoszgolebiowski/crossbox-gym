@@ -1,11 +1,12 @@
 import { QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { validateLambdaEnv } from '../shared/config';
 import { ddb } from '../shared/database';
 import { SubscriptionItem } from '../shared/types';
-import { getMainTableName } from '../shared/config';
 
 export const handler = async (): Promise<void> => {
   const nowIso = new Date().toISOString();
-  const mainTable = getMainTableName();
+  const env = validateLambdaEnv(process.env);
+  const mainTable = env.MAIN_TABLE_NAME;
 
   const result = await ddb.send(
     new QueryCommand({

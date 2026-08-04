@@ -23,9 +23,4 @@ export class MockPaymentProvider implements PaymentProvider {
       },
     ];
   }
-
-  async constructWebhookEvent(payload: string, _signature: string): Promise<any> {
-    // Basic mock parser
-    return JSON.parse(payload);
-  }
 }

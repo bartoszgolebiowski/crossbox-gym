@@ -1,15 +1,16 @@
 import {
-  CognitoIdentityProviderClient,
-  AdminCreateUserCommand,
-  AdminSetUserPasswordCommand,
   AdminAddUserToGroupCommand,
+  AdminCreateUserCommand,
   AdminGetUserCommand,
+  AdminSetUserPasswordCommand,
+  CognitoIdentityProviderClient,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand, GetCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import { randomBytes } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
+import { seedAdminEnvSchema, validateEnv } from './lib/env.mjs';
 
 const readOutputs = () => {
   try {
@@ -30,12 +31,25 @@ const readOutputs = () => {
 
 const run = async () => {
   const outputs = readOutputs();
+  const rawEnv = process.env;
+  const source = {
+    USER_POOL_ID:
+      rawEnv.USER_POOL_ID ||
+      outputs.UserPoolId ||
+      outputs.ExportsOutputRefUserPool6BA7E5F296FD7236,
+    MAIN_TABLE_NAME:
+      rawEnv.MAIN_TABLE_NAME ||
+      outputs.MainTableName ||
+      outputs.ExportsOutputRefMainTable74195DAB4503BD7E,
+    ADMIN_EMAIL: rawEnv.ADMIN_EMAIL,
+    ADMIN_PASSWORD: rawEnv.ADMIN_PASSWORD,
+  };
+  const env = validateEnv(seedAdminEnvSchema, source);
 
-  const userPoolId = process.env.USER_POOL_ID || outputs.UserPoolId || outputs.ExportsOutputRefUserPool6BA7E5F296FD7236;
-  const mainTableName =
-    process.env.MAIN_TABLE_NAME || outputs.MainTableName || outputs.ExportsOutputRefMainTable74195DAB4503BD7E;
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@crossboxgym.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin123!';
+  const userPoolId = env.USER_POOL_ID;
+  const mainTableName = env.MAIN_TABLE_NAME;
+  const adminEmail = env.ADMIN_EMAIL;
+  const adminPassword = env.ADMIN_PASSWORD;
 
   if (!userPoolId || !mainTableName) {
     throw new Error('USER_POOL_ID and MAIN_TABLE_NAME must be provided');

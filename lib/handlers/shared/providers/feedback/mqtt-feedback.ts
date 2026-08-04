@@ -1,5 +1,15 @@
 import { IoTDataPlaneClient, PublishCommand } from '@aws-sdk/client-iot-data-plane';
 import { IMqttFeedbackPublisher, MqttFeedbackPayload } from '..';
+import { formatDeviceTopic, getDeviceByType, getDeviceTopicTemplate } from '../../../../config';
+
+let scannerFeedbackTopicTemplate: string | undefined;
+
+function getScannerFeedbackTopicTemplate(): string {
+  if (!scannerFeedbackTopicTemplate) {
+    scannerFeedbackTopicTemplate = getDeviceTopicTemplate(getDeviceByType('scanner'), 'feedback');
+  }
+  return scannerFeedbackTopicTemplate;
+}
 
 export class MqttFeedbackPublisher implements IMqttFeedbackPublisher {
   private iotData?: IoTDataPlaneClient;
@@ -20,19 +30,17 @@ export class MqttFeedbackPublisher implements IMqttFeedbackPublisher {
   async sendFeedback(scannerId: string, feedback: MqttFeedbackPayload): Promise<void> {
     if (!scannerId) return;
 
+    const topic = formatDeviceTopic(getScannerFeedbackTopicTemplate(), scannerId);
     try {
       const client = this.getClient();
       await client.send(
         new PublishCommand({
-          topic: `gym/scanners/${scannerId}/feedback`,
+          topic,
           qos: 1,
           payload: Buffer.from(JSON.stringify(feedback)),
         })
       );
-      console.log(
-        `[MqttFeedbackPublisher] Successfully published feedback to gym/scanners/${scannerId}/feedback:`,
-        feedback
-      );
+      console.log(`[MqttFeedbackPublisher] Successfully published feedback to ${topic}:`, feedback);
     } catch (err) {
       console.warn(`[MqttFeedbackPublisher] Failed to send MQTT feedback to scanner ${scannerId}:`, err);
     }

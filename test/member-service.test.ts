@@ -63,10 +63,6 @@ class FakePaymentProvider implements PaymentProvider {
   async listInvoices() {
     return [];
   }
-
-  async constructWebhookEvent(): Promise<unknown> {
-    return {};
-  }
 }
 
 test('MemberService generates a deterministic short-lived QR code through injected dependencies', async () => {

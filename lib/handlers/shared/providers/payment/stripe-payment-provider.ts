@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 import { PaymentProvider } from '../types';
-import { getStripeClient, getWebhookSecret } from './stripe-client-manager';
+import { getStripeClient } from './stripe-client-manager';
 
 export class StripePaymentProvider implements PaymentProvider {
   async createCheckoutSession(params: {
@@ -133,11 +133,5 @@ export class StripePaymentProvider implements PaymentProvider {
       status: inv.status,
       createdAt: new Date(inv.created * 1000).toISOString(),
     }));
-  }
-
-  async constructWebhookEvent(payload: string, signature: string): Promise<any> {
-    const stripe = await getStripeClient();
-    const secret = await getWebhookSecret();
-    return stripe.webhooks.constructEvent(payload, signature, secret);
   }
 }

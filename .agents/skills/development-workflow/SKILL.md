@@ -134,7 +134,7 @@ cat response.json
 ## 5. Additional Serverless & CDK Best Practices
 
 1. **Environment Variables**:
-   - Copy `.env.example` to `.env` to set local environment variables (`AWS_REGION`, `STRIPE_TEST_SECRET_KEY`, etc.).
+   - Copy `.env.example` to `.env` to set local environment variables (`AWS_REGION`, `STRIPE_SECRET_KEY`, etc.).
    - `.env` is automatically parsed by `scripts/deploy.mjs` and `bin/app.ts`.
 
 2. **Integration Testing**:

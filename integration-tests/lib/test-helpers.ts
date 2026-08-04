@@ -1,26 +1,28 @@
 import { CloudFormationClient, ListStackResourcesCommand } from '@aws-sdk/client-cloudformation';
 import {
-  AdminAddUserToGroupCommand,
-  AdminCreateUserCommand,
-  AdminDeleteUserCommand,
-  AdminGetUserCommand,
-  AdminInitiateAuthCommand,
-  AdminSetUserPasswordCommand,
-  CognitoIdentityProviderClient,
+    AdminAddUserToGroupCommand,
+    AdminCreateUserCommand,
+    AdminDeleteUserCommand,
+    AdminGetUserCommand,
+    AdminInitiateAuthCommand,
+    AdminSetUserPasswordCommand,
+    CognitoIdentityProviderClient,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda';
 import { BatchWriteCommand, DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { createHmac, randomBytes } from 'crypto';
+import { getDeviceByType } from '../../lib/config';
+import { resolveIntegrationTestEnv } from './env';
 import { requireOutput } from './stack-outputs.ts';
 import {
-  IntegrationTestContext,
-  TestDeviceInput,
-  TestDeviceRecord,
-  TestLocationInput,
-  TestLocationRecord,
-  TestScannerRecord,
-  TestUserSession,
+    IntegrationTestContext,
+    TestDeviceInput,
+    TestDeviceRecord,
+    TestLocationInput,
+    TestLocationRecord,
+    TestScannerRecord,
+    TestUserSession,
 } from './types.ts';
 
 let cachedContext: IntegrationTestContext | undefined;
@@ -44,7 +46,7 @@ export async function getTestContext(): Promise<IntegrationTestContext> {
     () => undefined
   );
   const verifyEntryFunctionName = await requireOutput('VerifyEntryFunctionName').catch(() => undefined);
-  const region = process.env.AWS_REGION || 'eu-central-1';
+  const { AWS_REGION: region } = resolveIntegrationTestEnv();
 
   cachedContext = {
     apiUrl,
@@ -292,7 +294,7 @@ export async function createMockScanner(
       name: options?.name || `Mock Scanner ${Date.now()}`,
       reader_adapter: 'mock',
       allowed_qr_providers: options?.allowedQrProviders || ['mock'],
-      assigned_locker_id: options?.assignedLockerId || 'crossbox-locker-relay-01',
+      assigned_locker_id: options?.assignedLockerId || getDeviceByType('locker').thingName,
     }),
   });
   if (response.status !== 200 && response.status !== 201) {
@@ -446,11 +448,8 @@ export async function dispatchUnlockOutbox(context: IntegrationTestContext): Pro
   let dispatcherFunctionName = context.unlockOutboxDispatcherFunctionName;
 
   if (!dispatcherFunctionName) {
-    const stackArgumentIndex = process.argv.indexOf('--stack');
-    const stackName =
-      (stackArgumentIndex >= 0 ? process.argv[stackArgumentIndex + 1] : undefined) ||
-      process.env.STACK_NAME ||
-      'CrossboxGymDev';
+    const { STACK_NAME } = resolveIntegrationTestEnv();
+    const stackName = STACK_NAME;
     const apiStackName = `${stackName.replace(/Stack$/, '')}ApiStack`;
     const cloudFormation = new CloudFormationClient({ region: context.region });
     let nextToken: string | undefined;

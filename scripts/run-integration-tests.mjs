@@ -6,10 +6,11 @@
 //   npm run test:integration
 
 import { execSync } from 'node:child_process';
-import { parseArgs } from 'node:util';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
+import { integrationTestEnvSchema, validateEnv } from './lib/env.mjs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,9 +48,10 @@ const { values } = parseArgs({
   strict: false,
 });
 
-const STACK = values.stack ?? process.env.STACK_NAME ?? 'CrossboxGymDev';
+const env = validateEnv(integrationTestEnvSchema, process.env);
+const STACK = values.stack ?? env.STACK_NAME ?? 'CrossboxGymDev';
 const prefix = STACK.replace(/Stack$/, '');
-const REGION = values.region ?? process.env.AWS_REGION ?? 'eu-central-1';
+const REGION = values.region ?? env.AWS_REGION;
 
 let outputsPath = path.join(rootDir, 'cdk-outputs.json');
 if (!fs.existsSync(outputsPath)) {

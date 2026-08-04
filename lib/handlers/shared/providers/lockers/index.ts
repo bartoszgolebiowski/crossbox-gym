@@ -1,3 +1,4 @@
+import { SSM_IOT_ENDPOINT_PARAM, SSM_LOCKER_THING_NAME_PARAM } from '../../../../config';
 import { MockLockerClient } from './mock-locker';
 import { MqttLockerClient } from './mqtt-locker';
 import { ILockerConfigProvider, LockerConfig, SsmLockerConfigProvider } from './ssm-config-provider';
@@ -32,8 +33,8 @@ export function createLockerClient(
   }
   return new MqttLockerClient(
     new SsmLockerConfigProvider({
-      endpointParameterName: '/crossbox/iot/endpoint',
-      lockerThingNameParameterName: '/crossbox/iot/locker-thing-name',
+      endpointParameterName: SSM_IOT_ENDPOINT_PARAM,
+      lockerThingNameParameterName: SSM_LOCKER_THING_NAME_PARAM,
       fallbackConfig: configProviderOrEndpoint,
     })
   );

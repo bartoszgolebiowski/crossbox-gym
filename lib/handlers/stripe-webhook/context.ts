@@ -1,4 +1,4 @@
-import { getFrontendUrl, getIdentityProvider, getMainTableName, getUserPoolId } from '../shared/config';
+import { validateLambdaEnv } from '../shared/config';
 import { ddb } from '../shared/database';
 import { IdentityProvider, createIdentityProvider } from '../shared/providers';
 import { BillingRepository, DynamoDbBillingRepository } from './repository';
@@ -17,12 +17,13 @@ export interface WebhookContext {
 }
 
 export function createWebhookContext(): WebhookContext {
-  const mainTableName = getMainTableName();
+  const env = validateLambdaEnv(process.env);
+  const mainTableName = env.MAIN_TABLE_NAME;
   return {
     mainTableName,
-    userPoolId: getUserPoolId(),
-    frontendUrl: getFrontendUrl(),
-    identityProvider: createIdentityProvider(getIdentityProvider()),
+    userPoolId: env.USER_POOL_ID,
+    frontendUrl: env.FRONTEND_URL,
+    identityProvider: createIdentityProvider(env.IDENTITY_PROVIDER),
     billingRepository: new DynamoDbBillingRepository(ddb, mainTableName),
   };
 }

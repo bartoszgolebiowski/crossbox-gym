@@ -1,10 +1,4 @@
-import {
-  getFrontendUrl,
-  getIdentityProvider,
-  getMainTableName,
-  getUserPoolClientId,
-  getUserPoolId,
-} from '../shared/config';
+import { LambdaEnv, validateLambdaEnv } from '../shared/config';
 
 export interface AuthEnvironment {
   mainTableName: string;
@@ -14,12 +8,13 @@ export interface AuthEnvironment {
   identityProvider: string;
 }
 
-export function loadAuthEnvironment(_env = process.env): AuthEnvironment {
+export function loadAuthEnvironment(env: NodeJS.ProcessEnv = process.env): AuthEnvironment {
+  const validated = validateLambdaEnv(env) as LambdaEnv;
   return {
-    mainTableName: getMainTableName(),
-    userPoolId: getUserPoolId(),
-    userPoolClientId: getUserPoolClientId(),
-    frontendUrl: getFrontendUrl(),
-    identityProvider: getIdentityProvider(),
+    mainTableName: validated.MAIN_TABLE_NAME,
+    userPoolId: validated.USER_POOL_ID,
+    userPoolClientId: validated.USER_POOL_CLIENT_ID,
+    frontendUrl: validated.FRONTEND_URL,
+    identityProvider: validated.IDENTITY_PROVIDER,
   };
 }

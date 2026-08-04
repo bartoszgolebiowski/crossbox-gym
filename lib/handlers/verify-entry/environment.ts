@@ -1,3 +1,5 @@
+import { LambdaEnv, validateLambdaEnv } from '../shared/config';
+
 export interface VerifyEntryEnvironment {
   mainTableName: string;
   entryLogsTableName: string;
@@ -6,20 +8,13 @@ export interface VerifyEntryEnvironment {
   lockerThingName: string;
 }
 
-function required(environment: NodeJS.ProcessEnv, name: string): string {
-  const value = environment[name]?.trim();
-  if (!value) {
-    throw new Error(`${name} environment variable is required`);
-  }
-  return value;
-}
-
-export function loadVerifyEntryEnvironment(environment: NodeJS.ProcessEnv = process.env): VerifyEntryEnvironment {
+export function loadVerifyEntryEnvironment(env: NodeJS.ProcessEnv = process.env): VerifyEntryEnvironment {
+  const validated = validateLambdaEnv(env) as LambdaEnv;
   return {
-    mainTableName: required(environment, 'MAIN_TABLE_NAME'),
-    entryLogsTableName: required(environment, 'ENTRY_LOGS_TABLE_NAME'),
-    lockerClientType: environment.LOCKER_CLIENT_TYPE?.trim() || 'mqtt',
-    iotEndpoint: environment.IOT_ENDPOINT?.trim() || undefined,
-    lockerThingName: environment.LOCKER_THING_NAME?.trim() || 'crossbox-locker-relay-01',
+    mainTableName: validated.MAIN_TABLE_NAME,
+    entryLogsTableName: validated.ENTRY_LOGS_TABLE_NAME,
+    lockerClientType: validated.LOCKER_CLIENT_TYPE,
+    iotEndpoint: validated.IOT_ENDPOINT,
+    lockerThingName: validated.LOCKER_THING_NAME,
   };
 }

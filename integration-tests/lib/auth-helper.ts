@@ -1,4 +1,5 @@
-import { CognitoIdentityProviderClient, AdminInitiateAuthCommand } from '@aws-sdk/client-cognito-identity-provider';
+import { AdminInitiateAuthCommand, CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
+import { resolveIntegrationTestEnv } from './env';
 import { requireOutput } from './stack-outputs.ts';
 
 let cachedToken: string | undefined;
@@ -7,11 +8,12 @@ let cachedToken: string | undefined;
 export async function getAdminIdToken(): Promise<string> {
   if (cachedToken) return cachedToken;
 
+  const env = resolveIntegrationTestEnv();
   const userPoolId = await requireOutput('UserPoolId');
   const clientId = await requireOutput('UserPoolClientId');
-  const region = process.env.AWS_REGION || 'eu-central-1';
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@crossboxgym.com';
-  const adminPassword = process.env.ADMIN_PASSWORD || 'Admin123!';
+  const region = env.AWS_REGION;
+  const adminEmail = env.ADMIN_EMAIL;
+  const adminPassword = env.ADMIN_PASSWORD;
 
   const cognito = new CognitoIdentityProviderClient({ region });
   const authRes = await cognito.send(

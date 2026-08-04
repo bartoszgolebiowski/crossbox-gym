@@ -10,12 +10,14 @@ import * as nodejs from 'aws-cdk-lib/aws-lambda-nodejs';
 
 import { Construct } from 'constructs';
 import * as path from 'path';
+import { SSM_IOT_ENDPOINT_PARAM, SSM_LOCKER_THING_NAME_PARAM } from '../config';
 import { CrossboxDataStack } from './data-stack';
 
 export interface CrossboxApiStackProps extends cdk.StackProps {
   isTest: boolean;
   dataStack: CrossboxDataStack;
   appDistributionDomainName?: string;
+  partnerBusName?: string;
 }
 
 export class CrossboxApiStack extends cdk.Stack {
@@ -26,7 +28,7 @@ export class CrossboxApiStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: CrossboxApiStackProps) {
     super(scope, id, props);
 
-    const { isTest, dataStack, appDistributionDomainName } = props;
+    const { isTest, dataStack, appDistributionDomainName, partnerBusName } = props;
     const { mainTable, entryLogsTable, auditLogsTable, userPool, userPoolClient } = dataStack;
 
     // --- 1. API Gateway (HTTP) ---
@@ -57,6 +59,8 @@ export class CrossboxApiStack extends cdk.Stack {
 
     const commonEnv = {
       MAIN_TABLE_NAME: mainTable.tableName,
+      ENTRY_LOGS_TABLE_NAME: entryLogsTable.tableName,
+      AUDIT_LOGS_TABLE_NAME: auditLogsTable.tableName,
       USER_POOL_ID: userPool.userPoolId,
       USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
       APP_DISTRIBUTION_DOMAIN_NAME: appDistributionDomainName || '',
@@ -135,7 +139,6 @@ export class CrossboxApiStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30),
       environment: {
         ...commonEnv,
-        STRIPE_SECRET_KEY_SSM_PATH: '/crossbox/stripe/secret-key',
       },
     });
     mainTable.grantReadData(checkoutHandler);
@@ -157,7 +160,6 @@ export class CrossboxApiStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30),
       environment: {
         ...commonEnv,
-        STRIPE_SECRET_KEY_SSM_PATH: '/crossbox/stripe/secret-key',
       },
     });
     mainTable.grantReadWriteData(stripeWebhookHandler);
@@ -172,8 +174,6 @@ export class CrossboxApiStack extends cdk.Stack {
     }
 
     // EventBridge Bus & Rule for Stripe Events
-    const partnerBusName = this.node.tryGetContext('stripePartnerBusName') || process.env.STRIPE_PARTNER_BUS_NAME;
-
     this.stripeEventBus = partnerBusName
       ? events.EventBus.fromEventBusName(this, 'StripeEventBus', partnerBusName)
       : new events.EventBus(this, 'StripeEventBus', {
@@ -202,7 +202,6 @@ export class CrossboxApiStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(30),
       environment: {
         ...commonEnv,
-        STRIPE_SECRET_KEY_SSM_PATH: '/crossbox/stripe/secret-key',
       },
     });
     mainTable.grantReadWriteData(memberHandler);
@@ -251,8 +250,8 @@ export class CrossboxApiStack extends cdk.Stack {
         ...commonEnv,
         ENTRY_LOGS_TABLE_NAME: entryLogsTable.tableName,
         LOCKER_CLIENT_TYPE: isTest ? 'mock' : 'mqtt',
-        SSM_IOT_ENDPOINT_PARAM: '/crossbox/iot/endpoint',
-        SSM_LOCKER_THING_NAME_PARAM: '/crossbox/iot/locker-thing-name',
+        SSM_IOT_ENDPOINT_PARAM,
+        SSM_LOCKER_THING_NAME_PARAM,
       },
     });
     mainTable.grantReadWriteData(this.verifyEntryFunction);

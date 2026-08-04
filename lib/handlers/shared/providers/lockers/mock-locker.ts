@@ -1,4 +1,7 @@
+import { formatDeviceTopic, getDeviceByType, getDeviceTopicTemplate } from '../../../../config';
 import { ILockerClient, LockerCommandParams, LockerCommandPayload } from './types';
+
+const lockerCommandTopicTemplate = getDeviceTopicTemplate(getDeviceByType('locker'), 'command');
 
 export class MockLockerClient implements ILockerClient {
   public sentCommands: Array<{ lockerId: string; payload: LockerCommandPayload; topic: string }> = [];
@@ -14,7 +17,7 @@ export class MockLockerClient implements ILockerClient {
       },
     };
 
-    const topic = `gym/lockers/${lockerId}/command`;
+    const topic = formatDeviceTopic(lockerCommandTopicTemplate, lockerId);
     this.sentCommands.push({ lockerId, payload, topic });
     console.log(`[MockLockerClient] Simulated MQTT unlock command sent to ${topic}:`, payload);
     return payload;

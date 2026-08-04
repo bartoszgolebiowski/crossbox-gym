@@ -20,10 +20,6 @@ class FakePaymentProvider implements PaymentProvider {
   async listInvoices() {
     return [];
   }
-
-  async constructWebhookEvent(): Promise<unknown> {
-    return {};
-  }
 }
 
 test('CheckoutService resolves return routes from configured frontend URL', async () => {

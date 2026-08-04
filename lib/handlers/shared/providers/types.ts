@@ -30,8 +30,6 @@ export interface PaymentProvider {
       createdAt: string;
     }>
   >;
-
-  constructWebhookEvent(payload: string | Buffer, signature: string): Promise<any>;
 }
 
 export type ProviderId = 'tilde-v1-3-0' | 'basic-subscription' | 'mock' | 'unsupported';

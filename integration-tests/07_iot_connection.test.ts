@@ -5,7 +5,21 @@ import { execSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { describe, test } from 'node:test';
+import { resolveIntegrationTestEnv } from './lib/env';
 import { requireOutput } from './lib/stack-outputs.ts';
+
+async function getDeviceCertFromSecret(secretName: string, thingName: string, region: string) {
+  const secretsClient = new SecretsManagerClient({ region });
+  const secretResponse = await secretsClient.send(new GetSecretValueCommand({ SecretId: secretName }));
+
+  assert.ok(secretResponse.SecretString, 'SecretString must exist');
+  const payload = JSON.parse(secretResponse.SecretString);
+
+  // New per-device format: { "thingName": { certificate_pem, ... } }
+  const deviceCert = payload?.[thingName] ?? payload;
+  assert.ok(deviceCert, `Certificate entry for ${thingName} must exist`);
+  return deviceCert;
+}
 
 describe('AWS IoT Core Connection & Provisioning Integration Suite', () => {
   test('CloudFormation stack outputs publish IoT stack resources', async () => {
@@ -21,16 +35,15 @@ describe('AWS IoT Core Connection & Provisioning Integration Suite', () => {
     assert.match(iotEndpoint, /\.iot\.[a-z0-9-]+\.amazonaws\.com$/);
   });
 
-  test('Secrets Manager contains valid mTLS X.509 certificates and ATS endpoint configuration', async () => {
-    const secretName = await requireOutput('SecretNameOutput');
-    const expectedEndpoint = await requireOutput('IotEndpointOutput');
-    const region = process.env.AWS_REGION || 'eu-central-1';
+  test('Secrets Manager contains valid per-device mTLS X.509 certificates and ATS endpoint configuration', async () => {
+    const [secretName, thingName, expectedEndpoint] = await Promise.all([
+      requireOutput('SecretNameOutput'),
+      requireOutput('ThingNameOutput'),
+      requireOutput('IotEndpointOutput'),
+    ]);
+    const { AWS_REGION: region } = resolveIntegrationTestEnv();
 
-    const secretsClient = new SecretsManagerClient({ region });
-    const secretResponse = await secretsClient.send(new GetSecretValueCommand({ SecretId: secretName }));
-
-    assert.ok(secretResponse.SecretString, 'SecretString must exist');
-    const payload = JSON.parse(secretResponse.SecretString);
+    const payload = await getDeviceCertFromSecret(secretName, thingName, region);
 
     // Validate certificate payload contents
     assert.ok(payload.certificate_pem, 'certificate_pem must be present');
@@ -49,7 +62,7 @@ describe('AWS IoT Core Connection & Provisioning Integration Suite', () => {
 
   test('AWS IoT Data Plane connection is ready and active', async () => {
     const iotEndpoint = await requireOutput('IotEndpointOutput');
-    const region = process.env.AWS_REGION || 'eu-central-1';
+    const { AWS_REGION: region } = resolveIntegrationTestEnv();
 
     const iotDataClient = new IoTDataPlaneClient({
       endpoint: `https://${iotEndpoint}`,
@@ -75,13 +88,13 @@ describe('AWS IoT Core Connection & Provisioning Integration Suite', () => {
 
   test('fetch-certs script successfully downloads certificate bundle', async () => {
     const secretName = await requireOutput('SecretNameOutput');
-    const region = process.env.AWS_REGION || 'eu-central-1';
+    const { AWS_REGION: region } = resolveIntegrationTestEnv();
     const tmpDir = path.join(process.cwd(), 'certs_test_tmp');
 
     try {
       execSync(`node ./scripts/fetch-certs.mjs "${tmpDir}"`, {
         cwd: process.cwd(),
-        env: { ...process.env, SECRET_NAME: secretName, AWS_REGION: region },
+        env: { ...process.env, SECRET_NAME_IOT: secretName, AWS_REGION: region },
         stdio: 'pipe',
       });
 

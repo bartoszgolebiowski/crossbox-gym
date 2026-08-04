@@ -1,4 +1,4 @@
-import { getAuditLogsTableName, getEntryLogsTableName, getMainTableName } from '../shared/config';
+import { LambdaEnv, validateLambdaEnv } from '../shared/config';
 
 export interface AdminEnvironment {
   mainTableName: string;
@@ -7,11 +7,12 @@ export interface AdminEnvironment {
   iotEndpoint?: string;
 }
 
-export function loadAdminEnvironment(_env = process.env): AdminEnvironment {
+export function loadAdminEnvironment(env: NodeJS.ProcessEnv = process.env): AdminEnvironment {
+  const validated = validateLambdaEnv(env) as LambdaEnv;
   return {
-    mainTableName: getMainTableName(),
-    entryLogsTableName: getEntryLogsTableName(),
-    auditLogsTableName: getAuditLogsTableName(),
-    iotEndpoint: process.env.IOT_ENDPOINT,
+    mainTableName: validated.MAIN_TABLE_NAME,
+    entryLogsTableName: validated.ENTRY_LOGS_TABLE_NAME,
+    auditLogsTableName: validated.AUDIT_LOGS_TABLE_NAME,
+    iotEndpoint: validated.IOT_ENDPOINT,
   };
 }

@@ -1,6 +1,10 @@
 import { IoTDataPlaneClient, PublishCommand } from '@aws-sdk/client-iot-data-plane';
+import { formatDeviceTopic, getDeviceByType, getDeviceTopicTemplate } from '../../../../config';
 import { ILockerConfigProvider } from './ssm-config-provider';
 import { ILockerClient, LockerCommandParams, LockerCommandPayload } from './types';
+
+const defaultLockerThingName = getDeviceByType('locker').thingName;
+const lockerCommandTopicTemplate = getDeviceTopicTemplate(getDeviceByType('locker'), 'command');
 
 export class MqttLockerClient implements ILockerClient {
   private iotDataClients = new Map<string, IoTDataPlaneClient>();
@@ -13,7 +17,7 @@ export class MqttLockerClient implements ILockerClient {
         async getConfig() {
           return {
             endpoint: endpointStr,
-            lockerThingName: 'crossbox-locker-relay-01',
+            lockerThingName: defaultLockerThingName,
           };
         },
       };
@@ -46,7 +50,7 @@ export class MqttLockerClient implements ILockerClient {
       },
     };
 
-    const topic = `gym/lockers/${targetLockerId}/command`;
+    const topic = formatDeviceTopic(lockerCommandTopicTemplate, targetLockerId);
 
     try {
       await client.send(

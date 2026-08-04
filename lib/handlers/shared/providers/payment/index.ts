@@ -1,10 +1,9 @@
 import { PaymentProvider } from '../types';
-import { StripePaymentProvider } from './stripe-payment-provider';
 import { MockPaymentProvider } from './mock-payment-provider';
+import { StripePaymentProvider } from './stripe-payment-provider';
 
-export { StripePaymentProvider } from './stripe-payment-provider';
 export { MockPaymentProvider } from './mock-payment-provider';
-export { getStripeClient, getWebhookSecret } from './stripe-client-manager';
+export { StripePaymentProvider } from './stripe-payment-provider';
 
 const paymentProviders: Record<string, new () => PaymentProvider> = {
   stripe: StripePaymentProvider,

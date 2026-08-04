@@ -2,12 +2,20 @@ import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { handler as authHandler } from '../lib/handlers/auth';
 
+const mockEnv = {
+  MAIN_TABLE_NAME: 'CrossboxGymMainTable',
+  USER_POOL_ID: 'mock_pool_id',
+  USER_POOL_CLIENT_ID: 'mock_client_id',
+  FRONTEND_URL: 'https://localhost',
+  ENTRY_LOGS_TABLE_NAME: 'CrossboxGymEntryLogsTable',
+  AUDIT_LOGS_TABLE_NAME: 'CrossboxGymAuditLogsTable',
+  STRIPE_SECRET_KEY: 'sk_test_mock',
+  STRIPE_SANDBOX: 'true',
+};
+
 describe('Auth Registration & Password Reset Unit Tests', () => {
   test('POST /auth/register throws ValidationError when password is missing', async () => {
-    process.env.MAIN_TABLE_NAME = 'CrossboxGymMainTable';
-    process.env.USER_POOL_ID = 'mock_pool_id';
-    process.env.USER_POOL_CLIENT_ID = 'mock_client_id';
-    process.env.FRONTEND_URL = 'https://localhost';
+    process.env = { ...process.env, ...mockEnv };
 
     const event: any = {
       requestContext: {
@@ -27,10 +35,7 @@ describe('Auth Registration & Password Reset Unit Tests', () => {
   });
 
   test('POST /auth/forgot-password throws ValidationError when email is missing', async () => {
-    process.env.MAIN_TABLE_NAME = 'CrossboxGymMainTable';
-    process.env.USER_POOL_ID = 'mock_pool_id';
-    process.env.USER_POOL_CLIENT_ID = 'mock_client_id';
-    process.env.FRONTEND_URL = 'https://localhost';
+    process.env = { ...process.env, ...mockEnv };
 
     const event: any = {
       requestContext: {
@@ -50,10 +55,7 @@ describe('Auth Registration & Password Reset Unit Tests', () => {
   });
 
   test('POST /auth/confirm-forgot-password throws ValidationError when missing parameters', async () => {
-    process.env.MAIN_TABLE_NAME = 'CrossboxGymMainTable';
-    process.env.USER_POOL_ID = 'mock_pool_id';
-    process.env.USER_POOL_CLIENT_ID = 'mock_client_id';
-    process.env.FRONTEND_URL = 'https://localhost';
+    process.env = { ...process.env, ...mockEnv };
 
     const event: any = {
       requestContext: {

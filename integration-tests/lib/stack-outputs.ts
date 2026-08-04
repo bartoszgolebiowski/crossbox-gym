@@ -11,26 +11,60 @@
 import { CloudFormationClient, DescribeStacksCommand } from '@aws-sdk/client-cloudformation';
 import * as fs from 'fs';
 import * as path from 'path';
+import { resolveIntegrationTestEnv } from './env';
 
 export type StackOutputs = Record<string, string>;
 
 const cache = new Map<string, StackOutputs>();
 
-function argValue(flag: string): string | undefined {
-  const idx = process.argv.indexOf(flag);
-  return idx !== -1 ? process.argv[idx + 1] : undefined;
-}
-
 function resolveStackName(): string {
-  const stackName = argValue('--stack') ?? process.env.STACK_NAME ?? 'CrossboxGymDev';
-  if (!stackName) {
+  const { STACK_NAME } = resolveIntegrationTestEnv();
+  if (!STACK_NAME) {
     throw new Error('Missing stack name. Pass --stack <StackName> or set STACK_NAME env var.');
   }
-  return stackName;
+  return STACK_NAME;
 }
 
 function resolveRegion(): string {
-  return argValue('--region') ?? process.env.AWS_REGION ?? 'eu-central-1';
+  const { AWS_REGION } = resolveIntegrationTestEnv();
+  return AWS_REGION;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isRetryableError(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const e = error as { name?: string; message?: string };
+  const retryableNames = ['ThrottlingException', 'TooManyRequestsException', 'TimeoutError', 'RequestTimeout'];
+  if (retryableNames.includes(e.name ?? '')) return true;
+  const message = (e.message ?? '').toLowerCase();
+  return message.includes('throttling') || message.includes('rate exceeded') || message.includes('timeout');
+}
+
+async function describeStackWithRetry(
+  cfn: CloudFormationClient,
+  stackName: string,
+  maxAttempts = 3
+): Promise<import('@aws-sdk/client-cloudformation').Stack | undefined> {
+  let lastError: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const { Stacks } = await cfn.send(new DescribeStacksCommand({ StackName: stackName }));
+      return Stacks?.[0];
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxAttempts && isRetryableError(error)) {
+        console.warn(`[stack-outputs] DescribeStacks ${stackName} throttled, retrying (${attempt}/${maxAttempts})...`);
+        await sleep(2 ** attempt * 250);
+      } else {
+        break;
+      }
+    }
+  }
+  console.warn(`[stack-outputs] Failed to describe stack ${stackName}:`, lastError);
+  return undefined;
 }
 
 /** Fetches and caches all CfnOutput values for the target stacks. */
@@ -99,22 +133,20 @@ export async function getStackOutputs(): Promise<StackOutputs> {
       `${prefix}ApiStack`,
       `${prefix}DataStack`,
       `${prefix}IotStack`,
-      stackName,
     ];
+    // Only query the literal stackName if it looks like a real stack
+    if (stackName.endsWith('Stack')) {
+      possibleStackNames.push(stackName);
+    }
 
     for (const name of possibleStackNames) {
-      try {
-        const { Stacks } = await cfn.send(new DescribeStacksCommand({ StackName: name }));
-        const stack = Stacks?.[0];
-        if (stack && stack.Outputs) {
-          for (const o of stack.Outputs) {
-            if (o.OutputKey && o.OutputValue) {
-              merged[o.OutputKey] = o.OutputValue;
-            }
+      const stack = await describeStackWithRetry(cfn, name);
+      if (stack && stack.Outputs) {
+        for (const o of stack.Outputs) {
+          if (o.OutputKey && o.OutputValue) {
+            merged[o.OutputKey] = o.OutputValue;
           }
         }
-      } catch {
-        // Ignore individual stack describe failures
       }
     }
   }

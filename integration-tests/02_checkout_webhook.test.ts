@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { before, describe, test } from 'node:test';
+import { validateLambdaEnv } from '../lib/handlers/shared/config';
 import { handler as stripeEventHandler } from '../lib/handlers/stripe-webhook/index.ts';
 import { getTestContext } from './lib/test-helpers.ts';
 import { IntegrationTestContext } from './lib/types.ts';
@@ -10,10 +11,20 @@ describe('Checkout & EventBridge Lifecycle Test Suite', () => {
   before(async () => {
     context = await getTestContext();
     // Ensure environment variables are set for handler execution
-    process.env.MAIN_TABLE_NAME = context.mainTableName;
-    process.env.USER_POOL_ID = context.userPoolId;
-    process.env.PAYMENT_PROVIDER = 'mock';
-    process.env.FRONTEND_URL = 'http://localhost:5173';
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY || 'sk_test_mock';
+    process.env = {
+      ...process.env,
+      MAIN_TABLE_NAME: context.mainTableName,
+      USER_POOL_ID: context.userPoolId,
+      USER_POOL_CLIENT_ID: context.userPoolClientId,
+      PAYMENT_PROVIDER: 'mock',
+      FRONTEND_URL: 'http://localhost:5173',
+      ENTRY_LOGS_TABLE_NAME: context.entryLogsTableName,
+      AUDIT_LOGS_TABLE_NAME: context.auditLogsTableName,
+      STRIPE_SECRET_KEY: stripeSecretKey,
+      STRIPE_SANDBOX: 'true',
+    };
+    validateLambdaEnv(process.env);
   });
 
   test('POST /checkout/session creates Stripe checkout session URL', async () => {

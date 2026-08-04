@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { AccessService } from '../lib/handlers/shared/providers';
 import {
-  createLockerClient,
-  MockLockerClient,
-  MqttLockerClient,
-  setLockerClientOverride,
+    createLockerClient,
+    MockLockerClient,
+    MqttLockerClient,
+    setLockerClientOverride,
 } from '../lib/handlers/shared/providers/lockers';
 import { parseIotScanEvent, handler as verifyEntryHandler } from '../lib/handlers/verify-entry';
 
@@ -77,8 +77,16 @@ test('Locker Client Suite - 4. parseIotScanEvent ignores an untrusted lockerId w
 });
 
 test('Locker Client Suite - 5. verifyEntryHandler sends feedback to scanner and opens locker via LockerClient', async () => {
-  process.env.MAIN_TABLE_NAME = 'TestMainTable';
-  process.env.ENTRY_LOGS_TABLE_NAME = 'TestEntryLogsTable';
+  process.env = {
+    ...process.env,
+    MAIN_TABLE_NAME: 'TestMainTable',
+    ENTRY_LOGS_TABLE_NAME: 'TestEntryLogsTable',
+    AUDIT_LOGS_TABLE_NAME: 'TestAuditLogsTable',
+    USER_POOL_ID: 'mock_pool_id',
+    USER_POOL_CLIENT_ID: 'mock_client_id',
+    STRIPE_SECRET_KEY: 'sk_test_mock',
+    STRIPE_SANDBOX: 'true',
+  };
 
   const originalCommitAccess = AccessService.prototype.commitAccess;
   AccessService.prototype.commitAccess = async (_scannerId: string, _credential: any) => {
