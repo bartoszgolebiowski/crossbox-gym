@@ -1,12 +1,12 @@
-import { ILockerClient } from './types';
 import { MockLockerClient } from './mock-locker';
 import { MqttLockerClient } from './mqtt-locker';
 import { ILockerConfigProvider, LockerConfig, SsmLockerConfigProvider } from './ssm-config-provider';
+import { ILockerClient } from './types';
 
-export * from './types';
 export * from './mock-locker';
 export * from './mqtt-locker';
 export * from './ssm-config-provider';
+export * from './types';
 
 let lockerClientOverrideInstance: ILockerClient | undefined;
 

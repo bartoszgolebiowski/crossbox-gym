@@ -1,12 +1,12 @@
 import { CloudFormationClient, ListStackResourcesCommand } from '@aws-sdk/client-cloudformation';
 import {
-    AdminAddUserToGroupCommand,
-    AdminCreateUserCommand,
-    AdminDeleteUserCommand,
-    AdminGetUserCommand,
-    AdminInitiateAuthCommand,
-    AdminSetUserPasswordCommand,
-    CognitoIdentityProviderClient,
+  AdminAddUserToGroupCommand,
+  AdminCreateUserCommand,
+  AdminDeleteUserCommand,
+  AdminGetUserCommand,
+  AdminInitiateAuthCommand,
+  AdminSetUserPasswordCommand,
+  CognitoIdentityProviderClient,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda';
@@ -14,13 +14,13 @@ import { BatchWriteCommand, DynamoDBDocumentClient, GetCommand, PutCommand, Quer
 import { createHmac, randomBytes } from 'crypto';
 import { requireOutput } from './stack-outputs.ts';
 import {
-    IntegrationTestContext,
-    TestDeviceInput,
-    TestDeviceRecord,
-    TestLocationInput,
-    TestLocationRecord,
-    TestScannerRecord,
-    TestUserSession,
+  IntegrationTestContext,
+  TestDeviceInput,
+  TestDeviceRecord,
+  TestLocationInput,
+  TestLocationRecord,
+  TestScannerRecord,
+  TestUserSession,
 } from './types.ts';
 
 let cachedContext: IntegrationTestContext | undefined;

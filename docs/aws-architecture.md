@@ -156,9 +156,9 @@ One HTTP API with route groups, different auth per group:
 | `/device/verify` | POST | None (API key checked in Lambda) | `VerifyEntry` | FR-22, Flow 2 | ≤500ms. Lambda validates API key from header. |
 | `/webhook/stripe` | POST | None (Stripe signature in Lambda) | `StripeWebhookHandler` | FR-03, FR-09, FR-11, FR-12, FR-14 | |
 | `/admin/locations` | GET | Cognito JWT (admin) | `AdminHandler` | FR-29 | |
-| `/admin/locations` | POST | Cognito JWT (admin) | `AdminHandler` | FR-29 | Also writes locations.json to S3 |
-| `/admin/locations/{id}` | PUT | Cognito JWT (admin) | `AdminHandler` | FR-29 | Also writes locations.json to S3 |
-| `/admin/locations/{id}` | DELETE | Cognito JWT (admin) | `AdminHandler` | FR-29 | Also writes locations.json to S3 |
+| `/admin/locations` | POST | Cognito JWT (admin) | `AdminHandler` | FR-29 | |
+| `/admin/locations/{id}` | PUT | Cognito JWT (admin) | `AdminHandler` | FR-29 | |
+| `/admin/locations/{id}` | DELETE | Cognito JWT (admin) | `AdminHandler` | FR-29 | |
 | `/admin/locations/{id}/devices` | GET | Cognito JWT (admin) | `AdminHandler` | FR-30 | |
 | `/admin/locations/{id}/devices` | POST | Cognito JWT (admin) | `AdminHandler` | FR-30 | Auto-generates API key |
 | `/admin/devices/{id}` | PUT | Cognito JWT (admin) | `AdminHandler` | FR-30 | |
@@ -210,7 +210,6 @@ One HTTP API with route groups, different auth per group:
 | `AdminHandler` | DynamoDB `MainTable` | GetItem, PutItem, UpdateItem, DeleteItem, Query, Scan | FR-29–FR-36 | Full CRUD on locations, devices, members |
 | `AdminHandler` | DynamoDB `AuditLogs` | PutItem | FR-33, FR-34 | Write audit entries |
 | `AdminHandler` | SQS `UnlockQueue` | SendMessage | FR-34 | Remote unlock |
-| `AdminHandler` | S3 `StaticAssetsBucket` | PutObject (`locations.json`) | FR-01, FR-29 | Update public locations data |
 | `GraceExpiryCron` | DynamoDB `MainTable` | Query (GSI1: STATUS#PAST_DUE), UpdateItem (conditional) | FR-10 | Transition PAST_DUE → SUSPENDED |
 
 ---
@@ -248,7 +247,7 @@ One HTTP API with route groups, different auth per group:
 
 | Resource | Type | Purpose | Source |
 |---|---|---|---|
-| `StaticAssetsBucket` | S3 | All static assets: `/pwa/*` (PWA), `/admin/*` (Admin Panel), `/landing/*` (Landing page), `/public/locations.json` | FR-01, FR-16, FR-17, FR-29 |
+| `StaticAssetsBucket` | S3 | All static assets: `/pwa/*` (PWA), `/admin/*` (Admin Panel), `/landing/*` (Landing page) | FR-01, FR-16, FR-17 |
 | `CDNDistribution` | CloudFront | Single CDN for all static content. Cache behaviors route `/pwa/*`, `/admin/*`, `/landing/*` to the S3 bucket. API requests proxied to API Gateway origin. | All frontend FRs |
 
 **CloudFront behaviors:**

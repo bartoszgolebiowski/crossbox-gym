@@ -428,17 +428,15 @@ Ordered build sequence. Each step depends on the resources listed. Within a sing
     - `MAIN_TABLE_NAME`
     - `AUDIT_LOGS_TABLE_NAME`
     - `UNLOCK_QUEUE_URL`
-    - `STATIC_ASSETS_BUCKET_NAME`
 - **IAM permissions:**
   - `dynamodb:GetItem`, `PutItem`, `UpdateItem`, `DeleteItem`, `Query`, `Scan` on `MainTable`
   - `dynamodb:Query` on `MainTable` GSIs: `EmailIndex`, `GSI1`, `DeviceIdIndex`
   - `dynamodb:PutItem` on `AuditLogs`
   - `sqs:SendMessage` on `UnlockQueue` ARN
-  - `s3:PutObject` on `StaticAssetsBucket` (`public/locations.json` key)
 - **Error handling:** Sync API response. AuditLog writes are best-effort (log failure but don't block the admin action).
 - **Observability:** CloudWatch Logs.
 - **Authorization:** Lambda checks `cognito:groups` claim in JWT contains `admins`. Returns 403 if not.
-- **Testing follow-up:** Unit test CRUD operations, audit log writing, locations.json S3 sync, HMAC key rotation logic.
+- **Testing follow-up:** Unit test CRUD operations, audit log writing, HMAC key rotation logic.
 
 ---
 
