@@ -7,7 +7,6 @@ import {
   AdminRepository,
   CreateDeviceParams,
   CreateLocationParams,
-  CreateScannerParams,
   MemberOverrideParams,
 } from '../lib/handlers/admin/repository';
 import { AdminService } from '../lib/handlers/admin/service';
@@ -43,21 +42,6 @@ class FakeAdminRepository implements AdminRepository {
     this.deletedLocations.push(locationId);
   }
 
-  async listScanners(): Promise<Record<string, unknown>[]> {
-    return this.scanners;
-  }
-
-  async createScanner(params: CreateScannerParams): Promise<Record<string, unknown>> {
-    const item = {
-      PK: `LOC#${params.locationId}`,
-      SK: `SCANNER#${params.scannerId}`,
-      scanner_id: params.scannerId,
-      assigned_locker_id: params.assignedLockerId,
-    };
-    this.scanners.push(item);
-    return item;
-  }
-
   async listDevices(): Promise<Record<string, unknown>[]> {
     return this.devices;
   }
@@ -73,7 +57,11 @@ class FakeAdminRepository implements AdminRepository {
     return item;
   }
 
-  async getActivity(locationId: string, _scannerId?: string): Promise<ActivityAggregation> {
+  async getActivity(
+    locationId: string,
+    _scannerId?: string,
+    _options?: { limit?: number; nextToken?: string }
+  ): Promise<ActivityAggregation> {
     return {
       location_id: locationId,
       total_count: 0,
@@ -83,6 +71,7 @@ class FakeAdminRepository implements AdminRepository {
       daily_stats: {},
       weekly_stats: {},
       items: [],
+      has_more: false,
     };
   }
 
@@ -109,6 +98,11 @@ class FakeAdminRepository implements AdminRepository {
 
   async getHmacCurrentKey(): Promise<string | undefined> {
     return this.hmacCurrentKey;
+  }
+
+  async findAssignedLockerId(deviceId: string): Promise<string | undefined> {
+    const scanner = this.scanners.find((s) => s.scanner_id === deviceId || s.device_id === deviceId);
+    return (scanner?.assigned_locker_id as string | undefined) ?? undefined;
   }
 }
 
@@ -174,25 +168,15 @@ describe('AdminService', () => {
     assert.deepEqual(repository.deletedLocations, ['loc-1']);
   });
 
-  test('createScanner requires assigned_locker_id', async () => {
-    const { service } = createService();
-    await assert.rejects(
-      () => service.createScanner('admin-1', 'loc-1', { assigned_locker_id: '' } as any),
-      /assigned_locker_id is required when registering a scanner/
-    );
-  });
+  test('checkDeviceHealth verifies device status and audits', async () => {
+    const { service, auditLogger } = createService();
+    const result = await service.checkDeviceHealth('admin-1', 'crossbox-scanner-01', 'loc-1');
 
-  test('createScanner creates scanner and audits', async () => {
-    const { service, repository, auditLogger } = createService();
-    const result = await service.createScanner('admin-1', 'loc-1', {
-      assigned_locker_id: 'locker-1',
-      name: 'Scanner 1',
-    });
-
-    assert.equal((result as any).assigned_locker_id, 'locker-1');
-    assert.ok((result as any).scanner_api_key);
-    assert.equal(repository.scanners.length, 1);
-    assert.equal(auditLogger.logs[0].actionType, 'create_scanner');
+    assert.equal(result.device_id, 'crossbox-scanner-01');
+    assert.equal(result.status, 'ONLINE');
+    assert.equal(result.connected, true);
+    assert.ok(result.latency_ms > 0);
+    assert.equal(auditLogger.logs[0].actionType, 'device_health_check');
   });
 
   test('createDevice creates device and audits', async () => {

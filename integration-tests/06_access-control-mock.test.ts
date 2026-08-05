@@ -71,28 +71,24 @@ describe('Mock Access Control Integration Suite', () => {
   });
 
   describe('1. Provisioning & Admin Management', () => {
-    test('provisions mock scanner resources through location-scoped admin API', async () => {
-      const scannersRes = await fetch(`${context.apiUrl}/admin/locations/${location.locationId}/scanners`, {
+    test('fetches location devices through location-scoped admin API', async () => {
+      const devicesRes = await fetch(`${context.apiUrl}/admin/locations/${location.locationId}/devices`, {
         headers: { Authorization: `Bearer ${admin.idToken}` },
       });
 
-      assert.equal(scannersRes.status, 200);
-      const scannerItems = (await scannersRes.json()) as TestScannerRecord[];
-      const foundScanner = scannerItems.find((item) => item.scanner_id === scanner.scanner_id);
-
-      assert.ok(foundScanner);
-      assert.equal('scanner_api_key' in foundScanner, false, 'API key must be hidden on list endpoints');
+      assert.equal(devicesRes.status, 200);
+      const devices = (await devicesRes.json()) as Array<{ device_id: string; name: string; type?: string }>;
+      assert.ok(Array.isArray(devices), 'devices response must be an array');
+      const foundScanner = devices.find((d) => d.device_id === scanner.scanner_id);
+      assert.ok(foundScanner, 'expected scanner to be returned in location devices');
+      assert.equal(foundScanner?.type, 'scanner');
+      assert.equal(foundScanner?.name, scanner.name);
     });
   });
 
   describe('2. Mock Scan Authorization & Gate Unlock', () => {
     test('mock QR success creates one entry log and anti-passback state', async () => {
-      const result = (await scanMockDevice(
-        context,
-        scanner.scanner_api_key!,
-        `mock:${activeMember.userId}`,
-        scanner.scanner_id
-      )) as any;
+      const result = (await scanMockDevice(context, `mock:${activeMember.userId}`, scanner.scanner_id)) as any;
       assert.equal(result.result, 'success');
       const entryId = result.entryId || result.entry_id;
       assert.ok(entryId);
@@ -114,7 +110,6 @@ describe('Mock Access Control Integration Suite', () => {
     test('falls back from basic-subscription to mock QR provider when scanner allows both', async () => {
       const result = (await scanMockDevice(
         context,
-        fallbackScanner.scanner_api_key!,
         `mock:${fallbackMember.userId}`,
         fallbackScanner.scanner_id
       )) as any;
@@ -132,12 +127,7 @@ describe('Mock Access Control Integration Suite', () => {
   describe('4. Non-Subscription Provider Access Rules', () => {
     test('grants access for mock QR provider without requiring a subscription (unauthenticated guest)', async () => {
       const guestId = `guest_${Date.now()}`;
-      const result = (await scanMockDevice(
-        context,
-        scanner.scanner_api_key!,
-        `mock:${guestId}`,
-        scanner.scanner_id
-      )) as any;
+      const result = (await scanMockDevice(context, `mock:${guestId}`, scanner.scanner_id)) as any;
       assert.equal(result.result, 'success');
       const entryId = result.entryId || result.entry_id;
       assert.ok(entryId);
@@ -147,12 +137,7 @@ describe('Mock Access Control Integration Suite', () => {
     });
 
     test('grants access for mock QR provider even when user membership is inactive', async () => {
-      const result = (await scanMockDevice(
-        context,
-        scanner.scanner_api_key!,
-        `mock:${inactiveMember.userId}`,
-        scanner.scanner_id
-      )) as any;
+      const result = (await scanMockDevice(context, `mock:${inactiveMember.userId}`, scanner.scanner_id)) as any;
       assert.equal(result.result, 'success');
       const entryId = result.entryId || result.entry_id;
       assert.ok(entryId);
@@ -164,12 +149,7 @@ describe('Mock Access Control Integration Suite', () => {
 
   describe('5. Negative & Failure Modes', () => {
     test('enforces anti-passback cooldown after a committed mock scan without creating extra entries', async () => {
-      const result = await scanMockDevice(
-        context,
-        scanner.scanner_api_key!,
-        `mock:${activeMember.userId}`,
-        scanner.scanner_id
-      );
+      const result = await scanMockDevice(context, `mock:${activeMember.userId}`, scanner.scanner_id);
       assert.equal(result.result, 'denied');
       assert.equal(result.reason, 'anti_passback_cooldown');
 
@@ -180,7 +160,6 @@ describe('Mock Access Control Integration Suite', () => {
     test('fails closed when a scanner allows an unavailable provider and creates no access state', async () => {
       const result = await scanMockDevice(
         context,
-        unavailableProviderScanner.scanner_api_key!,
         `mock:${unavailableProviderMember.userId}`,
         unavailableProviderScanner.scanner_id
       );
@@ -195,7 +174,7 @@ describe('Mock Access Control Integration Suite', () => {
     });
 
     test('denies malformed mock credentials without creating access state', async () => {
-      const malformed = await scanMockDevice(context, scanner.scanner_api_key!, 'mock:', scanner.scanner_id);
+      const malformed = await scanMockDevice(context, 'mock:', scanner.scanner_id);
       assert.equal(malformed.result, 'denied');
       assert.equal(malformed.reason, 'missing_mock_subject_id');
     });

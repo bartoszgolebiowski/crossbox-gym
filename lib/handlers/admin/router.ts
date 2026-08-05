@@ -33,32 +33,28 @@ export function createAdminRouter(service: AdminService) {
       return service.deleteLocation(adminId, id);
     }
 
-    if (method === 'GET' && /^\/admin\/locations\/[^/]+\/scanners$/.test(path)) {
-      const locationId = path.split('/')[3];
-      return service.listScanners(adminId, locationId);
-    }
-
-    if (method === 'POST' && /^\/admin\/locations\/[^/]+\/scanners$/.test(path)) {
-      const locationId = path.split('/')[3];
-      const body = parseJsonBody(event);
-      return service.createScanner(adminId, locationId, {
-        name: body.name,
-        assigned_locker_id: body.assigned_locker_id,
-        reader_adapter: body.reader_adapter,
-        allowed_qr_providers: body.allowed_qr_providers,
-        hardware_metadata: body.hardware_metadata,
-      });
-    }
-
     if (method === 'GET' && /^\/admin\/locations\/[^/]+\/activity$/.test(path)) {
       const locationId = path.split('/')[3];
       const scannerId = event.queryStringParameters?.scanner_id;
-      return service.getActivity(adminId, locationId, scannerId);
+      const limit = event.queryStringParameters?.limit
+        ? parseInt(event.queryStringParameters.limit, 10)
+        : undefined;
+      const nextToken = event.queryStringParameters?.next_token;
+      return service.getActivity(adminId, locationId, scannerId, {
+        limit: Number.isNaN(limit) ? undefined : limit,
+        nextToken,
+      });
     }
 
     if (method === 'GET' && path.includes('/devices')) {
       const locationId = path.split('/')[3];
       return service.listDevices(adminId, locationId);
+    }
+
+    if ((method === 'POST' || method === 'GET') && path.endsWith('/health')) {
+      const deviceId = path.split('/')[3];
+      const locationId = event.queryStringParameters?.location_id;
+      return service.checkDeviceHealth(adminId, deviceId, locationId);
     }
 
     if (method === 'POST' && path.endsWith('/unlock')) {
@@ -71,10 +67,10 @@ export function createAdminRouter(service: AdminService) {
       const locationId = path.split('/')[3];
       const body = parseJsonBody(event);
       return service.createDevice(adminId, locationId, {
+        device_id: body.device_id,
         name: body.name,
         type: body.type,
         connection_params: body.connection_params,
-        api_key: body.api_key,
       });
     }
 

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { ScannerItem } from '../lib/handlers/shared/access/types';
 import { AccessService } from '../lib/handlers/shared/providers/access-service';
-import { AccessRepository } from '../lib/handlers/shared/repositories';
+import { AccessRepository, DeniedAccessParams } from '../lib/handlers/shared/repositories';
 
 const credential = { subjectId: 'member-123', providerId: 'mock' as const };
 
@@ -43,6 +43,10 @@ class FakeAccessRepository implements AccessRepository {
   async commitAccess() {
     this.commits += 1;
     return { outcome: 'committed' as const, entryId: 'entry-1' };
+  }
+
+  async logDeniedAccess(_params: DeniedAccessParams): Promise<void> {
+    // no-op for tests
   }
 }
 

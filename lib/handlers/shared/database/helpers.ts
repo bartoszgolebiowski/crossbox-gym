@@ -1,6 +1,6 @@
 import { GetCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { ScannerItem } from '../access/types';
-import { ConfigItem, DeviceItem, SubscriptionItem, UserItem } from '../types';
+import { ConfigItem, SubscriptionItem, UserItem } from '../types';
 import { ddb } from './client';
 
 /** Helper to fetch user profile by user_id */
@@ -27,33 +27,6 @@ export async function getUserSubscription(tableName: string, userId: string): Pr
     })
   );
   return result.Items?.[0] as SubscriptionItem | undefined;
-}
-
-/** Helper to look up active device by API key hash */
-export async function getDeviceByApiKey(tableName: string, apiKeyHash: string): Promise<DeviceItem | undefined> {
-  const result = await ddb.send(
-    new QueryCommand({
-      TableName: tableName,
-      IndexName: 'ApiKeyIndex',
-      KeyConditionExpression: 'api_key_hash = :hash',
-      ExpressionAttributeValues: { ':hash': apiKeyHash },
-    })
-  );
-  return result.Items?.[0] as DeviceItem | undefined;
-}
-
-/** Helper to look up a registered scanner through the existing API-key index. */
-export async function getScannerByApiKey(tableName: string, apiKeyHash: string): Promise<ScannerItem | undefined> {
-  const result = await ddb.send(
-    new QueryCommand({
-      TableName: tableName,
-      IndexName: 'ApiKeyIndex',
-      KeyConditionExpression: 'api_key_hash = :hash',
-      ExpressionAttributeValues: { ':hash': apiKeyHash },
-    })
-  );
-  const scanner = result.Items?.find((item) => String(item.SK).startsWith('SCANNER#')) as ScannerItem | undefined;
-  return scanner?.status === 'active' ? scanner : undefined;
 }
 
 /** Helper to look up a registered scanner by scanner_id. */

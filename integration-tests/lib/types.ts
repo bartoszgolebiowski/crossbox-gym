@@ -47,7 +47,6 @@ export interface TestDeviceInput {
     port?: number;
     path?: string;
   };
-  api_key: string;
 }
 
 export interface TestDeviceRecord {
@@ -57,7 +56,6 @@ export interface TestDeviceRecord {
   name: string;
   type: 'lock' | 'scanner';
   connection_params: { ip: string; port?: number; path?: string };
-  api_key_hash: string;
   status: 'active' | 'inactive';
   created_at: string;
 }
@@ -72,8 +70,6 @@ export interface TestScannerRecord {
   reader_adapter: string;
   allowed_qr_providers: string[];
   assigned_locker_id: string;
-  api_key_hash: string;
-  scanner_api_key?: string;
 }
 
 export interface TestLockerRecord {

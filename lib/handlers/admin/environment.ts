@@ -5,6 +5,8 @@ export interface AdminEnvironment {
   entryLogsTableName: string;
   auditLogsTableName: string;
   iotEndpoint?: string;
+  lockerClientType: string;
+  lockerThingName: string;
 }
 
 export function loadAdminEnvironment(env: NodeJS.ProcessEnv = process.env): AdminEnvironment {
@@ -14,5 +16,7 @@ export function loadAdminEnvironment(env: NodeJS.ProcessEnv = process.env): Admi
     entryLogsTableName: validated.ENTRY_LOGS_TABLE_NAME,
     auditLogsTableName: validated.AUDIT_LOGS_TABLE_NAME,
     iotEndpoint: validated.IOT_ENDPOINT,
+    lockerClientType: validated.LOCKER_CLIENT_TYPE,
+    lockerThingName: validated.LOCKER_THING_NAME,
   };
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { after, before, describe, test } from 'node:test';
-import { getTestContext, createTestUserSession, createTestLocation, cleanupTestLocation } from './lib/test-helpers.ts';
-import { IntegrationTestContext, TestUserSession, TestLocationRecord } from './lib/types.ts';
+import { cleanupTestLocation, createTestLocation, createTestUserSession, getTestContext } from './lib/test-helpers.ts';
+import { IntegrationTestContext, TestLocationRecord, TestUserSession } from './lib/types.ts';
 
 describe('Admin Management & System Operations Test Suite', () => {
   let context: IntegrationTestContext;
@@ -39,27 +39,6 @@ describe('Admin Management & System Operations Test Suite', () => {
     const data = (await res.json()) as any[];
     assert.ok(Array.isArray(data));
     assert.ok(data.length > 0);
-  });
-
-  test('POST /admin/locations/{id}/devices registers new device with hashed API key', async () => {
-    const res = await fetch(`${context.apiUrl}/admin/locations/${testLocation.locationId}/devices`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${adminSession.idToken}`,
-      },
-      body: JSON.stringify({
-        name: 'Admin Test Scanner',
-        type: 'scanner',
-        connection_params: { ip: '10.0.0.1' },
-        api_key: 'test_key_abc_123',
-      }),
-    });
-
-    assert.equal(res.status, 200);
-    const data = (await res.json()) as any;
-    assert.ok(data.device_id);
-    assert.ok(data.api_key_hash);
   });
 
   test('POST /admin/members/{id}/override suspends member account and extends grace period', async () => {

@@ -97,7 +97,7 @@ async function main() {
     }
   }
 
-    // Allow environment override of the IoT certificate secret name (used by integration tests).
+  // Allow environment override of the IoT certificate secret name (used by integration tests).
   if (env.SECRET_NAME_IOT) {
     for (const knownThing of knownThings) {
       knownThing.secretName = env.SECRET_NAME_IOT;

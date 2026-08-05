@@ -33,14 +33,9 @@ const run = async () => {
   const outputs = readOutputs();
   const rawEnv = process.env;
   const source = {
-    USER_POOL_ID:
-      rawEnv.USER_POOL_ID ||
-      outputs.UserPoolId ||
-      outputs.ExportsOutputRefUserPool6BA7E5F296FD7236,
+    USER_POOL_ID: rawEnv.USER_POOL_ID || outputs.UserPoolId || outputs.ExportsOutputRefUserPool6BA7E5F296FD7236,
     MAIN_TABLE_NAME:
-      rawEnv.MAIN_TABLE_NAME ||
-      outputs.MainTableName ||
-      outputs.ExportsOutputRefMainTable74195DAB4503BD7E,
+      rawEnv.MAIN_TABLE_NAME || outputs.MainTableName || outputs.ExportsOutputRefMainTable74195DAB4503BD7E,
     ADMIN_EMAIL: rawEnv.ADMIN_EMAIL,
     ADMIN_PASSWORD: rawEnv.ADMIN_PASSWORD,
   };

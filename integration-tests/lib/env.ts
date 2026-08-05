@@ -10,9 +10,7 @@ export const integrationTestEnvSchema = z.object({
 export type IntegrationTestEnv = z.infer<typeof integrationTestEnvSchema>;
 
 function formatZodError(error: ZodError): string {
-  const summary = error.issues
-    .map((issue) => `${issue.path.join('.')}: ${issue.message}`)
-    .join('; ');
+  const summary = error.issues.map((issue) => `${issue.path.join('.')}: ${issue.message}`).join('; ');
   return `Environment validation failed: ${summary}`;
 }
 

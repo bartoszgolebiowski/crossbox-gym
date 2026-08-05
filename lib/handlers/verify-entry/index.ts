@@ -67,20 +67,30 @@ export function createVerifyEntryHandler(dependencies: VerifyEntryDependencies) 
     const parsed = parseIotScanEvent(event);
     if (!parsed.valid) {
       const scannerId = parsed.scannerId || event?.client_id || event?.scannerId || 'unknown-scanner';
+      await dependencies.accessService.logDeniedAccess(scannerId, parsed.reason);
       return dependencies.feedbackPublisher.sendDenial(scannerId, parsed.reason);
     }
 
     const { scannerId, event: iotEvent } = parsed;
 
+    const scanner = await dependencies.accessService.findActiveScanner(scannerId);
+    const locationId = scanner?.location_id;
+
     // 1. Verify raw scan payload using provider strategy abstraction
     const verification = await dependencies.accessService.verifyRawData(iotEvent.payload.raw_data);
     if (!verification.success || !verification.credential) {
+      await dependencies.accessService.logDeniedAccess(
+        scannerId,
+        verification.reason || 'verification_failed',
+        locationId
+      );
       return dependencies.feedbackPublisher.sendDenial(scannerId, verification.reason);
     }
 
     // 2. Commit access entry, outbox command, and anti-passback state
     const commit = await dependencies.accessService.commitAccess(scannerId, verification.credential);
     if (!commit.success || !commit.entryId || !commit.lockerId) {
+      await dependencies.accessService.logDeniedAccess(scannerId, commit.reason || 'commit_failed', locationId);
       return dependencies.feedbackPublisher.sendDenial(scannerId, commit.reason);
     }
 

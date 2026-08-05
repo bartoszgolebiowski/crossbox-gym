@@ -48,11 +48,7 @@ export class CrossboxDataStack extends cdk.Stack {
       partitionKey: { name: 'stripe_subscription_id', type: dynamodb.AttributeType.STRING },
       projectionType: dynamodb.ProjectionType.ALL,
     });
-    this.mainTable.addGlobalSecondaryIndex({
-      indexName: 'ApiKeyIndex',
-      partitionKey: { name: 'api_key_hash', type: dynamodb.AttributeType.STRING },
-      projectionType: dynamodb.ProjectionType.ALL,
-    });
+
     this.mainTable.addGlobalSecondaryIndex({
       indexName: 'DeviceIdIndex',
       partitionKey: { name: 'device_id', type: dynamodb.AttributeType.STRING },

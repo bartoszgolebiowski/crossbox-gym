@@ -1,12 +1,12 @@
 import { CloudFormationClient, ListStackResourcesCommand } from '@aws-sdk/client-cloudformation';
 import {
-    AdminAddUserToGroupCommand,
-    AdminCreateUserCommand,
-    AdminDeleteUserCommand,
-    AdminGetUserCommand,
-    AdminInitiateAuthCommand,
-    AdminSetUserPasswordCommand,
-    CognitoIdentityProviderClient,
+  AdminAddUserToGroupCommand,
+  AdminCreateUserCommand,
+  AdminDeleteUserCommand,
+  AdminGetUserCommand,
+  AdminInitiateAuthCommand,
+  AdminSetUserPasswordCommand,
+  CognitoIdentityProviderClient,
 } from '@aws-sdk/client-cognito-identity-provider';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda';
@@ -16,13 +16,13 @@ import { getDeviceByType } from '../../lib/config';
 import { resolveIntegrationTestEnv } from './env';
 import { requireOutput } from './stack-outputs.ts';
 import {
-    IntegrationTestContext,
-    TestDeviceInput,
-    TestDeviceRecord,
-    TestLocationInput,
-    TestLocationRecord,
-    TestScannerRecord,
-    TestUserSession,
+  IntegrationTestContext,
+  TestDeviceInput,
+  TestDeviceRecord,
+  TestLocationInput,
+  TestLocationRecord,
+  TestScannerRecord,
+  TestUserSession,
 } from './types.ts';
 
 let cachedContext: IntegrationTestContext | undefined;
@@ -252,8 +252,7 @@ export async function createTestDevice(
   adminToken: string,
   locationId: string,
   input?: Partial<TestDeviceInput>
-): Promise<{ device: TestDeviceRecord; rawApiKey: string }> {
-  const rawApiKey = input?.api_key || `key_${Date.now()}_${randomBytes(8).toString('hex')}`;
+): Promise<{ device: TestDeviceRecord }> {
   const name = input?.name || `Turnstile Scanner ${Date.now()}`;
   const type = input?.type || 'scanner';
   const connection_params = input?.connection_params || { ip: '192.168.1.100', port: 8080 };
@@ -268,7 +267,6 @@ export async function createTestDevice(
       name,
       type,
       connection_params,
-      api_key: rawApiKey,
     }),
   });
 
@@ -278,7 +276,7 @@ export async function createTestDevice(
   }
 
   const device = (await res.json()) as TestDeviceRecord;
-  return { device, rawApiKey };
+  return { device };
 }
 
 export async function createMockScanner(
@@ -287,24 +285,26 @@ export async function createMockScanner(
   locationId: string,
   options?: { name?: string; allowedQrProviders?: string[]; assignedLockerId?: string }
 ): Promise<TestScannerRecord> {
-  const response = await fetch(`${context.apiUrl}/admin/locations/${locationId}/scanners`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
-    body: JSON.stringify({
-      name: options?.name || `Mock Scanner ${Date.now()}`,
-      reader_adapter: 'mock',
-      allowed_qr_providers: options?.allowedQrProviders || ['mock'],
-      assigned_locker_id: options?.assignedLockerId || getDeviceByType('locker').thingName,
-    }),
-  });
-  if (response.status !== 200 && response.status !== 201) {
-    throw new Error(`Failed to create mock scanner (${response.status}): ${await response.text()}`);
-  }
-  const scanner = (await response.json()) as TestScannerRecord;
-  if (!scanner.scanner_id || !scanner.scanner_api_key) {
-    throw new Error('Mock scanner creation did not return a scanner ID and one-time scanner API key');
-  }
-  return scanner;
+  const scannerId = `mock_scanner_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+  const lockerId = options?.assignedLockerId || getDeviceByType('locker').thingName;
+  const now = new Date().toISOString();
+  const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({ region: context.awsRegion }));
+  const item = {
+    PK: `LOC#${locationId}`,
+    SK: `SCANNER#${scannerId}`,
+    scanner_id: scannerId,
+    device_id: scannerId,
+    location_id: locationId,
+    name: options?.name || `Mock Scanner ${Date.now()}`,
+    status: 'active',
+    reader_adapter: 'mock',
+    allowed_qr_providers: options?.allowedQrProviders || ['mock'],
+    assigned_locker_id: lockerId,
+    created_at: now,
+    updated_at: now,
+  };
+  await ddb.send(new PutCommand({ TableName: context.mainTableName, Item: item }));
+  return item as unknown as TestScannerRecord;
 }
 
 export async function generateTestQRPayload(
@@ -488,7 +488,6 @@ export async function dispatchUnlockOutbox(context: IntegrationTestContext): Pro
 
 export async function scanMockDevice(
   context: IntegrationTestContext,
-  scannerApiKey: string,
   mockScanValue: string,
   scannerId: string = 'hd360-qr-scanner-01'
 ): Promise<{ result: string; reason?: string; entry_id?: string; feedback?: string }> {

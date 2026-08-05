@@ -1,32 +1,21 @@
 import React, { useEffect, useReducer } from 'react';
-import { accessFormReducer, initialAccessFormState, updateAccessFormField } from '../reducers/accessFormReducer';
 import {
   changeLocationFormField,
   initialLocationFormState,
   locationFormReducer,
 } from '../reducers/locationFormReducer';
 import { useAdminDispatch, useAdminSelector } from '../store';
-import {
-  createLocationThunk,
-  createScannerThunk,
-  fetchScannersThunk,
-  listLocationsThunk,
-  selectAccessOutput,
-  selectLocationsList,
-} from '../store/adminSlice';
+import { createLocationThunk, listLocationsThunk, selectLocationsList } from '../store/adminSlice';
+import { IotDeviceHealthCard } from './IotDeviceHealthCard';
 
 const fieldLabelClass = 'mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-600';
 const fieldClass =
   'w-full rounded-md border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 transition focus:border-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-700/20 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed';
-const selectClass =
-  'w-full rounded-md border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition focus:border-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-700/20 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed cursor-pointer';
 
 export const LocationManagerCard: React.FC = () => {
   const dispatch = useAdminDispatch();
-  const accessOutput = useAdminSelector(selectAccessOutput);
   const locationsList = useAdminSelector(selectLocationsList);
-
-  const [accessForm, dispatchAccessForm] = useReducer(accessFormReducer, initialAccessFormState);
+  const [selectedLocId, setSelectedLocId] = React.useState<string>('');
 
   const [formState, dispatchForm] = useReducer(locationFormReducer, initialLocationFormState);
   const { locName, locAddress } = formState;
@@ -38,18 +27,11 @@ export const LocationManagerCard: React.FC = () => {
 
   // Auto-select first location when locationsList updates and none is selected
   useEffect(() => {
-    if (locationsList.length > 0 && !accessForm.locationId && !accessForm.isCustomLocation) {
+    if (locationsList.length > 0 && !selectedLocId) {
       const firstId = locationsList[0].PK.replace(/^LOC#/, '');
-      dispatchAccessForm(updateAccessFormField('locationId', firstId));
+      setSelectedLocId(firstId);
     }
-  }, [locationsList, accessForm.locationId, accessForm.isCustomLocation]);
-
-  // Auto-fetch scanners when locationId changes
-  useEffect(() => {
-    if (accessForm.locationId.trim()) {
-      dispatch(fetchScannersThunk(accessForm.locationId.trim()));
-    }
-  }, [dispatch, accessForm.locationId]);
+  }, [locationsList, selectedLocId]);
 
   const handleFieldChange = (field: 'locName' | 'locAddress', value: string) => {
     dispatchForm(changeLocationFormField(field, value));
@@ -63,24 +45,15 @@ export const LocationManagerCard: React.FC = () => {
     dispatch(listLocationsThunk());
   };
 
-  const updateAccessForm = (field: keyof typeof accessForm, value: string | boolean) => {
-    dispatchAccessForm(updateAccessFormField(field, value));
-  };
-
   const selectLocationRow = (locId: string) => {
-    dispatchAccessForm(updateAccessFormField('locationId', locId));
-    dispatchAccessForm(updateAccessFormField('isCustomLocation', false));
+    setSelectedLocId(locId);
   };
 
   const canCreateLocation = locName.trim().length > 0 && locAddress.trim().length > 0;
-  const canAssignScanner =
-    accessForm.locationId.trim().length > 0 &&
-    accessForm.scannerName.trim().length > 0 &&
-    accessForm.assignedLockerId.trim().length > 0;
 
   return (
-    <div className="bg-white border border-slate-300 rounded-lg p-6 shadow-xl shadow-slate-900/5 flex flex-col justify-between h-full space-y-6">
-      <div className="space-y-6">
+    <div className="space-y-6">
+      <div className="bg-white border border-slate-300 rounded-lg p-6 shadow-xl shadow-slate-900/5 space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between pb-2 border-b border-slate-200">
           <div className="flex items-center gap-2.5 font-bold text-base text-slate-900">
@@ -100,7 +73,7 @@ export const LocationManagerCard: React.FC = () => {
                 />
               </svg>
             </span>
-            <span>Location & Access Control Management</span>
+            <span>Location & Facility Management</span>
           </div>
           <button
             type="button"
@@ -130,7 +103,7 @@ export const LocationManagerCard: React.FC = () => {
             </span>
           </div>
 
-          <div className="border border-slate-200 rounded-lg overflow-hidden shadow-sm max-h-56 overflow-y-auto">
+          <div className="border border-slate-200 rounded-lg overflow-hidden shadow-xs max-h-56 overflow-y-auto">
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-100 text-slate-700 uppercase tracking-wider font-semibold border-b border-slate-200 sticky top-0">
                 <tr>
@@ -150,7 +123,7 @@ export const LocationManagerCard: React.FC = () => {
                 ) : (
                   locationsList.map((loc) => {
                     const locId = loc.PK.replace(/^LOC#/, '');
-                    const isSelected = accessForm.locationId === locId;
+                    const isSelected = selectedLocId === locId;
                     return (
                       <tr
                         key={locId}
@@ -190,8 +163,8 @@ export const LocationManagerCard: React.FC = () => {
 
         {/* --- CREATE NEW LOCATION --- */}
         <div className="bg-slate-50/80 p-4 rounded-lg border border-slate-200 space-y-3">
-          <div className="text-xs font-bold uppercase tracking-wider text-slate-700">Add New Facility</div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="text-xs font-bold uppercase tracking-wider text-slate-700">Add New Facility Location</div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className={fieldLabelClass} htmlFor="facility-name">
                 Facility Name
@@ -235,127 +208,10 @@ export const LocationManagerCard: React.FC = () => {
             <span>Create Facility Location</span>
           </button>
         </div>
-
-        {/* --- FORM 1: ASSIGN SCANNER TO LOCATION --- */}
-        <div className="bg-cyan-50/40 p-4 rounded-lg border border-cyan-200 space-y-3">
-          <div className="flex items-center justify-between border-b border-cyan-200 pb-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-cyan-900 flex items-center gap-2">
-              <span className="w-5 h-5 rounded-full bg-cyan-700 text-white flex items-center justify-center text-xs">
-                1
-              </span>
-              <span>Assign Scanner to Location</span>
-            </span>
-            <button
-              type="button"
-              className="text-[11px] text-cyan-700 hover:underline cursor-pointer"
-              onClick={() => updateAccessForm('isCustomLocation', !accessForm.isCustomLocation)}
-            >
-              {accessForm.isCustomLocation ? 'Select Location from Table' : 'Manual Location ID'}
-            </button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={fieldLabelClass} htmlFor="form1-location">
-                Target Location
-              </label>
-              {!accessForm.isCustomLocation ? (
-                <select
-                  id="form1-location"
-                  className={selectClass}
-                  value={accessForm.locationId}
-                  onChange={(e) => updateAccessForm('locationId', e.target.value)}
-                >
-                  <option value="">-- Select Location --</option>
-                  {locationsList.map((loc) => {
-                    const id = loc.PK.replace(/^LOC#/, '');
-                    return (
-                      <option key={id} value={id}>
-                        {loc.name || id} ({id})
-                      </option>
-                    );
-                  })}
-                </select>
-              ) : (
-                <input
-                  id="form1-custom-location"
-                  className={fieldClass}
-                  placeholder="Enter Location ID (e.g. loc_01)"
-                  value={accessForm.locationId}
-                  onChange={(e) => updateAccessForm('locationId', e.target.value)}
-                />
-              )}
-            </div>
-
-            <div>
-              <label className={fieldLabelClass} htmlFor="form1-scanner-name">
-                Scanner Name
-              </label>
-              <input
-                id="form1-scanner-name"
-                className={fieldClass}
-                placeholder="e.g. Main Entrance Turnstile Reader"
-                value={accessForm.scannerName}
-                onChange={(e) => updateAccessForm('scannerName', e.target.value)}
-                disabled={!accessForm.locationId.trim()}
-              />
-            </div>
-
-            <div>
-              <label className={fieldLabelClass} htmlFor="form1-locker-id">
-                Assigned Locker Thing
-              </label>
-              <input
-                id="form1-locker-id"
-                className={fieldClass}
-                placeholder="e.g. crossbox-locker-relay-01"
-                value={accessForm.assignedLockerId}
-                onChange={(e) => updateAccessForm('assignedLockerId', e.target.value)}
-                disabled={!accessForm.locationId.trim()}
-              />
-            </div>
-          </div>
-
-          <button
-            type="button"
-            className={`w-full rounded-md px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition ${
-              canAssignScanner
-                ? 'bg-cyan-700 hover:bg-cyan-600 cursor-pointer'
-                : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
-            }`}
-            onClick={() =>
-              dispatch(
-                createScannerThunk({
-                  locationId: accessForm.locationId,
-                  name: accessForm.scannerName,
-                  assignedLockerId: accessForm.assignedLockerId,
-                })
-              )
-            }
-            disabled={!canAssignScanner}
-            title={
-              canAssignScanner
-                ? 'Assign scanner hardware and locker to location'
-                : 'Select a location, then enter scanner and locker names'
-            }
-          >
-            Assign Scanner to Location
-          </button>
-        </div>
       </div>
 
-      {/* Terminal Outputs */}
-      {accessOutput && (
-        <div className="mt-3 rounded-md bg-cyan-50 border border-cyan-200 overflow-hidden text-xs">
-          <div className="bg-cyan-100 px-3 py-1.5 border-b border-cyan-200 flex items-center justify-between text-[11px] text-cyan-800 font-mono">
-            <span>Hardware Provisioning Output</span>
-            <span className="text-cyan-900">200 OK</span>
-          </div>
-          <pre className="max-h-36 overflow-x-auto whitespace-pre-wrap p-3 font-mono text-[11px] leading-relaxed text-cyan-900">
-            {accessOutput}
-          </pre>
-        </div>
-      )}
+      {/* IoT Devices Live Connection & Health Checks Card */}
+      <IotDeviceHealthCard locationId={selectedLocId} />
     </div>
   );
 };

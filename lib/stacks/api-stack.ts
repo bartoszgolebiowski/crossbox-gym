@@ -279,6 +279,9 @@ export class CrossboxApiStack extends cdk.Stack {
         ...commonEnv,
         AUDIT_LOGS_TABLE_NAME: auditLogsTable.tableName,
         ENTRY_LOGS_TABLE_NAME: entryLogsTable.tableName,
+        LOCKER_CLIENT_TYPE: isTest ? 'mock' : 'mqtt',
+        SSM_IOT_ENDPOINT_PARAM,
+        SSM_LOCKER_THING_NAME_PARAM,
       },
     });
     mainTable.grantReadWriteData(adminHandler);
@@ -290,19 +293,25 @@ export class CrossboxApiStack extends cdk.Stack {
         resources: ['*'],
       })
     );
+    adminHandler.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ['ssm:GetParameter', 'ssm:GetParameters'],
+        resources: [`arn:aws:ssm:${this.region}:${this.account}:parameter/crossbox/iot/*`],
+      })
+    );
 
     const adminIntegration = new HttpLambdaIntegration('AdminIntegration', adminHandler);
     const adminRoutes = [
       { path: '/admin/locations', methods: [apigw.HttpMethod.GET, apigw.HttpMethod.POST] },
       { path: '/admin/locations/{id}', methods: [apigw.HttpMethod.PUT, apigw.HttpMethod.DELETE] },
       { path: '/admin/locations/{id}/activity', methods: [apigw.HttpMethod.GET] },
-      { path: '/admin/locations/{id}/scanners', methods: [apigw.HttpMethod.GET, apigw.HttpMethod.POST] },
       { path: '/admin/locations/{id}/devices', methods: [apigw.HttpMethod.GET, apigw.HttpMethod.POST] },
       { path: '/admin/devices/{id}', methods: [apigw.HttpMethod.PUT, apigw.HttpMethod.DELETE] },
       { path: '/admin/members', methods: [apigw.HttpMethod.GET] },
       { path: '/admin/members/{id}', methods: [apigw.HttpMethod.GET] },
       { path: '/admin/members/{id}/override', methods: [apigw.HttpMethod.POST] },
       { path: '/admin/devices/{id}/unlock', methods: [apigw.HttpMethod.POST] },
+      { path: '/admin/devices/{id}/health', methods: [apigw.HttpMethod.GET, apigw.HttpMethod.POST] },
       { path: '/admin/hmac/rotate', methods: [apigw.HttpMethod.POST] },
     ];
     for (const route of adminRoutes) {

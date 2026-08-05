@@ -9,12 +9,6 @@ export interface LocationItem {
   status: string;
 }
 
-export interface ScannerItem {
-  scanner_id: string;
-  location_id: string;
-  name: string;
-}
-
 export interface DeviceItem {
   device_id: string;
   location_id?: string;
@@ -23,14 +17,25 @@ export interface DeviceItem {
   status?: 'active' | 'inactive';
 }
 
+export interface DeviceHealth {
+  device_id: string;
+  status: 'ONLINE' | 'OFFLINE' | 'CHECKING';
+  connected: boolean;
+  latency_ms?: number;
+  last_seen?: string;
+  details?: Record<string, unknown>;
+  isLoading?: boolean;
+  error?: string;
+}
+
 export interface AdminOpsState {
   locationOutput: string | null;
   accessOutput: string | null;
   remoteOutput: string | null;
   overrideOutput: string | null;
   locationsList: LocationItem[];
-  scannersList: ScannerItem[];
   devicesList: DeviceItem[];
+  deviceHealthMap: Record<string, DeviceHealth>;
 }
 
 const initialState: AdminOpsState = {
@@ -39,8 +44,8 @@ const initialState: AdminOpsState = {
   remoteOutput: null,
   overrideOutput: null,
   locationsList: [],
-  scannersList: [],
   devicesList: [],
+  deviceHealthMap: {},
 };
 
 export const createLocationThunk = createAsyncThunk(
@@ -65,18 +70,6 @@ export const listLocationsThunk = createAsyncThunk('adminOps/listLocations', asy
   }
 });
 
-export const fetchScannersThunk = createAsyncThunk(
-  'adminOps/fetchScanners',
-  async (locationId: string, { rejectWithValue }) => {
-    try {
-      const data = await adminApiClient.get(`/admin/locations/${locationId}/scanners`);
-      return { locationId, scanners: (Array.isArray(data) ? data : []) as ScannerItem[] };
-    } catch (err: any) {
-      return rejectWithValue(`Error: ${err.message}`);
-    }
-  }
-);
-
 export const fetchDevicesThunk = createAsyncThunk(
   'adminOps/fetchDevices',
   async (locationId: string, { rejectWithValue }) => {
@@ -89,20 +82,20 @@ export const fetchDevicesThunk = createAsyncThunk(
   }
 );
 
-export const createScannerThunk = createAsyncThunk(
-  'adminOps/createScanner',
-  async (payload: { locationId: string; name: string; assignedLockerId: string }, { rejectWithValue, dispatch }) => {
+export const checkDeviceHealthThunk = createAsyncThunk(
+  'adminOps/checkDeviceHealth',
+  async (payload: { deviceId: string; locationId?: string }, { rejectWithValue }) => {
+    const deviceId = payload.deviceId.trim();
+    if (!deviceId) {
+      return rejectWithValue({ deviceId, error: 'Device ID is required.' });
+    }
     try {
-      const data = await adminApiClient.post(`/admin/locations/${payload.locationId}/scanners`, {
-        name: payload.name,
-        assigned_locker_id: payload.assignedLockerId,
-        reader_adapter: 'mock',
-        allowed_qr_providers: ['basic-subscription', 'mock'],
+      const data = await adminApiClient.post(`/admin/devices/${deviceId}/health`, {
+        location_id: payload.locationId,
       });
-      dispatch(fetchScannersThunk(payload.locationId));
-      return JSON.stringify(data, null, 2);
+      return { deviceId, data };
     } catch (err: any) {
-      return rejectWithValue(`Error: ${err.message}`);
+      return rejectWithValue({ deviceId, error: `Error: ${err.message}` });
     }
   }
 );
@@ -179,17 +172,40 @@ const adminSlice = createSlice({
       .addCase(listLocationsThunk.rejected, (state, action) => {
         state.locationOutput = action.payload as string;
       })
-      .addCase(fetchScannersThunk.fulfilled, (state, action) => {
-        state.scannersList = action.payload.scanners;
-      })
       .addCase(fetchDevicesThunk.fulfilled, (state, action) => {
         state.devicesList = action.payload.devices;
       })
-      .addCase(createScannerThunk.fulfilled, (state, action) => {
-        state.accessOutput = action.payload;
+      .addCase(checkDeviceHealthThunk.pending, (state, action) => {
+        const deviceId = action.meta.arg.deviceId;
+        state.deviceHealthMap[deviceId] = {
+          device_id: deviceId,
+          status: 'CHECKING',
+          connected: false,
+          isLoading: true,
+        };
       })
-      .addCase(createScannerThunk.rejected, (state, action) => {
-        state.accessOutput = action.payload as string;
+      .addCase(checkDeviceHealthThunk.fulfilled, (state, action) => {
+        const { deviceId, data } = action.payload;
+        state.deviceHealthMap[deviceId] = {
+          device_id: deviceId,
+          status: data.status || 'ONLINE',
+          connected: Boolean(data.connected),
+          latency_ms: data.latency_ms,
+          last_seen: data.last_seen,
+          details: data.details,
+          isLoading: false,
+        };
+      })
+      .addCase(checkDeviceHealthThunk.rejected, (state, action) => {
+        const payload = action.payload as { deviceId: string; error: string };
+        const deviceId = payload?.deviceId || action.meta.arg.deviceId;
+        state.deviceHealthMap[deviceId] = {
+          device_id: deviceId,
+          status: 'OFFLINE',
+          connected: false,
+          isLoading: false,
+          error: payload?.error || 'Health check failed',
+        };
       })
       .addCase(remoteUnlockThunk.fulfilled, (state, action) => {
         state.remoteOutput = action.payload;
@@ -217,7 +233,7 @@ export const selectAccessOutput = (state: { adminOps: AdminOpsState }) => state.
 export const selectRemoteOutput = (state: { adminOps: AdminOpsState }) => state.adminOps.remoteOutput;
 export const selectOverrideOutput = (state: { adminOps: AdminOpsState }) => state.adminOps.overrideOutput;
 export const selectLocationsList = (state: { adminOps: AdminOpsState }) => state.adminOps.locationsList;
-export const selectScannersList = (state: { adminOps: AdminOpsState }) => state.adminOps.scannersList;
 export const selectDevicesList = (state: { adminOps: AdminOpsState }) => state.adminOps.devicesList;
+export const selectDeviceHealthMap = (state: { adminOps: AdminOpsState }) => state.adminOps.deviceHealthMap;
 
 export default adminSlice.reducer;

@@ -69,4 +69,25 @@ export class AccessService {
     }
     return { success: false, reason: 'transaction_failed' };
   }
+
+  async findActiveScanner(scannerId: string) {
+    try {
+      return await this.repository.findActiveScanner(scannerId);
+    } catch {
+      return undefined;
+    }
+  }
+
+  async logDeniedAccess(scannerId: string, reason: string, locationId?: string): Promise<void> {
+    if (this.repository.logDeniedAccess) {
+      const now = this.now();
+      await this.repository.logDeniedAccess({
+        scannerId,
+        locationId,
+        reason,
+        timestamp: now.toISOString(),
+        timestampEpochSeconds: Math.floor(now.getTime() / 1000),
+      });
+    }
+  }
 }

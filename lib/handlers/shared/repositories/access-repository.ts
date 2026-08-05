@@ -1,4 +1,10 @@
-import { DynamoDBDocumentClient, GetCommand, QueryCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
+import {
+  DynamoDBDocumentClient,
+  GetCommand,
+  PutCommand,
+  QueryCommand,
+  TransactWriteCommand,
+} from '@aws-sdk/lib-dynamodb';
 import { randomBytes } from 'crypto';
 import { ScannerItem } from '../access/types';
 import { VerifiedCredential } from '../providers/types';
@@ -11,6 +17,14 @@ export interface AccessCommitParams {
   committedAtEpochSeconds: number;
 }
 
+export interface DeniedAccessParams {
+  scannerId: string;
+  locationId?: string;
+  reason: string;
+  timestamp: string;
+  timestampEpochSeconds: number;
+}
+
 export type AccessCommitOutcome = 'committed' | 'anti_passback_cooldown' | 'failed';
 
 export interface AccessRepository {
@@ -18,6 +32,7 @@ export interface AccessRepository {
   getQrSigningKeys(): Promise<{ currentKey?: string; previousKey?: string }>;
   getUserSubscription(userId: string): Promise<{ status: string; grace_period_end?: string } | undefined>;
   commitAccess(params: AccessCommitParams): Promise<{ outcome: AccessCommitOutcome; entryId?: string }>;
+  logDeniedAccess(params: DeniedAccessParams): Promise<void>;
 }
 
 export class DynamoDbAccessRepository implements AccessRepository {
@@ -131,6 +146,32 @@ export class DynamoDbAccessRepository implements AccessRepository {
         return { outcome: 'anti_passback_cooldown' };
       }
       return { outcome: 'failed' };
+    }
+  }
+
+  async logDeniedAccess(params: DeniedAccessParams): Promise<void> {
+    const entryId = randomBytes(12).toString('hex');
+    const locId = params.locationId || '1ca5b96aaa45205c';
+    try {
+      await this.client.send(
+        new PutCommand({
+          TableName: this.entryLogsTableName,
+          Item: {
+            PK: `SCANNER#${params.scannerId}`,
+            SK: `ENTRY#${params.timestamp}#${entryId}`,
+            entry_id: entryId,
+            location_id: locId,
+            timestamp: params.timestamp,
+            result: 'denied',
+            reason: params.reason,
+            device_id: params.scannerId,
+            scanner_id: params.scannerId,
+            ttl: params.timestampEpochSeconds + 365 * 24 * 60 * 60,
+          },
+        })
+      );
+    } catch (err) {
+      console.warn('[DynamoDbAccessRepository] Failed to log denied access:', err);
     }
   }
 }

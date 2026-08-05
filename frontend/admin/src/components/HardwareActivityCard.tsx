@@ -1,20 +1,31 @@
 import { useEffect, useMemo } from 'react';
 import { useAdminDispatch, useAdminSelector } from '../store';
 import {
-  fetchActivityThunk,
-  fetchHardwareDevicesThunk,
-  selectHardwareActivityState,
-  setSearchFilter,
-  setSelectedDeviceId,
-  setSelectedLocationId,
-  setTimeWindow,
+    fetchActivityThunk,
+    fetchHardwareDevicesThunk,
+    selectHardwareActivityState,
+    setPageSize,
+    setSearchFilter,
+    setSelectedDeviceId,
+    setSelectedLocationId,
+    setTimeWindow,
 } from '../store/hardwareActivitySlice';
 
 export function HardwareActivityCard() {
   const dispatch = useAdminDispatch();
   const locations = useAdminSelector((state) => state.adminOps.locationsList);
-  const { selectedLocationId, scanners, selectedDeviceId, timeWindow, activityData, isLoading, error, searchFilter } =
-    useAdminSelector(selectHardwareActivityState);
+  const {
+    selectedLocationId,
+    scanners,
+    selectedDeviceId,
+    timeWindow,
+    activityData,
+    isLoading,
+    error,
+    searchFilter,
+    pageSize,
+    currentPage,
+  } = useAdminSelector(selectHardwareActivityState);
 
   // Automatically select first location when available
   useEffect(() => {
@@ -33,9 +44,9 @@ export function HardwareActivityCard() {
   // Fetch activity audit logs for selected location and hardware filter
   useEffect(() => {
     if (selectedLocationId) {
-      dispatch(fetchActivityThunk());
+      dispatch(fetchActivityThunk({ direction: 'first' }));
     }
-  }, [dispatch, selectedLocationId, selectedDeviceId, timeWindow]);
+  }, [dispatch, selectedLocationId, selectedDeviceId, timeWindow, pageSize]);
 
   // Filter activity items based on search filter text
   const filteredItems = useMemo(() => {
@@ -77,7 +88,7 @@ export function HardwareActivityCard() {
         </div>
         <button
           type="button"
-          onClick={() => dispatch(fetchActivityThunk())}
+          onClick={() => dispatch(fetchActivityThunk({ direction: 'first' }))}
           className="flex items-center gap-1.5 text-xs font-semibold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 px-3 py-1.5 rounded-md transition cursor-pointer"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -167,35 +178,52 @@ export function HardwareActivityCard() {
           <div className="text-2xl font-bold text-slate-900 mt-1">
             {isLoading ? '...' : activityData?.total_count || 0}
           </div>
-          <div className="text-[11px] text-slate-500 mt-0.5">Scans across selected horizon</div>
+          <div className="text-[11px] text-slate-500 mt-0.5">Loaded records on this page</div>
         </div>
         <div className="bg-emerald-50/60 border border-emerald-200 p-4 rounded-lg">
           <div className="text-xs font-semibold text-emerald-800 uppercase tracking-wider">Granted Access</div>
           <div className="text-2xl font-bold text-emerald-700 mt-1">
             {isLoading ? '...' : activityData?.success_count || 0}
           </div>
-          <div className="text-[11px] text-emerald-600 mt-0.5">Successful gate unlocks</div>
+          <div className="text-[11px] text-emerald-600 mt-0.5">Successful gate unlocks on page</div>
         </div>
         <div className="bg-rose-50/60 border border-rose-200 p-4 rounded-lg">
           <div className="text-xs font-semibold text-rose-800 uppercase tracking-wider">Denied Access</div>
           <div className="text-2xl font-bold text-rose-700 mt-1">
             {isLoading ? '...' : activityData?.denied_count || 0}
           </div>
-          <div className="text-[11px] text-rose-600 mt-0.5">Rejected scans / expired passes</div>
+          <div className="text-[11px] text-rose-600 mt-0.5">Rejected scans on page</div>
         </div>
       </div>
 
       {/* Table & Search */}
       <div className="space-y-3">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h3 className="text-sm font-bold text-slate-900">Scan & Access Audit Stream</h3>
-          <input
-            type="text"
-            placeholder="Filter logs by User, Scanner, or Result..."
-            value={searchFilter}
-            onChange={(e) => dispatch(setSearchFilter(e.target.value))}
-            className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600 w-full sm:w-72"
-          />
+          <div className="flex items-center gap-3">
+            <h3 className="text-sm font-bold text-slate-900">Scan & Access Audit Stream</h3>
+            <span className="text-[11px] text-slate-500">
+              Page {currentPage + 1} · {pageSize} records max
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <select
+              value={pageSize}
+              onChange={(e) => dispatch(setPageSize(Number(e.target.value) as 10 | 20 | 50))}
+              className="rounded-md border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600 cursor-pointer"
+              aria-label="Records per page"
+            >
+              <option value={10}>10 / page</option>
+              <option value={20}>20 / page</option>
+              <option value={50}>50 / page</option>
+            </select>
+            <input
+              type="text"
+              placeholder="Filter logs by User, Scanner, or Result..."
+              value={searchFilter}
+              onChange={(e) => dispatch(setSearchFilter(e.target.value))}
+              className="rounded-md border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-900 focus:border-teal-600 focus:outline-none focus:ring-1 focus:ring-teal-600 w-full sm:w-72"
+            />
+          </div>
         </div>
 
         <div className="border border-slate-200 rounded-lg overflow-hidden max-h-80 overflow-y-auto">
@@ -247,6 +275,29 @@ export function HardwareActivityCard() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Pagination Controls */}
+        <div className="flex items-center justify-between pt-1">
+          <button
+            type="button"
+            onClick={() => dispatch(fetchActivityThunk({ direction: 'prev' }))}
+            disabled={currentPage === 0 || isLoading}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer"
+          >
+            ← Previous
+          </button>
+          <span className="text-xs text-slate-500">
+            {activityData?.items?.length || 0} records loaded · {activityData?.has_more ? 'more available' : 'end of stream'}
+          </span>
+          <button
+            type="button"
+            onClick={() => dispatch(fetchActivityThunk({ direction: 'next' }))}
+            disabled={!activityData?.has_more || isLoading}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-semibold text-teal-800 bg-teal-50 border border-teal-200 hover:bg-teal-100 disabled:opacity-50 disabled:cursor-not-allowed transition cursor-pointer"
+          >
+            Next →
+          </button>
         </div>
       </div>
     </div>

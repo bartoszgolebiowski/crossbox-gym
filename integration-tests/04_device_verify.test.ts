@@ -38,7 +38,7 @@ describe('Turnstile Entry & Device Verification Test Suite', () => {
 
   test('VerifyEntry Lambda with valid signed QR returns success and gate unlock signal', async () => {
     const qrPayload = await generateTestQRPayload(context, memberSession.userId);
-    const data = await scanMockDevice(context, testScanner.scanner_api_key!, qrPayload, testScanner.scanner_id);
+    const data = await scanMockDevice(context, qrPayload, testScanner.scanner_id);
 
     assert.equal(data.result, 'success');
     assert.equal(data.action, 'open_gate');
@@ -46,7 +46,7 @@ describe('Turnstile Entry & Device Verification Test Suite', () => {
 
   test('VerifyEntry Lambda anti-passback denies second scan within 15 minutes', async () => {
     const qrPayload = await generateTestQRPayload(context, memberSession.userId);
-    const data = await scanMockDevice(context, testScanner.scanner_api_key!, qrPayload, testScanner.scanner_id);
+    const data = await scanMockDevice(context, qrPayload, testScanner.scanner_id);
 
     assert.equal(data.result, 'denied');
     assert.equal(data.reason, 'anti_passback_cooldown');
@@ -54,7 +54,7 @@ describe('Turnstile Entry & Device Verification Test Suite', () => {
 
   test('VerifyEntry Lambda with invalid/missing client_id returns denied', async () => {
     const qrPayload = await generateTestQRPayload(context, memberSession.userId);
-    const data = await scanMockDevice(context, testScanner.scanner_api_key!, qrPayload, '');
+    const data = await scanMockDevice(context, qrPayload, '');
 
     assert.equal(data.result, 'denied');
     assert.equal(data.reason, 'missing_or_invalid_client_id');
@@ -63,7 +63,7 @@ describe('Turnstile Entry & Device Verification Test Suite', () => {
   test('VerifyEntry Lambda with expired QR (>60s) returns denied qr_expired', async () => {
     const expiredUser = await createTestUserSession(context, { role: 'member', withActiveSubscription: true });
     const qrPayload = await generateTestQRPayload(context, expiredUser.userId, { timestampOffsetSeconds: -120 });
-    const data = await scanMockDevice(context, testScanner.scanner_api_key!, qrPayload, testScanner.scanner_id);
+    const data = await scanMockDevice(context, qrPayload, testScanner.scanner_id);
 
     assert.equal(data.result, 'denied');
     assert.equal(data.reason, 'qr_expired');
@@ -74,7 +74,7 @@ describe('Turnstile Entry & Device Verification Test Suite', () => {
     const qrPayload = await generateTestQRPayload(context, tamperedUser.userId, {
       customHmacKey: 'invalid_secret_key',
     });
-    const data = await scanMockDevice(context, testScanner.scanner_api_key!, qrPayload, testScanner.scanner_id);
+    const data = await scanMockDevice(context, qrPayload, testScanner.scanner_id);
 
     assert.equal(data.result, 'denied');
     assert.equal(data.reason, 'invalid_hmac');
