@@ -1,4 +1,4 @@
-import { IoTClient, DescribeEndpointCommand } from '@aws-sdk/client-iot';
+import { DescribeEndpointCommand, IoTClient } from '@aws-sdk/client-iot';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { ddb } from '../shared/database';
