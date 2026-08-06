@@ -1,4 +1,4 @@
-import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 import { adminApiClient } from '../services/apiClient';
 
 export interface AuthState {
@@ -65,7 +65,7 @@ const authSlice = createSlice({
   },
 });
 
-export const { adminLogout, clearAdminAuthError } = authSlice.actions;
+export const { adminLogout } = authSlice.actions;
 
 export const selectAdminAuth = (state: { auth: AuthState }) => state.auth;
 export const selectAdminToken = (state: { auth: AuthState }) => state.auth.token;

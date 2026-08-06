@@ -12,6 +12,7 @@ import {
   resolveDeviceTopic,
   SSM_IOT_ENDPOINT_PARAM,
   SSM_LOCKER_THING_NAME_PARAM,
+  SSM_SCANNER_THING_NAME_PARAM,
 } from '../config';
 import { CrossboxApiStack } from './api-stack';
 
@@ -31,6 +32,7 @@ export class CrossboxIotStack extends cdk.Stack {
   public readonly lockerThing: iot.CfnThing;
   public readonly iotPolicy: iot.CfnPolicy;
   public readonly topicRule: iot.CfnTopicRule;
+  public readonly heartbeatTopicRule: iot.CfnTopicRule;
 
   constructor(scope: Construct, id: string, props: CrossboxIotStackProps) {
     super(scope, id, props);
@@ -80,6 +82,9 @@ export class CrossboxIotStack extends cdk.Stack {
     for (const { device } of things) {
       if (device.topics.scan) {
         publishTopics.add(resolveDeviceTopic(device, 'scan').replace(device.thingName, '*'));
+      }
+      if (device.topics.heartbeat) {
+        publishTopics.add(resolveDeviceTopic(device, 'heartbeat').replace(device.thingName, '*'));
       }
       if (device.topics.feedback) {
         const topic = resolveDeviceTopic(device, 'feedback').replace(device.thingName, '*');
@@ -208,6 +213,30 @@ export class CrossboxIotStack extends cdk.Stack {
       sourceArn: `arn:aws:iot:${this.region}:${this.account}:rule/${fleet.scannerTopicRule.name}`,
     });
 
+    // 5b. AWS IoT Topic Rule to invoke DeviceHeartbeat Lambda on incoming heartbeats.
+    const heartbeatFunc = apiStack.deviceHeartbeatFunction;
+
+    this.heartbeatTopicRule = new iot.CfnTopicRule(this, `${this._pascalCase(fleet.heartbeatTopicRule.name)}`, {
+      ruleName: fleet.heartbeatTopicRule.name,
+      topicRulePayload: {
+        sql: fleet.heartbeatTopicRule.sql,
+        description: 'Forwards MQTT heartbeat events from gym devices to DeviceHeartbeat Lambda',
+        actions: [
+          {
+            lambda: {
+              functionArn: heartbeatFunc.functionArn,
+            },
+          },
+        ],
+        ruleDisabled: false,
+      },
+    });
+
+    heartbeatFunc.addPermission('IoTHeartbeatInvokePermission', {
+      principal: new iam.ServicePrincipal('iot.amazonaws.com'),
+      sourceArn: `arn:aws:iot:${this.region}:${this.account}:rule/${fleet.heartbeatTopicRule.name}`,
+    });
+
     // 6. SSM Parameter Store parameters declared by the fleet config.
     new ssm.StringParameter(this, 'IotEndpointParameter', {
       parameterName: SSM_IOT_ENDPOINT_PARAM,
@@ -217,8 +246,10 @@ export class CrossboxIotStack extends cdk.Stack {
 
     for (const { device } of things) {
       if (device.ssm?.thingNameParameter) {
+        const thingNameParameter =
+          device.type === 'scanner' ? SSM_SCANNER_THING_NAME_PARAM : SSM_LOCKER_THING_NAME_PARAM;
         new ssm.StringParameter(this, `${this._pascalCase(device.id)}ThingNameParameter`, {
-          parameterName: SSM_LOCKER_THING_NAME_PARAM,
+          parameterName: thingNameParameter,
           stringValue: device.thingName,
           description: `AWS IoT Thing Name for ${device.deviceType}`,
         });
@@ -226,18 +257,20 @@ export class CrossboxIotStack extends cdk.Stack {
     }
 
     // 7. Stack Outputs driven by fleet config.
+    const iotEndpoint = customResource.getAttString('IotEndpoint');
+
     new cdk.CfnOutput(this, 'SecretNameOutput', {
       value: secretName,
       description: 'AWS Secrets Manager Secret Name for fetching certificates',
     });
 
     new cdk.CfnOutput(this, 'IotEndpointOutput', {
-      value: customResource.getAttString('IotEndpoint'),
+      value: iotEndpoint,
       description: 'AWS IoT Core ATS Endpoint URL',
     });
 
     new cdk.CfnOutput(this, 'IotEndpoint', {
-      value: customResource.getAttString('IotEndpoint'),
+      value: iotEndpoint,
       description: 'AWS IoT Core ATS Endpoint URL',
     });
 
@@ -246,7 +279,37 @@ export class CrossboxIotStack extends cdk.Stack {
       description: 'AWS Secrets Manager Secret Name for fetching certificates',
     });
 
-    for (const { device } of things) {
+    new cdk.CfnOutput(this, 'SecretArn', {
+      value: this.certSecret.secretArn,
+      description: 'AWS Secrets Manager Secret ARN for fetching certificates',
+    });
+
+    new cdk.CfnOutput(this, 'IotPolicyName', {
+      value: policyName,
+      description: 'AWS IoT Policy name',
+    });
+
+    new cdk.CfnOutput(this, 'IotEndpointParameterName', {
+      value: SSM_IOT_ENDPOINT_PARAM,
+      description: 'SSM parameter name for the IoT endpoint',
+    });
+
+    new cdk.CfnOutput(this, 'LockerThingNameParameterName', {
+      value: SSM_LOCKER_THING_NAME_PARAM,
+      description: 'SSM parameter name for the locker thing name',
+    });
+
+    new cdk.CfnOutput(this, 'ScannerThingNameParameterName', {
+      value: SSM_SCANNER_THING_NAME_PARAM,
+      description: 'SSM parameter name for the scanner thing name',
+    });
+
+    for (const { device, thing } of things) {
+      new cdk.CfnOutput(this, `${this._pascalCase(device.id)}ThingArn`, {
+        value: thing.attrArn,
+        description: `AWS IoT Thing ARN for ${device.id}`,
+      });
+
       for (const [outputKey, outputName] of Object.entries(device.outputs)) {
         let value: string;
         switch (outputKey) {

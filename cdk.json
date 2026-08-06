@@ -1,5 +1,8 @@
 {
   "app": "npx ts-node --prefer-ts-exts bin/app.ts",
+  "context": {
+    "@aws-cdk/core:defaultCrossStackReferences": "both"
+  },
   "watch": {
     "include": ["**"],
     "exclude": [

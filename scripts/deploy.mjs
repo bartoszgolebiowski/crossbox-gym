@@ -82,6 +82,7 @@ const { values, positionals } = parseArgs({
   options: {
     stacks: { type: 'string', short: 's' },
     stackPrefix: { type: 'string' },
+    output: { type: 'string' },
     hotswap: { type: 'boolean', default: false },
     buildUi: { type: 'boolean', default: true },
   },
@@ -91,6 +92,7 @@ const { values, positionals } = parseArgs({
 const env = validateEnv(deployEnvSchema, process.env);
 const rawStacks = values.stacks || positionals.find((p) => !p.startsWith('-')) || env.STACKS;
 const rawPrefix = values.stackPrefix || env.STACK_NAME || 'CrossboxGymDev';
+const cdkOutputDir = values.output || process.env.CDK_OUTDIR || 'cdk.out.deploy';
 const prefix = rawPrefix.replace(/Stack$/, '');
 
 const stackMap = {
@@ -116,6 +118,7 @@ if (rawStacks.toLowerCase() === 'all' || rawStacks.trim() === '*') {
 console.log(`\n🚀 CrossBox Multi-Stack Deployment Manager`);
 console.log(`📌 Target Prefix : ${prefix}`);
 console.log(`📦 Target Stacks : ${selectedStacks}`);
+console.log(`📁 CDK Output    : ${cdkOutputDir}`);
 if (values.hotswap) console.log(`⚡ Mode          : HOTSWAP ENABLED (Instant Lambda Code Push)\n`);
 
 // Build UI if frontend stack is being deployed or all stacks
@@ -132,6 +135,8 @@ const cdkArgs = [
   ...(values.hotswap ? ['--hotswap'] : []),
   '--require-approval',
   'never',
+  '--output',
+  cdkOutputDir,
   '--outputs-file',
   'cdk-outputs.json',
 ];

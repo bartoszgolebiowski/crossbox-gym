@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { CheckoutService } from '../lib/handlers/checkout/service';
-import { PaymentProvider } from '../lib/handlers/shared/providers';
+import { PaymentProvider } from '../lib/handlers/shared/payment';
 
 class FakePaymentProvider implements PaymentProvider {
   checkoutRequest?: Parameters<PaymentProvider['createCheckoutSession']>[0];

@@ -1,9 +1,9 @@
 import * as cdk from 'aws-cdk-lib';
 import { Template } from 'aws-cdk-lib/assertions';
-import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CrossboxDataStack } from '../lib/stacks/data-stack';
+import test from 'node:test';
 import { CrossboxApiStack } from '../lib/stacks/api-stack';
+import { CrossboxDataStack } from '../lib/stacks/data-stack';
 import { CrossboxIotStack } from '../lib/stacks/iot-stack';
 
 test('CrossboxIotStack synthesizes required IoT resources', () => {
@@ -57,6 +57,28 @@ test('CrossboxIotStack synthesizes required IoT resources', () => {
     },
   });
 
+  // Assert Device Heartbeat Topic Rule
+  template.hasResourceProperties('AWS::IoT::TopicRule', {
+    RuleName: 'CrossboxDeviceHeartbeatRule',
+    TopicRulePayload: {
+      Sql: "SELECT *, topic(3) as thingName FROM 'gym/devices/+/heartbeat'",
+      RuleDisabled: false,
+    },
+  });
+
+  template.hasResourceProperties('AWS::SSM::Parameter', {
+    Name: '/crossbox/iot/scanner-thing-name',
+    Type: 'String',
+    Value: 'crossbox-qr-scanner-01',
+  });
+
+  template.hasResourceProperties('AWS::SSM::Parameter', {
+    Name: '/crossbox/iot/locker-thing-name',
+    Type: 'String',
+    Value: 'crossbox-locker-relay-01',
+  });
+
   assert.ok(iotStack.iotThing);
   assert.ok(iotStack.lockerThing);
+  assert.ok(iotStack.heartbeatTopicRule);
 });

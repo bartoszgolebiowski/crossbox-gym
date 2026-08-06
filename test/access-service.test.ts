@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { AccessService } from '../lib/handlers/shared/access';
 import { ScannerItem } from '../lib/handlers/shared/access/types';
-import { AccessService } from '../lib/handlers/shared/providers/access-service';
-import { AccessRepository, DeniedAccessParams } from '../lib/handlers/shared/repositories';
+import { AccessRepository, DeniedAccessParams, LockerUnlockParams } from '../lib/handlers/shared/db';
 
 const credential = { subjectId: 'member-123', providerId: 'mock' as const };
 
@@ -48,6 +48,10 @@ class FakeAccessRepository implements AccessRepository {
   async logDeniedAccess(_params: DeniedAccessParams): Promise<void> {
     // no-op for tests
   }
+
+  async logLockerUnlock(_params: LockerUnlockParams): Promise<void> {
+    // no-op for tests
+  }
 }
 
 test('AccessService rejects an unknown scanner without accessing storage writes', async () => {
@@ -68,5 +72,16 @@ test('AccessService rejects an active scanner without a locker assignment', asyn
   const result = await service.commitAccess('scanner-1', credential);
 
   assert.deepEqual(result, { success: false, reason: 'scanner_unassigned_locker' });
+  assert.equal(repository.commits, 0);
+});
+
+test('AccessService validates an active scanner before persistence is requested', async () => {
+  const repository = new FakeAccessRepository();
+  repository.activeScanner = scanner();
+  const service = new AccessService(repository);
+
+  const result = await service.validateAccess('scanner-1', credential);
+
+  assert.deepEqual(result, { success: true, scanner: repository.activeScanner });
   assert.equal(repository.commits, 0);
 });

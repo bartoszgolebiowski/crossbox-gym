@@ -34,9 +34,3 @@ export class DynamoDbAuditLogger implements AuditLogger {
     }
   }
 }
-
-export class NoOpAuditLogger implements AuditLogger {
-  async log(): Promise<void> {
-    // no-op for tests
-  }
-}

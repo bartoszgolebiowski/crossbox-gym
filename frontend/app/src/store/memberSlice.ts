@@ -174,7 +174,6 @@ const memberSlice = createSlice({
 
 export const { clearMemberData } = memberSlice.actions;
 
-export const selectMember = (state: { member: MemberState }) => state.member;
 export const selectDashboard = (state: { member: MemberState }) => state.member.dashboard;
 export const selectDashboardLoading = (state: { member: MemberState }) => state.member.dashboardLoading;
 export const selectQrUrl = (state: { member: MemberState }) => state.member.qrUrl;

@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { before, describe, test } from 'node:test';
-import { validateLambdaEnv } from '../lib/handlers/shared/config';
 import { handler as stripeEventHandler } from '../lib/handlers/stripe-webhook/index.ts';
 import { getTestContext } from './lib/test-helpers.ts';
 import { IntegrationTestContext } from './lib/types.ts';
@@ -18,13 +17,13 @@ describe('Checkout & EventBridge Lifecycle Test Suite', () => {
       USER_POOL_ID: context.userPoolId,
       USER_POOL_CLIENT_ID: context.userPoolClientId,
       PAYMENT_PROVIDER: 'mock',
+      IDENTITY_PROVIDER: 'cognito',
       FRONTEND_URL: 'http://localhost:5173',
       ENTRY_LOGS_TABLE_NAME: context.entryLogsTableName,
       AUDIT_LOGS_TABLE_NAME: context.auditLogsTableName,
       STRIPE_SECRET_KEY: stripeSecretKey,
       STRIPE_SANDBOX: 'true',
     };
-    validateLambdaEnv(process.env);
   });
 
   test('POST /checkout/session creates Stripe checkout session URL', async () => {

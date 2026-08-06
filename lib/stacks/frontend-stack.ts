@@ -42,34 +42,24 @@ export class CrossboxFrontendStack extends cdk.Stack {
       removalPolicy,
     });
 
-    // --- 2. CloudFront Distributions ---
-    this.appDistribution = new cloudfront.Distribution(this, 'AppDistribution', {
-      defaultBehavior: {
-        origin: origins.S3BucketOrigin.withOriginAccessControl(this.appBucket),
-        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
-        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-      },
-      defaultRootObject: 'index.html',
-      errorResponses: [
-        { httpStatus: 403, responseHttpStatus: 200, responsePagePath: '/index.html' },
-        { httpStatus: 404, responseHttpStatus: 200, responsePagePath: '/index.html' },
-      ],
-      priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
-    });
+    const createSpaDistribution = (distributionId: string, bucket: s3.Bucket): cloudfront.Distribution =>
+      new cloudfront.Distribution(this, distributionId, {
+        defaultBehavior: {
+          origin: origins.S3BucketOrigin.withOriginAccessControl(bucket),
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        },
+        defaultRootObject: 'index.html',
+        errorResponses: [
+          { httpStatus: 403, responseHttpStatus: 200, responsePagePath: '/index.html' },
+          { httpStatus: 404, responseHttpStatus: 200, responsePagePath: '/index.html' },
+        ],
+        priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
+      });
 
-    this.adminDistribution = new cloudfront.Distribution(this, 'AdminDistribution', {
-      defaultBehavior: {
-        origin: origins.S3BucketOrigin.withOriginAccessControl(this.adminBucket),
-        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
-        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
-      },
-      defaultRootObject: 'index.html',
-      errorResponses: [
-        { httpStatus: 403, responseHttpStatus: 200, responsePagePath: '/index.html' },
-        { httpStatus: 404, responseHttpStatus: 200, responsePagePath: '/index.html' },
-      ],
-      priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
-    });
+    // --- 2. CloudFront Distributions ---
+    this.appDistribution = createSpaDistribution('AppDistribution', this.appBucket);
+    this.adminDistribution = createSpaDistribution('AdminDistribution', this.adminBucket);
 
     // --- 3. Bucket Deployments ---
     const configData = {
@@ -80,43 +70,98 @@ export class CrossboxFrontendStack extends cdk.Stack {
 
     const rootDir = path.join(__dirname, '..', '..');
 
-    new s3deploy.BucketDeployment(this, 'DeployAppAssets', {
-      sources: [
-        s3deploy.Source.asset(path.join(rootDir, 'frontend', 'app', 'dist')),
-        s3deploy.Source.jsonData('config.json', configData),
-      ],
-      destinationBucket: this.appBucket,
-      distribution: this.appDistribution,
-      distributionPaths: ['/*'],
-      waitForDistributionInvalidation: false,
-    });
+    const deployFrontendAssets = (
+      deploymentId: string,
+      distFolder: string,
+      destinationBucket: s3.Bucket,
+      distribution: cloudfront.Distribution
+    ) =>
+      new s3deploy.BucketDeployment(this, deploymentId, {
+        sources: [
+          s3deploy.Source.asset(path.join(rootDir, 'frontend', distFolder, 'dist')),
+          s3deploy.Source.jsonData('config.json', configData),
+        ],
+        destinationBucket,
+        distribution,
+        distributionPaths: ['/*'],
+        waitForDistributionInvalidation: false,
+      });
 
-    new s3deploy.BucketDeployment(this, 'DeployAdminAssets', {
-      sources: [
-        s3deploy.Source.asset(path.join(rootDir, 'frontend', 'admin', 'dist')),
-        s3deploy.Source.jsonData('config.json', configData),
-      ],
-      destinationBucket: this.adminBucket,
-      distribution: this.adminDistribution,
-      distributionPaths: ['/*'],
-      waitForDistributionInvalidation: false,
-    });
+    deployFrontendAssets('DeployAppAssets', 'app', this.appBucket, this.appDistribution);
+    deployFrontendAssets('DeployAdminAssets', 'admin', this.adminBucket, this.adminDistribution);
 
     // --- 4. All Stack Outputs ---
-    new cdk.CfnOutput(this, 'ApiUrl', { value: httpApi.apiEndpoint });
-    new cdk.CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId });
-    new cdk.CfnOutput(this, 'UserPoolClientId', { value: userPoolClient.userPoolClientId });
-    new cdk.CfnOutput(this, 'MainTableName', { value: mainTable.tableName });
-    new cdk.CfnOutput(this, 'EntryLogsTableName', { value: entryLogsTable.tableName });
-    new cdk.CfnOutput(this, 'AuditLogsTableName', { value: auditLogsTable.tableName });
-    new cdk.CfnOutput(this, 'AppBucketName', { value: this.appBucket.bucketName });
-    new cdk.CfnOutput(this, 'AdminBucketName', { value: this.adminBucket.bucketName });
-    new cdk.CfnOutput(this, 'StaticBucketName', { value: this.adminBucket.bucketName });
-    new cdk.CfnOutput(this, 'AppCloudFrontUrl', { value: this.appDistribution.distributionDomainName });
-    new cdk.CfnOutput(this, 'AdminCloudFrontUrl', { value: this.adminDistribution.distributionDomainName });
-    new cdk.CfnOutput(this, 'AppDistributionId', { value: this.appDistribution.distributionId });
-    new cdk.CfnOutput(this, 'AdminDistributionId', { value: this.adminDistribution.distributionId });
-    new cdk.CfnOutput(this, 'CloudFrontUrl', { value: this.appDistribution.distributionDomainName });
-    new cdk.CfnOutput(this, 'StripeEventBusName', { value: stripeEventBus.eventBusName });
+    new cdk.CfnOutput(this, 'ApiUrl', { value: httpApi.apiEndpoint, description: 'API Gateway HTTP API endpoint URL' });
+    new cdk.CfnOutput(this, 'ApiId', { value: httpApi.httpApiId, description: 'API Gateway HTTP API ID' });
+    new cdk.CfnOutput(this, 'UserPoolId', { value: userPool.userPoolId, description: 'Cognito User Pool ID' });
+    new cdk.CfnOutput(this, 'UserPoolClientId', {
+      value: userPoolClient.userPoolClientId,
+      description: 'Cognito User Pool Client ID',
+    });
+    new cdk.CfnOutput(this, 'MainTableName', { value: mainTable.tableName, description: 'Main DynamoDB table name' });
+    new cdk.CfnOutput(this, 'EntryLogsTableName', {
+      value: entryLogsTable.tableName,
+      description: 'Entry logs DynamoDB table name',
+    });
+    new cdk.CfnOutput(this, 'AuditLogsTableName', {
+      value: auditLogsTable.tableName,
+      description: 'Audit logs DynamoDB table name',
+    });
+    new cdk.CfnOutput(this, 'AppBucketName', {
+      value: this.appBucket.bucketName,
+      description: 'Member app S3 bucket name',
+    });
+    new cdk.CfnOutput(this, 'AppBucketArn', {
+      value: this.appBucket.bucketArn,
+      description: 'Member app S3 bucket ARN',
+    });
+    new cdk.CfnOutput(this, 'AdminBucketName', {
+      value: this.adminBucket.bucketName,
+      description: 'Admin app S3 bucket name',
+    });
+    new cdk.CfnOutput(this, 'AdminBucketArn', {
+      value: this.adminBucket.bucketArn,
+      description: 'Admin app S3 bucket ARN',
+    });
+    new cdk.CfnOutput(this, 'StaticBucketName', {
+      value: this.adminBucket.bucketName,
+      description: 'Static assets S3 bucket name (alias for admin bucket)',
+    });
+    new cdk.CfnOutput(this, 'AppCloudFrontUrl', {
+      value: this.appDistribution.distributionDomainName,
+      description: 'Member app CloudFront distribution domain name',
+    });
+    new cdk.CfnOutput(this, 'AdminCloudFrontUrl', {
+      value: this.adminDistribution.distributionDomainName,
+      description: 'Admin app CloudFront distribution domain name',
+    });
+    new cdk.CfnOutput(this, 'AppUrl', {
+      value: `https://${this.appDistribution.distributionDomainName}`,
+      description: 'Member app HTTPS URL',
+    });
+    new cdk.CfnOutput(this, 'AdminUrl', {
+      value: `https://${this.adminDistribution.distributionDomainName}`,
+      description: 'Admin app HTTPS URL',
+    });
+    new cdk.CfnOutput(this, 'AppDistributionId', {
+      value: this.appDistribution.distributionId,
+      description: 'Member app CloudFront distribution ID',
+    });
+    new cdk.CfnOutput(this, 'AdminDistributionId', {
+      value: this.adminDistribution.distributionId,
+      description: 'Admin app CloudFront distribution ID',
+    });
+    new cdk.CfnOutput(this, 'CloudFrontUrl', {
+      value: this.appDistribution.distributionDomainName,
+      description: 'Primary CloudFront distribution domain name (alias for member app)',
+    });
+    new cdk.CfnOutput(this, 'StripeEventBusName', {
+      value: stripeEventBus.eventBusName,
+      description: 'EventBridge bus name for Stripe events',
+    });
+    new cdk.CfnOutput(this, 'StripeEventBusArn', {
+      value: stripeEventBus.eventBusArn,
+      description: 'EventBridge bus ARN for Stripe events',
+    });
   }
 }

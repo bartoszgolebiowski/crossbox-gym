@@ -7,6 +7,8 @@ import {
   AdminRepository,
   CreateDeviceParams,
   CreateLocationParams,
+  DevicePresence,
+  DevicePresenceRepository,
   MemberOverrideParams,
 } from '../lib/handlers/admin/repository';
 import { AdminService } from '../lib/handlers/admin/service';
@@ -60,12 +62,14 @@ class FakeAdminRepository implements AdminRepository {
   async getActivity(
     locationId: string,
     _scannerId?: string,
+    _lockerId?: string,
     _options?: { limit?: number; nextToken?: string }
   ): Promise<ActivityAggregation> {
     return {
       location_id: locationId,
       total_count: 0,
       success_count: 0,
+      unlock_count: 0,
       denied_count: 0,
       hourly_stats: {},
       daily_stats: {},
@@ -122,6 +126,18 @@ class FakeLockPublisher implements LockPublisher {
   }
 }
 
+class FakeDevicePresenceRepository implements DevicePresenceRepository {
+  presence = new Map<string, DevicePresence>();
+
+  async getPresence(thingName: string): Promise<DevicePresence | undefined> {
+    return this.presence.get(thingName);
+  }
+
+  async updatePresence(thingName: string, timestamp: string): Promise<void> {
+    this.presence.set(thingName, { thingName, lastSeen: timestamp });
+  }
+}
+
 describe('AdminService', () => {
   const fixedNow = new Date('2026-01-01T12:00:00.000Z');
   const fixedRandomBytes = Buffer.from('a'.repeat(32), 'ascii');
@@ -130,14 +146,17 @@ describe('AdminService', () => {
     const repository = new FakeAdminRepository();
     const auditLogger = new FakeAuditLogger();
     const lockPublisher = new FakeLockPublisher();
+    const presenceRepository = new FakeDevicePresenceRepository();
     const service = new AdminService({
       repository,
       auditLogger,
       lockPublisher,
+      presenceRepository,
+      deviceOfflineThresholdMs: 30000,
       now: () => fixedNow,
       randomBytes: () => fixedRandomBytes,
     });
-    return { service, repository, auditLogger, lockPublisher };
+    return { service, repository, auditLogger, lockPublisher, presenceRepository };
   }
 
   test('createLocation creates location', async () => {
@@ -168,15 +187,46 @@ describe('AdminService', () => {
     assert.deepEqual(repository.deletedLocations, ['loc-1']);
   });
 
-  test('checkDeviceHealth verifies device status and audits', async () => {
-    const { service, auditLogger } = createService();
+  test('checkDeviceHealth reports ONLINE for fresh heartbeat', async () => {
+    const { service, auditLogger, presenceRepository } = createService();
+    await presenceRepository.updatePresence('crossbox-scanner-01', fixedNow.toISOString());
+
     const result = await service.checkDeviceHealth('admin-1', 'crossbox-scanner-01', 'loc-1');
 
     assert.equal(result.device_id, 'crossbox-scanner-01');
     assert.equal(result.status, 'ONLINE');
     assert.equal(result.connected, true);
-    assert.ok(result.latency_ms > 0);
+    assert.ok(result.latency_ms >= 0);
+    assert.equal(result.last_seen, fixedNow.toISOString());
+    assert.equal(result.thing_name, 'crossbox-scanner-01');
     assert.equal(auditLogger.logs[0].actionType, 'device_health_check');
+  });
+
+  test('checkDeviceHealth reports OFFLINE for stale heartbeat', async () => {
+    const { service, presenceRepository } = createService();
+    const stale = new Date(fixedNow.getTime() - 60000).toISOString();
+    await presenceRepository.updatePresence('crossbox-scanner-01', stale);
+
+    const result = await service.checkDeviceHealth('admin-1', 'crossbox-scanner-01', 'loc-1');
+
+    assert.equal(result.status, 'OFFLINE');
+    assert.equal(result.connected, false);
+    assert.equal(result.last_seen, stale);
+  });
+
+  test('checkDeviceHealth reports OFFLINE when no heartbeat exists', async () => {
+    const { service } = createService();
+
+    const result = await service.checkDeviceHealth('admin-1', 'crossbox-scanner-01', 'loc-1');
+
+    assert.equal(result.status, 'OFFLINE');
+    assert.equal(result.connected, false);
+    assert.equal(result.last_seen, null);
+  });
+
+  test('checkDeviceHealth requires device_id', async () => {
+    const { service } = createService();
+    await assert.rejects(() => service.checkDeviceHealth('admin-1', '   '), /device_id is required/);
   });
 
   test('createDevice creates device and audits', async () => {

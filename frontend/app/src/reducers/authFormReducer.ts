@@ -69,7 +69,3 @@ export const setAuthFormError = (error: string | null): AuthFormAction => ({
   type: 'SET_ERROR',
   payload: error,
 });
-
-export const resetAuthForm = (): AuthFormAction => ({
-  type: 'RESET_FORM',
-});

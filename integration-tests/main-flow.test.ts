@@ -7,7 +7,6 @@
 
 import assert from 'node:assert/strict';
 import { before, describe, test } from 'node:test';
-import { validateLambdaEnv } from '../lib/handlers/shared/config';
 import { requireOutput } from './lib/stack-outputs.ts';
 import { getTestContext, scanMockDevice } from './lib/test-helpers.ts';
 import { IntegrationTestContext } from './lib/types.ts';
@@ -31,13 +30,13 @@ describe('CrossBox Gym Integration Tests', () => {
       MAIN_TABLE_NAME: mainTableName,
       USER_POOL_ID: userPoolId,
       USER_POOL_CLIENT_ID: userPoolClientId,
+      IDENTITY_PROVIDER: 'cognito',
       FRONTEND_URL: frontendUrl.startsWith('http') ? frontendUrl : `https://${frontendUrl}`,
       ENTRY_LOGS_TABLE_NAME: testContext.entryLogsTableName,
       AUDIT_LOGS_TABLE_NAME: testContext.auditLogsTableName,
       STRIPE_SECRET_KEY: stripeSecretKey,
       STRIPE_SANDBOX: 'true',
     };
-    validateLambdaEnv(process.env);
   });
 
   describe('Checkout & Webhook Flow', () => {

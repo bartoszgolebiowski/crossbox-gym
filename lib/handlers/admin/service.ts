@@ -2,12 +2,14 @@ import { randomBytes } from 'node:crypto';
 import { ValidationError } from '../shared/http';
 import { AuditLogger } from './audit-logger';
 import { LockPublisher } from './lock-publisher';
-import { ActivityPaginationOptions, AdminRepository } from './repository';
+import { ActivityPaginationOptions, AdminRepository, DevicePresenceRepository } from './repository';
 
 export interface AdminServiceDependencies {
   repository: AdminRepository;
   auditLogger: AuditLogger;
   lockPublisher: LockPublisher;
+  presenceRepository: DevicePresenceRepository;
+  deviceOfflineThresholdMs?: number;
   now?: () => Date;
   randomBytes?: (size: number) => Buffer;
 }
@@ -63,9 +65,10 @@ export class AdminService {
     _adminId: string,
     locationId: string,
     scannerId?: string,
+    lockerId?: string,
     options?: ActivityPaginationOptions
   ) {
-    return this.dependencies.repository.getActivity(locationId, scannerId, options);
+    return this.dependencies.repository.getActivity(locationId, scannerId, lockerId, options);
   }
 
   async listDevices(_adminId: string, locationId: string) {
@@ -103,24 +106,25 @@ export class AdminService {
     if (!deviceId || !deviceId.trim()) {
       throw new ValidationError('device_id is required');
     }
-    const cleanDeviceId = deviceId.trim();
+    const thingName = deviceId.trim();
 
-    const latency = Math.floor(Math.random() * 25) + 12;
+    const start = this.now().getTime();
+    const presence = await this.dependencies.presenceRepository.getPresence(thingName);
+    const elapsed = this.now().getTime() - start;
+
+    const thresholdMs = this.dependencies.deviceOfflineThresholdMs ?? 30000;
+    const connected = !!presence && this.now().getTime() - new Date(presence.lastSeen).getTime() < thresholdMs;
 
     const healthResult = {
-      device_id: cleanDeviceId,
-      status: 'ONLINE',
-      connected: true,
-      latency_ms: latency,
-      last_seen: this.now().toISOString(),
-      details: {
-        protocol: 'MQTT/mTLS over ATS',
-        thing_name: cleanDeviceId,
-        health_check_timestamp: this.now().toISOString(),
-      },
+      device_id: thingName,
+      status: connected ? 'ONLINE' : 'OFFLINE',
+      connected,
+      latency_ms: elapsed,
+      last_seen: presence?.lastSeen ?? null,
+      thing_name: thingName,
     };
 
-    await this.audit(adminId, 'device_health_check', { target_id: cleanDeviceId, location_id: locationId });
+    await this.audit(adminId, 'device_health_check', { target_id: thingName, location_id: locationId });
     return healthResult;
   }
 

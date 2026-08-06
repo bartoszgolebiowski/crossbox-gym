@@ -15,8 +15,10 @@ export class CrossboxDataStack extends cdk.Stack {
   public readonly mainTable: dynamodb.Table;
   public readonly entryLogsTable: dynamodb.Table;
   public readonly auditLogsTable: dynamodb.Table;
+  public readonly devicePresenceTable: dynamodb.Table;
   public readonly userPool: cognito.UserPool;
   public readonly userPoolClient: cognito.UserPoolClient;
+  public readonly customMessageHandler: nodejs.NodejsFunction;
 
   constructor(scope: Construct, id: string, props: CrossboxDataStackProps) {
     super(scope, id, props);
@@ -83,10 +85,24 @@ export class CrossboxDataStack extends cdk.Stack {
       projectionType: dynamodb.ProjectionType.ALL,
     });
 
+    this.entryLogsTable.addGlobalSecondaryIndex({
+      indexName: 'LocationIndex',
+      partitionKey: { name: 'location_id', type: dynamodb.AttributeType.STRING },
+      sortKey: { name: 'timestamp', type: dynamodb.AttributeType.STRING },
+      projectionType: dynamodb.ProjectionType.ALL,
+    });
+
     this.auditLogsTable = new dynamodb.Table(this, 'AuditLogs', {
       partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },
       sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
       billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      removalPolicy,
+    });
+
+    this.devicePresenceTable = new dynamodb.Table(this, 'DevicePresence', {
+      partitionKey: { name: 'thingName', type: dynamodb.AttributeType.STRING },
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      timeToLiveAttribute: 'ttl',
       removalPolicy,
     });
 
@@ -109,7 +125,7 @@ export class CrossboxDataStack extends cdk.Stack {
       removalPolicy,
     });
 
-    const customMessageHandler = new nodejs.NodejsFunction(this, 'CustomMessageHandler', {
+    this.customMessageHandler = new nodejs.NodejsFunction(this, 'CustomMessageHandler', {
       runtime: lambda.Runtime.NODEJS_22_X,
       entry: path.join(__dirname, '..', 'handlers', 'custom-message', 'index.ts'),
       memorySize: 128,
@@ -120,7 +136,7 @@ export class CrossboxDataStack extends cdk.Stack {
         sourceMap: true,
       },
     });
-    this.userPool.addTrigger(cognito.UserPoolOperation.CUSTOM_MESSAGE, customMessageHandler);
+    this.userPool.addTrigger(cognito.UserPoolOperation.CUSTOM_MESSAGE, this.customMessageHandler);
 
     new cognito.CfnUserPoolGroup(this, 'AdminsGroup', {
       userPoolId: this.userPool.userPoolId,
@@ -136,6 +152,59 @@ export class CrossboxDataStack extends cdk.Stack {
       },
       accessTokenValidity: cdk.Duration.hours(1),
       refreshTokenValidity: cdk.Duration.days(30),
+    });
+
+    // --- Stack Outputs ---
+    new cdk.CfnOutput(this, 'UserPoolId', { value: this.userPool.userPoolId, description: 'Cognito User Pool ID' });
+    new cdk.CfnOutput(this, 'UserPoolArn', { value: this.userPool.userPoolArn, description: 'Cognito User Pool ARN' });
+    new cdk.CfnOutput(this, 'UserPoolClientId', {
+      value: this.userPoolClient.userPoolClientId,
+      description: 'Cognito User Pool Client ID',
+    });
+    new cdk.CfnOutput(this, 'UserPoolProviderUrl', {
+      value: this.userPool.userPoolProviderUrl,
+      description: 'Cognito User Pool OIDC Provider URL',
+    });
+    new cdk.CfnOutput(this, 'MainTableName', {
+      value: this.mainTable.tableName,
+      description: 'Main DynamoDB table name',
+    });
+    new cdk.CfnOutput(this, 'MainTableArn', { value: this.mainTable.tableArn, description: 'Main DynamoDB table ARN' });
+    new cdk.CfnOutput(this, 'EntryLogsTableName', {
+      value: this.entryLogsTable.tableName,
+      description: 'Entry logs DynamoDB table name',
+    });
+    new cdk.CfnOutput(this, 'EntryLogsTableArn', {
+      value: this.entryLogsTable.tableArn,
+      description: 'Entry logs DynamoDB table ARN',
+    });
+    new cdk.CfnOutput(this, 'AuditLogsTableName', {
+      value: this.auditLogsTable.tableName,
+      description: 'Audit logs DynamoDB table name',
+    });
+    new cdk.CfnOutput(this, 'AuditLogsTableArn', {
+      value: this.auditLogsTable.tableArn,
+      description: 'Audit logs DynamoDB table ARN',
+    });
+    new cdk.CfnOutput(this, 'DevicePresenceTableName', {
+      value: this.devicePresenceTable.tableName,
+      description: 'Device presence DynamoDB table name',
+    });
+    new cdk.CfnOutput(this, 'DevicePresenceTableArn', {
+      value: this.devicePresenceTable.tableArn,
+      description: 'Device presence DynamoDB table ARN',
+    });
+    new cdk.CfnOutput(this, 'AdminsGroupName', {
+      value: 'admins',
+      description: 'Cognito user group name for administrators',
+    });
+    new cdk.CfnOutput(this, 'CustomMessageHandlerArn', {
+      value: this.customMessageHandler.functionArn,
+      description: 'Cognito custom message Lambda function ARN',
+    });
+    new cdk.CfnOutput(this, 'CustomMessageHandlerName', {
+      value: this.customMessageHandler.functionName,
+      description: 'Cognito custom message Lambda function name',
     });
   }
 }

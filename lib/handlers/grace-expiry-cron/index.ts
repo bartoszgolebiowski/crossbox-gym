@@ -1,11 +1,15 @@
 import { QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
-import { validateLambdaEnv } from '../shared/config';
-import { ddb } from '../shared/database';
+import { z } from 'zod';
+import { ddb } from '../shared/db';
 import { SubscriptionItem } from '../shared/types';
+
+const graceExpiryEnvironmentSchema = z.object({
+  MAIN_TABLE_NAME: z.string().min(1, 'MAIN_TABLE_NAME is required'),
+});
 
 export const handler = async (): Promise<void> => {
   const nowIso = new Date().toISOString();
-  const env = validateLambdaEnv(process.env);
+  const env = graceExpiryEnvironmentSchema.parse(process.env);
   const mainTable = env.MAIN_TABLE_NAME;
 
   const result = await ddb.send(

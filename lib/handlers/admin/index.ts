@@ -1,46 +1,45 @@
-import { DescribeEndpointCommand, IoTClient } from '@aws-sdk/client-iot';
 import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
-import { ddb } from '../shared/database';
+import { getDeviceByType, getDeviceTopicTemplate } from '../../config';
+import { ddb } from '../shared/db';
 import { withHandler } from '../shared/http';
-import { createMqttPublisher } from '../shared/providers/feedback/mqtt-feedback';
-import { createLockerClient } from '../shared/providers/lockers';
+import { AwsIotMqttClient, LockerDeviceThing, ScannerDeviceThing } from '../shared/iot';
+import { SsmIotEndpointProvider } from '../shared/ssm';
 import { DynamoDbAuditLogger } from './audit-logger';
 import { loadAdminEnvironment } from './environment';
-import { MqttLockPublisher, NoOpLockPublisher } from './lock-publisher';
-import { AdminRepository, DynamoDbAdminRepository } from './repository';
+import {
+  MqttLockPublisher,
+  MqttScannerFeedbackPublisher,
+  NoOpLockPublisher,
+  RepositoryLockerTargetResolver,
+} from './lock-publisher';
+import { AdminRepository, DynamoDbAdminRepository, DynamoDbDevicePresenceRepository } from './repository';
 import { createAdminRouter } from './router';
 import { AdminService } from './service';
 
-let cachedIoTEndpoint: string | undefined;
-
-async function resolveIoTEndpoint(envEndpoint?: string): Promise<string | undefined> {
-  if (envEndpoint) return envEndpoint;
-  if (cachedIoTEndpoint) return cachedIoTEndpoint;
-  try {
-    const client = new IoTClient({});
-    const res = await client.send(new DescribeEndpointCommand({ endpointType: 'iot:Data-ATS' }));
-    cachedIoTEndpoint = res.endpointAddress;
-    return cachedIoTEndpoint;
-  } catch (err) {
-    console.warn('[AdminHandler] Failed to describe IoT endpoint:', err);
-    return undefined;
-  }
-}
-
-function createLockPublisher(iotEndpoint: string | undefined, lockerClientType: string, repository?: AdminRepository) {
-  if (lockerClientType === 'mock' || !iotEndpoint) {
+function createLockPublisher(lockerClientType: string, repository: AdminRepository) {
+  if (lockerClientType === 'mock') {
     return new NoOpLockPublisher();
   }
-  const feedbackPublisher = createMqttPublisher(iotEndpoint);
-  const lockerClient = createLockerClient('mqtt', iotEndpoint);
-  const lockerResolver = repository ? (deviceId: string) => repository.findAssignedLockerId(deviceId) : undefined;
-  return new MqttLockPublisher(lockerClient, feedbackPublisher, lockerResolver);
+
+  const mqttClient = new AwsIotMqttClient(new SsmIotEndpointProvider({ fallbackValue: '' }));
+  const lockerThing = new LockerDeviceThing(mqttClient, getDeviceTopicTemplate(getDeviceByType('locker'), 'command'));
+  const scannerThing = new ScannerDeviceThing(
+    mqttClient,
+    getDeviceTopicTemplate(getDeviceByType('scanner'), 'feedback')
+  );
+  const targetResolver = new RepositoryLockerTargetResolver(repository);
+  const feedbackPublisher = new MqttScannerFeedbackPublisher(scannerThing);
+
+  return new MqttLockPublisher({
+    lockerThing,
+    targetResolver,
+    feedbackPublisher,
+  });
 }
 
 export const handler = async (event: APIGatewayProxyEventV2) => {
   const environment = loadAdminEnvironment();
-  const iotEndpoint = await resolveIoTEndpoint(environment.iotEndpoint);
 
   const repository = new DynamoDbAdminRepository(
     ddb as DynamoDBDocumentClient,
@@ -48,10 +47,19 @@ export const handler = async (event: APIGatewayProxyEventV2) => {
     environment.entryLogsTableName
   );
   const auditLogger = new DynamoDbAuditLogger(ddb as DynamoDBDocumentClient, environment.auditLogsTableName);
+  const presenceRepository = new DynamoDbDevicePresenceRepository(
+    ddb as DynamoDBDocumentClient,
+    environment.presenceTableName
+  );
+  const lockPublisher = createLockPublisher(environment.lockerClientType, repository);
+
   const service = new AdminService({
     repository,
     auditLogger,
-    lockPublisher: createLockPublisher(iotEndpoint, environment.lockerClientType, repository),
+    lockPublisher,
+    presenceRepository,
+    deviceOfflineThresholdMs: environment.deviceOfflineThresholdMs,
   });
+
   return withHandler(createAdminRouter(service))(event);
 };

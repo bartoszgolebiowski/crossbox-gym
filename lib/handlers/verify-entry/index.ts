@@ -1,17 +1,24 @@
-import { ddb } from '../shared/database';
-import { IMqttFeedbackPublisher } from '../shared/providers';
-import { AccessService } from '../shared/providers/access-service';
-import { MqttFeedbackPublisher } from '../shared/providers/feedback/mqtt-feedback';
-import { ILockerClient } from '../shared/providers/lockers';
-import { createLockerClient } from '../shared/providers/lockers/index';
-import { IotScanEvent } from '../shared/providers/types';
-import { DynamoDbAccessRepository } from '../shared/repositories';
+import { getDeviceByType, getDeviceTopicTemplate } from '../../config';
+import { AccessService } from '../shared/access';
+import { ddb, DynamoDbAccessRepository } from '../shared/db';
+import {
+  AwsIotMqttClient,
+  DynamoDbLockerAudit,
+  DynamoDbScannerAudit,
+  IotScanEvent,
+  LockerDeviceThing,
+  LockerFacade,
+  ScannerDeviceThing,
+  ScannerFacade,
+} from '../shared/iot';
+import { SsmIotEndpointProvider } from '../shared/ssm';
+import { VerifyEntryAccessControl, VerifyEntryAccessControlService } from './access-control';
 import { loadVerifyEntryEnvironment } from './environment';
 
 export interface VerifyEntryDependencies {
-  accessService: AccessService;
-  feedbackPublisher: IMqttFeedbackPublisher;
-  lockerClient: ILockerClient;
+  accessControl: VerifyEntryAccessControl;
+  scannerFacade: Pick<ScannerFacade, 'reject' | 'feedback'>;
+  lockerFacade: Pick<LockerFacade, 'unlock'>;
 }
 
 export function parseIotScanEvent(
@@ -63,46 +70,29 @@ export function parseIotScanEvent(
 }
 
 export function createVerifyEntryHandler(dependencies: VerifyEntryDependencies) {
+  const { accessControl, scannerFacade, lockerFacade } = dependencies;
   return async (event: any) => {
     const parsed = parseIotScanEvent(event);
     if (!parsed.valid) {
       const scannerId = parsed.scannerId || event?.client_id || event?.scannerId || 'unknown-scanner';
-      await dependencies.accessService.logDeniedAccess(scannerId, parsed.reason);
-      return dependencies.feedbackPublisher.sendDenial(scannerId, parsed.reason);
+      const rejected = await scannerFacade.reject(scannerId, parsed.reason);
+      return rejected.feedback;
     }
 
-    const { scannerId, event: iotEvent } = parsed;
-
-    const scanner = await dependencies.accessService.findActiveScanner(scannerId);
-    const locationId = scanner?.location_id;
-
-    // 1. Verify raw scan payload using provider strategy abstraction
-    const verification = await dependencies.accessService.verifyRawData(iotEvent.payload.raw_data);
-    if (!verification.success || !verification.credential) {
-      await dependencies.accessService.logDeniedAccess(
-        scannerId,
-        verification.reason || 'verification_failed',
-        locationId
-      );
-      return dependencies.feedbackPublisher.sendDenial(scannerId, verification.reason);
+    const decision = await accessControl.authorizeScan(parsed.event);
+    if (!decision.granted) {
+      const rejected = await scannerFacade.reject(decision.scannerId, decision.reason, decision.scanner);
+      return rejected.feedback;
     }
 
-    // 2. Commit access entry, outbox command, and anti-passback state
-    const commit = await dependencies.accessService.commitAccess(scannerId, verification.credential);
-    if (!commit.success || !commit.entryId || !commit.lockerId) {
-      await dependencies.accessService.logDeniedAccess(scannerId, commit.reason || 'commit_failed', locationId);
-      return dependencies.feedbackPublisher.sendDenial(scannerId, commit.reason);
-    }
-
-    // 3. Dispatch scanner feedback signal (welcome/grant)
-    const [feedbackResult, lockerPayload] = await Promise.all([
-      dependencies.feedbackPublisher.sendGateUnlockSignal(scannerId, commit.entryId),
-      dependencies.lockerClient.openLocker(commit.lockerId),
+    const [feedback, lockerPayload] = await Promise.all([
+      scannerFacade.feedback(decision),
+      lockerFacade.unlock(decision),
     ]);
 
     return {
-      ...feedbackResult,
-      lockerId: commit.lockerId,
+      ...feedback,
+      lockerId: decision.lockerId,
       lockerPayload,
     };
   };
@@ -111,12 +101,35 @@ export function createVerifyEntryHandler(dependencies: VerifyEntryDependencies) 
 export const handler = async (event: any) => {
   const environment = loadVerifyEntryEnvironment();
   const repository = new DynamoDbAccessRepository(ddb, environment.mainTableName, environment.entryLogsTableName);
+  const accessService = new AccessService(repository);
+  const scannerAudit = new DynamoDbScannerAudit(repository);
+  const lockerAudit = new DynamoDbLockerAudit(repository);
+  const mqttClient = new AwsIotMqttClient(new SsmIotEndpointProvider({ fallbackValue: '' }));
+  const scannerDeviceThing = new ScannerDeviceThing(
+    mqttClient,
+    getDeviceTopicTemplate(getDeviceByType('scanner'), 'feedback')
+  );
+  const lockerDeviceThing = new LockerDeviceThing(
+    mqttClient,
+    getDeviceTopicTemplate(getDeviceByType('locker'), 'command')
+  );
+
+  const lockerFacade = new LockerFacade({
+    deviceThing: lockerDeviceThing,
+    audit: lockerAudit,
+  });
+  const scannerFacade = new ScannerFacade({
+    deviceThing: scannerDeviceThing,
+    audit: scannerAudit,
+  });
+  const accessControl = new VerifyEntryAccessControlService({
+    accessService,
+    scannerAudit,
+  });
+
   return createVerifyEntryHandler({
-    accessService: new AccessService(repository),
-    feedbackPublisher: new MqttFeedbackPublisher(environment.iotEndpoint),
-    lockerClient: createLockerClient(environment.lockerClientType, {
-      endpoint: environment.iotEndpoint || '',
-      lockerThingName: environment.lockerThingName,
-    }),
+    accessControl,
+    scannerFacade,
+    lockerFacade,
   })(event);
 };

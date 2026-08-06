@@ -36,11 +36,10 @@ export function createAdminRouter(service: AdminService) {
     if (method === 'GET' && /^\/admin\/locations\/[^/]+\/activity$/.test(path)) {
       const locationId = path.split('/')[3];
       const scannerId = event.queryStringParameters?.scanner_id;
-      const limit = event.queryStringParameters?.limit
-        ? parseInt(event.queryStringParameters.limit, 10)
-        : undefined;
+      const lockerId = event.queryStringParameters?.locker_id;
+      const limit = event.queryStringParameters?.limit ? parseInt(event.queryStringParameters.limit, 10) : undefined;
       const nextToken = event.queryStringParameters?.next_token;
-      return service.getActivity(adminId, locationId, scannerId, {
+      return service.getActivity(adminId, locationId, scannerId, lockerId, {
         limit: Number.isNaN(limit) ? undefined : limit,
         nextToken,
       });

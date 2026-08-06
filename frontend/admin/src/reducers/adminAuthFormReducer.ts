@@ -30,7 +30,3 @@ export const changeAdminAuthFormField = (field: keyof AdminAuthFormState, value:
   type: 'CHANGE_FIELD',
   payload: { field, value },
 });
-
-export const resetAdminAuthForm = (): AdminAuthFormAction => ({
-  type: 'RESET_FORM',
-});

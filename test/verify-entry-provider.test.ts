@@ -5,8 +5,8 @@ import {
   DefaultProviderClassifier,
   MockProvider,
   TildeV130Provider,
-} from '../lib/handlers/shared/providers/qr';
-import { parseIotScanEvent } from '../lib/handlers/verify-entry';
+} from '../lib/handlers/shared/qr';
+import { createVerifyEntryHandler, parseIotScanEvent } from '../lib/handlers/verify-entry';
 
 test('1. TildeV130Provider classifies and verifies sample IoT Core payload', async () => {
   const provider = new TildeV130Provider();
@@ -126,4 +126,73 @@ test('5. parseIotScanEvent strictly validates required IoT Core payload schema',
   });
   assert.strictEqual(invalidEncoding.valid, false);
   assert.strictEqual(invalidEncoding.reason, 'missing_or_invalid_encoding');
+});
+
+test('6. a valid QR scan is delegated to the scanner facade', async () => {
+  const accessControlEvents: unknown[] = [];
+  const grantFeedbackCalls: unknown[] = [];
+  const lockerUnlocks: unknown[] = [];
+  const handler = createVerifyEntryHandler({
+    accessControl: {
+      authorizeScan: async (event) => {
+        accessControlEvents.push(event);
+        return {
+          granted: true,
+          scannerId: 'scanner-1',
+          entryId: 'entry-1',
+          lockerId: 'locker-1',
+          userId: 'member-1',
+          locationId: 'site-1',
+        };
+      },
+    },
+    scannerFacade: {
+      reject: async () => ({ status: 'denied', feedback: { result: 'denied', action: 'none', timestamp: 'now' } }),
+      feedback: async (scan) => {
+        grantFeedbackCalls.push(scan);
+        return { result: 'success', action: 'open_gate', timestamp: 'now' };
+      },
+    },
+    lockerFacade: {
+      unlock: async (command) => {
+        lockerUnlocks.push(command);
+        return { id: 1, method: 'Switch.Set', params: { id: 0, on: true, toggle_after: 3 } };
+      },
+    },
+  });
+  await handler({
+    event_id: 'scan-1',
+    client_id: 'scanner-1',
+    timestamp: 1785933296,
+    payload: { raw_data: 'mock:member-1', encoding: 'utf-8' },
+  });
+
+  assert.deepStrictEqual(accessControlEvents, [
+    {
+      event_id: 'scan-1',
+      client_id: 'scanner-1',
+      timestamp: 1785933296,
+      payload: { raw_data: 'mock:member-1', encoding: 'utf-8' },
+    },
+  ]);
+  assert.deepStrictEqual(grantFeedbackCalls, [
+    {
+      granted: true,
+      scannerId: 'scanner-1',
+      entryId: 'entry-1',
+      lockerId: 'locker-1',
+      userId: 'member-1',
+      locationId: 'site-1',
+    },
+  ]);
+  assert.deepStrictEqual(lockerUnlocks, [
+    {
+      granted: true,
+      scannerId: 'scanner-1',
+      entryId: 'entry-1',
+      lockerId: 'locker-1',
+      userId: 'member-1',
+      locationId: 'site-1',
+    },
+  ]);
 });

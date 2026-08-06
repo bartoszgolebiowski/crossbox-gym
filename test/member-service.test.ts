@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { MemberRepository, StoredInvoice } from '../lib/handlers/member/repository';
 import { MemberService } from '../lib/handlers/member/service';
-import { PaymentProvider } from '../lib/handlers/shared/providers';
+import { PaymentProvider } from '../lib/handlers/shared/payment';
 import { SubscriptionItem, UserItem } from '../lib/handlers/shared/types';
 
 const activeSubscription: SubscriptionItem = {

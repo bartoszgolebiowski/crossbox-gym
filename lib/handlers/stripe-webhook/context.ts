@@ -1,7 +1,25 @@
-import { validateLambdaEnv } from '../shared/config';
-import { ddb } from '../shared/database';
-import { IdentityProvider, createIdentityProvider } from '../shared/providers';
+import { z } from 'zod';
+import { ddb } from '../shared/db';
+import { IdentityProvider } from '../shared/identity';
+import { CognitoIdentityProvider, MockIdentityProvider } from '../shared/identity/cognito-identity-provider';
 import { BillingRepository, DynamoDbBillingRepository } from './repository';
+
+const identityProviders: Record<string, new () => IdentityProvider> = {
+  cognito: CognitoIdentityProvider,
+  mock: MockIdentityProvider,
+};
+
+const stripeWebhookEnvironmentSchema = z.object({
+  MAIN_TABLE_NAME: z.string().min(1, 'MAIN_TABLE_NAME is required'),
+  USER_POOL_ID: z.string().min(1, 'USER_POOL_ID is required'),
+  FRONTEND_URL: z.string().min(1, 'FRONTEND_URL is required'),
+  IDENTITY_PROVIDER: z.string().min(1, 'IDENTITY_PROVIDER is required'),
+});
+
+function createIdentityProvider(type: string): IdentityProvider {
+  const ProviderClass = identityProviders[type] || CognitoIdentityProvider;
+  return new ProviderClass();
+}
 
 /**
  * Shared context for all webhook event handlers.
@@ -17,7 +35,7 @@ export interface WebhookContext {
 }
 
 export function createWebhookContext(): WebhookContext {
-  const env = validateLambdaEnv(process.env);
+  const env = stripeWebhookEnvironmentSchema.parse(process.env);
   const mainTableName = env.MAIN_TABLE_NAME;
   return {
     mainTableName,

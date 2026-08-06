@@ -28,6 +28,14 @@ export interface DeviceHealth {
   error?: string;
 }
 
+interface DeviceHealthResponse {
+  status?: DeviceHealth['status'];
+  connected?: boolean;
+  latency_ms?: number;
+  last_seen?: string;
+  details?: Record<string, unknown>;
+}
+
 export interface AdminOpsState {
   locationOutput: string | null;
   accessOutput: string | null;
@@ -90,7 +98,7 @@ export const checkDeviceHealthThunk = createAsyncThunk(
       return rejectWithValue({ deviceId, error: 'Device ID is required.' });
     }
     try {
-      const data = await adminApiClient.post(`/admin/devices/${deviceId}/health`, {
+      const data = await adminApiClient.post<DeviceHealthResponse>(`/admin/devices/${deviceId}/health`, {
         location_id: payload.locationId,
       });
       return { deviceId, data };
@@ -228,8 +236,6 @@ const adminSlice = createSlice({
   },
 });
 
-export const selectLocationOutput = (state: { adminOps: AdminOpsState }) => state.adminOps.locationOutput;
-export const selectAccessOutput = (state: { adminOps: AdminOpsState }) => state.adminOps.accessOutput;
 export const selectRemoteOutput = (state: { adminOps: AdminOpsState }) => state.adminOps.remoteOutput;
 export const selectOverrideOutput = (state: { adminOps: AdminOpsState }) => state.adminOps.overrideOutput;
 export const selectLocationsList = (state: { adminOps: AdminOpsState }) => state.adminOps.locationsList;

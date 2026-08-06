@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
 import { before, describe, test } from 'node:test';
 import Stripe from 'stripe';
-import { validateLambdaEnv } from '../lib/handlers/shared/config';
-import { StripePaymentProvider } from '../lib/handlers/shared/providers/payment';
+import { StripePaymentProvider } from '../lib/handlers/shared/payment';
 
 const liveStripeTestsEnabled = (process.env.RUN_STRIPE_LIVE_TESTS ?? '') === 'true';
 const describeLiveStripe = liveStripeTestsEnabled ? describe : describe.skip;
@@ -13,8 +12,7 @@ describeLiveStripe('Stripe Live Sandbox Integration Test Suite (No Mocks)', () =
   let testPriceId: string;
 
   before(async () => {
-    const lambdaEnv = validateLambdaEnv(process.env);
-    const stripeSandboxKey = lambdaEnv.STRIPE_SECRET_KEY;
+    const stripeSandboxKey = process.env.STRIPE_SECRET_KEY;
     if (!stripeSandboxKey) {
       throw new Error('STRIPE_SECRET_KEY is required when RUN_STRIPE_LIVE_TESTS=true');
     }

@@ -288,7 +288,7 @@ export async function createMockScanner(
   const scannerId = `mock_scanner_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
   const lockerId = options?.assignedLockerId || getDeviceByType('locker').thingName;
   const now = new Date().toISOString();
-  const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({ region: context.awsRegion }));
+  const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({ region: context.region }));
   const item = {
     PK: `LOC#${locationId}`,
     SK: `SCANNER#${scannerId}`,
@@ -518,5 +518,22 @@ export async function scanMockDevice(
   }
 
   const resultStr = Buffer.from(response.Payload).toString('utf-8');
-  return JSON.parse(resultStr);
+  const parsed = JSON.parse(resultStr) as any;
+
+  // Support both direct-handler returns and wrapped invocation payloads.
+  let resolved = parsed;
+  if (parsed && typeof parsed.body === 'string') {
+    resolved = JSON.parse(parsed.body);
+  }
+
+  // Older handler variants may return { status, feedback }.
+  if (resolved && typeof resolved === 'object' && resolved.feedback && !resolved.result) {
+    resolved = resolved.feedback;
+  }
+
+  if (resolved && typeof resolved === 'object' && resolved.entryId && !resolved.entry_id) {
+    resolved.entry_id = resolved.entryId;
+  }
+
+  return resolved;
 }

@@ -1,10 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux';
-import configReducer, { bootstrapAdminConfigThunk } from './configSlice';
-import authReducer from './authSlice';
 import adminOpsReducer from './adminSlice';
-import uiReducer from './uiSlice';
+import authReducer from './authSlice';
+import configReducer, { bootstrapAdminConfigThunk } from './configSlice';
 import hardwareActivityReducer from './hardwareActivitySlice';
+import lockerActivityReducer from './lockerActivitySlice';
+import uiReducer from './uiSlice';
 
 export const adminStore = configureStore({
   reducer: {
@@ -13,6 +14,7 @@ export const adminStore = configureStore({
     adminOps: adminOpsReducer,
     ui: uiReducer,
     hardwareActivity: hardwareActivityReducer,
+    lockerActivity: lockerActivityReducer,
   },
 });
 

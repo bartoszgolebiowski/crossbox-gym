@@ -72,6 +72,5 @@ const configSlice = createSlice({
 });
 
 export const selectConfig = (state: { config: ConfigState }) => state.config;
-export const selectIsConfigLoaded = (state: { config: ConfigState }) => state.config.isLoaded;
 
 export default configSlice.reducer;

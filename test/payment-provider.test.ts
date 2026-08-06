@@ -1,10 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import {
-  MockPaymentProvider,
-  StripePaymentProvider,
-  createPaymentProvider,
-} from '../lib/handlers/shared/providers/payment';
+import { MockPaymentProvider, StripePaymentProvider, createPaymentProvider } from '../lib/handlers/shared/payment';
 
 describe('Stripe Payment Service & Provider Unit Tests (No Deployment Required)', () => {
   test('createPaymentProvider creates MockPaymentProvider when type is "mock"', () => {

@@ -8,6 +8,7 @@ export interface SsmPaths {
   iot: {
     endpoint: string;
     lockerThingName: string;
+    scannerThingName: string;
   };
 }
 
@@ -15,6 +16,7 @@ export interface IotDeviceTopics {
   scan?: string;
   feedback?: string;
   command?: string;
+  heartbeat?: string;
 }
 
 export interface IotDevice {
@@ -39,6 +41,10 @@ export interface IotFleet {
     name: string;
     sql: string;
   };
+  heartbeatTopicRule: {
+    name: string;
+    sql: string;
+  };
   devices: IotDevice[];
 }
 
@@ -48,6 +54,7 @@ export const iotFleet: IotFleet = rawIotFleet as unknown as IotFleet;
 export const SSM_PATH_STRIPE_SECRET_KEY = ssmPaths.stripe.secretKey;
 export const SSM_IOT_ENDPOINT_PARAM = ssmPaths.iot.endpoint;
 export const SSM_LOCKER_THING_NAME_PARAM = ssmPaths.iot.lockerThingName;
+export const SSM_SCANNER_THING_NAME_PARAM = ssmPaths.iot.scannerThingName;
 
 export function resolveDeviceTopic(device: IotDevice, topicKey: keyof IotDeviceTopics): string {
   return formatDeviceTopic(getDeviceTopicTemplate(device, topicKey), device.thingName);

@@ -1,14 +1,14 @@
 import { useEffect, useMemo } from 'react';
 import { useAdminDispatch, useAdminSelector } from '../store';
 import {
-    fetchActivityThunk,
-    fetchHardwareDevicesThunk,
-    selectHardwareActivityState,
-    setPageSize,
-    setSearchFilter,
-    setSelectedDeviceId,
-    setSelectedLocationId,
-    setTimeWindow,
+  fetchActivityThunk,
+  fetchHardwareDevicesThunk,
+  selectHardwareActivityState,
+  setPageSize,
+  setSearchFilter,
+  setSelectedDeviceId,
+  setSelectedLocationId,
+  setTimeWindow,
 } from '../store/hardwareActivitySlice';
 
 export function HardwareActivityCard() {
@@ -288,7 +288,8 @@ export function HardwareActivityCard() {
             ← Previous
           </button>
           <span className="text-xs text-slate-500">
-            {activityData?.items?.length || 0} records loaded · {activityData?.has_more ? 'more available' : 'end of stream'}
+            {activityData?.items?.length || 0} records loaded ·{' '}
+            {activityData?.has_more ? 'more available' : 'end of stream'}
           </span>
           <button
             type="button"

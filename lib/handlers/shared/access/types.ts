@@ -1,18 +1,3 @@
-/** Identifies the source representation supplied by a scanner reader. */
-export type ScanContentKind = 'text' | 'url' | 'image' | 'vendor-payload';
-
-/** Opaque normalized input produced by a scanner reader. */
-export interface ScanContent {
-  kind: ScanContentKind;
-  value: string;
-}
-
-/** Scan input accepted by the access-entry boundary. Trusted physical metadata is resolved server-side. */
-export interface ScanEnvelope {
-  content: ScanContent;
-  observed_at: string;
-}
-
 /** The lifecycle state of a registered scanner. */
 export type ScannerStatus = 'pending-enrollment' | 'active' | 'disabled';
 

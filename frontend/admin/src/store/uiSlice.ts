@@ -1,7 +1,9 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
+export type AdminTab = 'management' | 'activity' | 'lockerActivity';
+
 export interface UIState {
-  activeTab: 'management' | 'activity';
+  activeTab: AdminTab;
 }
 
 const initialState: UIState = {
@@ -12,7 +14,7 @@ const uiSlice = createSlice({
   name: 'ui',
   initialState,
   reducers: {
-    setActiveTab: (state, action: PayloadAction<'management' | 'activity'>) => {
+    setActiveTab: (state, action: PayloadAction<AdminTab>) => {
       state.activeTab = action.payload;
     },
   },

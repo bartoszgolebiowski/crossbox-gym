@@ -4,6 +4,7 @@
   },
   "iot": {
     "endpoint": "/crossbox/iot/endpoint",
-    "lockerThingName": "/crossbox/iot/locker-thing-name"
+    "lockerThingName": "/crossbox/iot/locker-thing-name",
+    "scannerThingName": "/crossbox/iot/scanner-thing-name"
   }
 }

@@ -30,7 +30,3 @@ export const changeLocationFormField = (field: keyof LocationFormState, value: s
   type: 'CHANGE_FIELD',
   payload: { field, value },
 });
-
-export const resetLocationForm = (): LocationFormAction => ({
-  type: 'RESET_FORM',
-});

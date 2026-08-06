@@ -1,9 +1,11 @@
+import { useEffect, useRef } from 'react';
 import { AuthCard } from './components/AuthCard';
 import { Footer } from './components/Footer';
 import { HardwareActivityCard } from './components/HardwareActivityCard';
 import { Header } from './components/Header';
 import { HmacRotationCard } from './components/HmacRotationCard';
 import { LocationManagerCard } from './components/LocationManagerCard';
+import { LockerActivityCard } from './components/LockerActivityCard';
 import { MemberOverrideCard } from './components/MemberOverrideCard';
 import { RemoteOpsCard } from './components/RemoteOpsCard';
 import { useAdminDispatch, useAdminSelector } from './store';
@@ -11,12 +13,53 @@ import { adminLogout, selectAdminEmail, selectAdminToken } from './store/authSli
 import { retryAdminConfigThunk, selectAdminConfig } from './store/configSlice';
 import { selectActiveTab, setActiveTab } from './store/uiSlice';
 
+const VALID_TABS = ['management', 'activity', 'lockerActivity'] as const;
+type ValidTab = (typeof VALID_TABS)[number];
+
+function isValidTab(value: string | null): value is ValidTab {
+  return VALID_TABS.includes(value as ValidTab);
+}
+
+function readTabFromUrl(): ValidTab {
+  if (typeof window === 'undefined') return 'management';
+  const params = new URLSearchParams(window.location.search);
+  const tab = params.get('tab');
+  return isValidTab(tab) ? tab : 'management';
+}
+
+function writeTabToUrl(tab: ValidTab) {
+  if (typeof window === 'undefined') return;
+  const url = new URL(window.location.href);
+  if (tab === 'management') {
+    url.searchParams.delete('tab');
+  } else {
+    url.searchParams.set('tab', tab);
+  }
+  window.history.replaceState({}, '', url.toString());
+}
+
 export default function App() {
   const dispatch = useAdminDispatch();
   const config = useAdminSelector(selectAdminConfig);
   const token = useAdminSelector(selectAdminToken);
   const email = useAdminSelector(selectAdminEmail);
   const activeTab = useAdminSelector(selectActiveTab);
+
+  // Initialise tab from URL on first load
+  const initialisedFromUrl = useRef(false);
+  useEffect(() => {
+    if (initialisedFromUrl.current) return;
+    initialisedFromUrl.current = true;
+    const tabFromUrl = readTabFromUrl();
+    if (tabFromUrl !== activeTab) {
+      dispatch(setActiveTab(tabFromUrl));
+    }
+  }, [activeTab, dispatch]);
+
+  // Keep URL in sync with active tab
+  useEffect(() => {
+    writeTabToUrl(activeTab);
+  }, [activeTab]);
 
   const handleLogout = () => {
     dispatch(adminLogout());
@@ -115,7 +158,27 @@ export default function App() {
                     d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
                   />
                 </svg>
-                Scanner & Lock Activity Audit
+                Scanner Activity Audit
+              </button>
+
+              <button
+                type="button"
+                onClick={() => dispatch(setActiveTab('lockerActivity'))}
+                className={`pb-3 px-1 text-sm font-bold border-b-2 transition flex items-center gap-2 ${
+                  activeTab === 'lockerActivity'
+                    ? 'border-indigo-700 text-indigo-800'
+                    : 'border-transparent text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                  />
+                </svg>
+                Locker Activity Audit
               </button>
             </div>
 
@@ -131,6 +194,8 @@ export default function App() {
                   <MemberOverrideCard />
                 </div>
               </div>
+            ) : activeTab === 'lockerActivity' ? (
+              <LockerActivityCard />
             ) : (
               <HardwareActivityCard />
             )}

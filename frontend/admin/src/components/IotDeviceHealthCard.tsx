@@ -46,8 +46,7 @@ export const IotDeviceHealthCard: React.FC<IotDeviceHealthCardProps> = ({ locati
     for (const dev of devicesList) {
       if (dev.device_id && !seen.has(dev.device_id)) {
         seen.add(dev.device_id);
-        const typeLabel =
-          dev.type === 'lock' ? 'Locker Relay' : dev.type === 'scanner' ? 'QR Scanner' : 'IoT Hardware';
+        const typeLabel = dev.type === 'lock' ? 'Locker Relay' : dev.type === 'scanner' ? 'QR Scanner' : 'IoT Hardware';
         list.push({
           id: dev.device_id,
           name: dev.name || `Device ${dev.device_id}`,

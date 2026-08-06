@@ -6,6 +6,10 @@
     "name": "CrossboxQrScannerScanRule",
     "sql": "SELECT *, topic(3) as scannerId FROM 'gym/scanners/+/scan'"
   },
+  "heartbeatTopicRule": {
+    "name": "CrossboxDeviceHeartbeatRule",
+    "sql": "SELECT *, topic(3) as thingName FROM 'gym/devices/+/heartbeat'"
+  },
   "devices": [
     {
       "id": "qr-scanner",
@@ -18,7 +22,11 @@
       "isCertPrimary": true,
       "topics": {
         "scan": "gym/scanners/{thingName}/scan",
-        "feedback": "gym/scanners/{thingName}/feedback"
+        "feedback": "gym/scanners/{thingName}/feedback",
+        "heartbeat": "gym/devices/{thingName}/heartbeat"
+      },
+      "ssm": {
+        "thingNameParameter": true
       },
       "outputs": {
         "thingName": "ThingNameOutput",

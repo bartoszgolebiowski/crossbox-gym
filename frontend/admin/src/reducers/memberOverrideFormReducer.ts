@@ -36,7 +36,3 @@ export const changeMemberOverrideFormField = (
   type: 'CHANGE_FIELD',
   payload: { field, value },
 });
-
-export const resetMemberOverrideForm = (): MemberOverrideFormAction => ({
-  type: 'RESET_FORM',
-});

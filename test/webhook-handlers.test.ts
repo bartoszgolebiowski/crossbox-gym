@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { IdentityProvider } from '../lib/handlers/shared/providers';
+import { IdentityProvider } from '../lib/handlers/shared/identity';
 import { SubscriptionItem } from '../lib/handlers/shared/types';
 import { WebhookContext } from '../lib/handlers/stripe-webhook/context';
 import { handleCheckoutSessionCompleted } from '../lib/handlers/stripe-webhook/events/checkout-session-completed';

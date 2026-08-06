@@ -1,6 +1,6 @@
 import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
-import { ddb } from '../shared/database';
+import { ddb } from '../shared/db';
 import { withHandler } from '../shared/http';
 import { loadAuthEnvironment } from './environment';
 import { CognitoAuthIdentityProvider } from './identity-provider';

@@ -1,5 +1,5 @@
 import { ValidationError } from '../shared/http';
-import { PaymentProvider } from '../shared/providers';
+import { PaymentProvider } from '../shared/payment';
 
 export interface CreateCheckoutRequest {
   priceId?: string;

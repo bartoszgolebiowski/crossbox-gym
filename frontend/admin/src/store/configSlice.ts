@@ -75,6 +75,5 @@ const configSlice = createSlice({
 });
 
 export const selectAdminConfig = (state: { config: ConfigState }) => state.config;
-export const selectIsAdminConfigLoaded = (state: { config: ConfigState }) => state.config.isLoaded;
 
 export default configSlice.reducer;
