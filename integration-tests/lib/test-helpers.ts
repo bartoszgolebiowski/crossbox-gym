@@ -10,7 +10,7 @@ import {
 } from '@aws-sdk/client-cognito-identity-provider';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda';
-import { BatchWriteCommand, DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { BatchWriteCommand, DeleteCommand, DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { createHmac, randomBytes } from 'crypto';
 import { getDeviceByType } from '../../lib/config';
 import { resolveIntegrationTestEnv } from './env';
@@ -536,4 +536,22 @@ export async function scanMockDevice(
   }
 
   return resolved;
+}
+
+export async function cleanupHealthCheckRecords(
+  context: IntegrationTestContext,
+  devicePresenceTableName: string,
+  thingName: string
+): Promise<void> {
+  if (context?.region && devicePresenceTableName && thingName) {
+    const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({ region: context.region }));
+    await ddb
+      .send(
+        new DeleteCommand({
+          TableName: devicePresenceTableName,
+          Key: { thingName },
+        })
+      )
+      .catch(() => undefined);
+  }
 }

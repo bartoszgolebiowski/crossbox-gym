@@ -94,6 +94,7 @@ test.describe('Deployed CrossBox browser flows', () => {
     await page.getByRole('button', { name: 'Register' }).click();
     await page.locator('#register-email').fill(registeredEmail);
     await page.locator('#register-password').fill(browserPassword);
+    await page.locator('#register-confirm-password').fill(browserPassword);
     await page.getByRole('button', { name: 'Create Member Account' }).click();
 
     await expect(page.getByText('Turnstile Access Pass', { exact: true })).toBeVisible();
@@ -141,18 +142,15 @@ test.describe('Deployed CrossBox browser flows', () => {
     await page.locator('#admin-password').fill(admin.password);
     await page.getByRole('button', { name: 'Sign In to Console' }).click();
 
-    await expect(page.getByText('Location Management')).toBeVisible();
+    await expect(page.getByText('Location & Facility Management')).toBeVisible();
     await page.locator('#facility-name').fill(locationName);
     await page.locator('#facility-address').fill(address);
-    await page.getByRole('button', { name: 'Create Facility' }).click();
+    await page.getByRole('button', { name: 'Create Facility Location' }).click();
 
-    const output = page.locator('pre').filter({ hasText: locationName });
-    await expect(output).toBeVisible();
-    const location = JSON.parse((await output.textContent()) || '{}') as Omit<TestLocationRecord, 'locationId'> & {
-      locationId?: string;
-    };
-    const locationId = location.locationId || location.PK?.replace(/^LOC#/, '');
-    createdLocation = { ...location, locationId } as TestLocationRecord;
+    const createdRow = page.getByRole('row').filter({ hasText: locationName }).first();
+    await expect(createdRow).toBeVisible();
+    const locationId = ((await createdRow.getByRole('cell').nth(1).textContent()) || '').trim();
+    createdLocation = { locationId, name: locationName, address } as TestLocationRecord;
     expect(createdLocation.locationId).toBeTruthy();
   });
 });
