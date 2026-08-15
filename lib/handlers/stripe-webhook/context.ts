@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AuthRepository, DynamoDbAuthRepository } from '../auth/repository';
 import { ddb } from '../shared/db';
 import { IdentityProvider } from '../shared/identity';
 import { CognitoIdentityProvider, MockIdentityProvider } from '../shared/identity/cognito-identity-provider';
@@ -32,6 +33,7 @@ export interface WebhookContext {
   frontendUrl: string;
   identityProvider: IdentityProvider;
   billingRepository: BillingRepository;
+  authRepository: AuthRepository;
 }
 
 export function createWebhookContext(): WebhookContext {
@@ -43,5 +45,6 @@ export function createWebhookContext(): WebhookContext {
     frontendUrl: env.FRONTEND_URL,
     identityProvider: createIdentityProvider(env.IDENTITY_PROVIDER),
     billingRepository: new DynamoDbBillingRepository(ddb, mainTableName),
+    authRepository: new DynamoDbAuthRepository(ddb, mainTableName),
   };
 }

@@ -71,6 +71,36 @@ export const confirmForgotPasswordThunk = createAsyncThunk(
   }
 );
 
+export const verifyMagicLinkThunk = createAsyncThunk(
+  'auth/verifyMagicLink',
+  async (payload: { token: string; email: string }, { rejectWithValue }) => {
+    try {
+      const data = await apiClient.get<{ verified: boolean; message?: string }>(
+        `/auth/magic-link/verify?token=${encodeURIComponent(payload.token)}&email=${encodeURIComponent(payload.email)}`
+      );
+      if (data.verified) {
+        return { verified: true, email: payload.email };
+      }
+      return rejectWithValue(data.message || 'Verification failed.');
+    } catch (err: any) {
+      return rejectWithValue(err.message || 'Magic link verification error.');
+    }
+  }
+);
+
+export const setPasswordWithTokenThunk = createAsyncThunk(
+  'auth/setPasswordWithToken',
+  async (payload: { email: string; token: string; newPassword: string }, { dispatch, rejectWithValue }) => {
+    try {
+      await apiClient.post('/auth/reset-password', payload);
+      const loginRes = await dispatch(loginThunk({ email: payload.email, password: payload.newPassword })).unwrap();
+      return loginRes;
+    } catch (err: any) {
+      return rejectWithValue(err.message || 'Password creation failed.');
+    }
+  }
+);
+
 const authSlice = createSlice({
   name: 'auth',
   initialState,
@@ -141,6 +171,20 @@ const authSlice = createSlice({
         state.successMessage = action.payload;
       })
       .addCase(confirmForgotPasswordThunk.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+      .addCase(setPasswordWithTokenThunk.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+        state.successMessage = null;
+      })
+      .addCase(setPasswordWithTokenThunk.fulfilled, (state, action) => {
+        state.loading = false;
+        state.token = action.payload.token;
+        state.email = action.payload.email;
+      })
+      .addCase(setPasswordWithTokenThunk.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload as string;
       });

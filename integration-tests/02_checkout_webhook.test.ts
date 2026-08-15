@@ -22,7 +22,6 @@ describe('Checkout & EventBridge Lifecycle Test Suite', () => {
       ENTRY_LOGS_TABLE_NAME: context.entryLogsTableName,
       AUDIT_LOGS_TABLE_NAME: context.auditLogsTableName,
       STRIPE_SECRET_KEY: stripeSecretKey,
-      STRIPE_SANDBOX: 'true',
     };
   });
 
@@ -185,5 +184,76 @@ describe('Checkout & EventBridge Lifecycle Test Suite', () => {
     });
 
     assert.equal(res.received, true);
+  });
+
+  test('New user checkout session generates invitation token and permits password setup via /auth/reset-password', async () => {
+    const testEmail = `new-onboard-${Date.now()}@example.com`;
+    const subId = `sub_onboard_${Date.now()}`;
+    const customerId = `cus_onboard_${Date.now()}`;
+
+    // 1. Process checkout completed webhook for a new user
+    const resWebhook = await stripeEventHandler({
+      source: 'aws.partner/stripe.com',
+      'detail-type': 'checkout.session.completed',
+      detail: {
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            customer_details: { email: testEmail },
+            subscription: subId,
+            customer: customerId,
+          },
+        },
+      },
+    });
+    assert.equal(resWebhook.received, true);
+
+    // 2. Request a magic link to obtain a valid token for this user
+    const magicRes = await fetch(`${context.apiUrl}/auth/magic-link`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: testEmail }),
+    });
+    assert.equal(magicRes.status, 200);
+    const magicData = (await magicRes.json()) as { magicUrl: string };
+    assert.ok(magicData.magicUrl);
+
+    const urlObj = new URL(magicData.magicUrl);
+    const token = urlObj.searchParams.get('token');
+    assert.ok(token);
+
+    // 3. Verify magic link token via GET /auth/magic-link/verify
+    const verifyRes = await fetch(
+      `${context.apiUrl}/auth/magic-link/verify?token=${encodeURIComponent(token)}&email=${encodeURIComponent(testEmail)}`
+    );
+    assert.equal(verifyRes.status, 200);
+    const verifyData = (await verifyRes.json()) as { verified: boolean };
+    assert.equal(verifyData.verified, true);
+
+    // 4. Set password using token via POST /auth/reset-password
+    const newPassword = 'NewUserSecurePass1!';
+    const resetRes = await fetch(`${context.apiUrl}/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: testEmail,
+        token,
+        newPassword,
+      }),
+    });
+    assert.equal(resetRes.status, 200);
+
+    // 5. Verify the user can log in with their newly set password
+    const loginRes = await fetch(`${context.apiUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: testEmail,
+        password: newPassword,
+      }),
+    });
+    assert.equal(loginRes.status, 200);
+    const loginData = (await loginRes.json()) as { idToken: string };
+    assert.ok(loginData.idToken);
   });
 });

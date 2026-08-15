@@ -106,6 +106,19 @@ export class CrossboxDataStack extends cdk.Stack {
       removalPolicy,
     });
 
+    // Tag tables for discovery by the external backup/ app; DevicePresence is ephemeral and intentionally excluded.
+    if (!isTest) {
+      const tagTableForBackup = (table: dynamodb.Table, logicalName: string) => {
+        cdk.Tags.of(table).add('crossbox-gym-backup', 'true');
+        cdk.Tags.of(table).add('crossbox-gym-table', logicalName);
+        cdk.Tags.of(table).add('crossbox-gym-project', 'crossbox-gym');
+      };
+
+      tagTableForBackup(this.mainTable, 'MainTable');
+      tagTableForBackup(this.entryLogsTable, 'EntryLogs');
+      tagTableForBackup(this.auditLogsTable, 'AuditLogs');
+    }
+
     // --- 2. Cognito User Pool & Client ---
     this.userPool = new cognito.UserPool(this, 'UserPool', {
       selfSignUpEnabled: false,

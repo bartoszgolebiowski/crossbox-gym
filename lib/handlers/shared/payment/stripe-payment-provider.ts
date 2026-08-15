@@ -27,13 +27,13 @@ export class StripePaymentProvider implements PaymentProvider {
         : [
             {
               price_data: {
-                currency: 'usd',
+                currency: 'pln',
                 product_data: {
                   name: 'CrossBox Gym Monthly All-Access Membership',
                   description: 'Unlimited access to all CrossBox Gym locations, turnstile keycard, and mobile app.',
                 },
                 recurring: { interval: 'month' },
-                unit_amount: 4900,
+                unit_amount: 13900,
                 tax_behavior: 'exclusive',
               },
               quantity: 1,
@@ -56,13 +56,13 @@ export class StripePaymentProvider implements PaymentProvider {
         sessionParams.line_items = [
           {
             price_data: {
-              currency: 'usd',
+              currency: 'pln',
               product_data: {
                 name: 'CrossBox Gym Monthly All-Access Membership',
                 description: 'Unlimited access to all CrossBox Gym locations, turnstile keycard, and mobile app.',
               },
               recurring: { interval: 'month' },
-              unit_amount: 4900,
+              unit_amount: 13900,
               tax_behavior: 'exclusive',
             },
             quantity: 1,

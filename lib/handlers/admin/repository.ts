@@ -49,7 +49,6 @@ export interface ActivityAggregation {
   location_id: string;
   total_count: number;
   success_count: number;
-  unlock_count: number;
   denied_count: number;
   hourly_stats: Record<string, number>;
   daily_stats: Record<string, number>;
@@ -193,20 +192,29 @@ export class DynamoDbAdminRepository implements AdminRepository {
     options?: ActivityPaginationOptions
   ): Promise<ActivityAggregation> {
     const pageLimit = Math.min(Math.max(options?.limit || 20, 1), 100);
+    const maxEvaluated = 1000;
 
-    let exclusiveStartKey: Record<string, unknown> | undefined;
+    let cursorSk: string | undefined;
     if (options?.nextToken) {
       try {
-        exclusiveStartKey = JSON.parse(Buffer.from(options.nextToken, 'base64').toString('utf8'));
+        const parsed = JSON.parse(Buffer.from(options.nextToken, 'base64').toString('utf8'));
+        cursorSk = typeof parsed.sk === 'string' ? parsed.sk : undefined;
       } catch {
-        exclusiveStartKey = undefined;
+        cursorSk = undefined;
       }
     }
 
-    const filterParts: string[] = [];
+    const filterParts = ['(location_id = :locId OR location_id = :locPk)', 'begins_with(SK, :skPrefix)'];
     const expressionValues: Record<string, unknown> = {
       ':locId': locationId,
+      ':locPk': `LOC#${locationId}`,
+      ':skPrefix': 'ENTRY#',
     };
+
+    if (cursorSk) {
+      filterParts.push('SK < :cursorSk');
+      expressionValues[':cursorSk'] = cursorSk;
+    }
 
     if (scannerId && scannerId !== 'all') {
       filterParts.push('(scanner_id = :scannerId OR device_id = :scannerId)');
@@ -220,32 +228,51 @@ export class DynamoDbAdminRepository implements AdminRepository {
 
     const filterExpression = filterParts.join(' AND ');
 
-    const queryResult = await this.client.send(
-      new QueryCommand({
-        TableName: this.entryLogsTableName,
-        IndexName: 'LocationIndex',
-        KeyConditionExpression: 'location_id = :locId',
-        FilterExpression: filterExpression || undefined,
-        ExpressionAttributeValues: expressionValues,
-        ScanIndexForward: false,
-        Limit: pageLimit,
-        ExclusiveStartKey: exclusiveStartKey,
-      })
-    );
+    const matchedItems: ActivityItem[] = [];
+    let exclusiveStartKey: Record<string, unknown> | undefined;
+    let lastEvaluatedKey: Record<string, unknown> | undefined;
+    let evaluatedCount = 0;
 
-    const items = (queryResult.Items || []) as ActivityItem[];
+    do {
+      const batchLimit = Math.min(pageLimit * 5, maxEvaluated - evaluatedCount, 100);
+      if (batchLimit <= 0) break;
+
+      const scanResult = await this.client
+        .send(
+          new ScanCommand({
+            TableName: this.entryLogsTableName,
+            FilterExpression: filterExpression,
+            ExpressionAttributeValues: expressionValues,
+            Limit: batchLimit,
+            ExclusiveStartKey: exclusiveStartKey,
+          })
+        )
+        .catch(() => ({ Items: [], LastEvaluatedKey: undefined, ScannedCount: 0 }));
+
+      const batchItems = (scanResult.Items || []) as ActivityItem[];
+      evaluatedCount += scanResult.ScannedCount || 0;
+      lastEvaluatedKey = scanResult.LastEvaluatedKey;
+      matchedItems.push(...batchItems);
+
+      if (matchedItems.length >= pageLimit) {
+        break;
+      }
+
+      exclusiveStartKey = lastEvaluatedKey;
+    } while (lastEvaluatedKey && evaluatedCount < maxEvaluated);
+
+    matchedItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const items = matchedItems.slice(0, pageLimit);
 
     const hourly_stats: Record<string, number> = {};
     const daily_stats: Record<string, number> = {};
     const weekly_stats: Record<string, number> = {};
     let successCount = 0;
     let deniedCount = 0;
-    let unlockCount = 0;
 
     for (const item of items) {
       if (item.result === 'success') successCount++;
-      else if (item.result === 'denied') deniedCount++;
-      else if (item.result === 'unlock') unlockCount++;
+      else deniedCount++;
 
       const date = new Date(item.timestamp);
       if (isNaN(date.getTime())) continue;
@@ -262,22 +289,22 @@ export class DynamoDbAdminRepository implements AdminRepository {
       weekly_stats[weekKey] = (weekly_stats[weekKey] || 0) + 1;
     }
 
-    const nextToken = queryResult.LastEvaluatedKey
-      ? Buffer.from(JSON.stringify(queryResult.LastEvaluatedKey)).toString('base64')
-      : undefined;
+    const nextToken =
+      items.length > 0
+        ? Buffer.from(JSON.stringify({ sk: (items[items.length - 1].SK as string) || '' })).toString('base64')
+        : undefined;
 
     return {
       location_id: locationId,
       total_count: items.length,
       success_count: successCount,
-      unlock_count: unlockCount,
       denied_count: deniedCount,
       hourly_stats,
       daily_stats,
       weekly_stats,
       items,
       next_token: nextToken,
-      has_more: queryResult.LastEvaluatedKey !== undefined,
+      has_more: matchedItems.length > pageLimit || (items.length === pageLimit && lastEvaluatedKey !== undefined),
     };
   }
 

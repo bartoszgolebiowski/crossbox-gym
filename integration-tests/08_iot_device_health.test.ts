@@ -8,12 +8,12 @@ import { EdgeIotDevice } from './lib/edge-iot-device.ts';
 import { resolveIntegrationTestEnv } from './lib/env';
 import { requireOutput } from './lib/stack-outputs.ts';
 import {
-    cleanupHealthCheckRecords,
-    cleanupTestLocation,
-    cleanupTestUser,
-    createTestLocation,
-    createTestUserSession,
-    getTestContext,
+  cleanupHealthCheckRecords,
+  cleanupTestLocation,
+  cleanupTestUser,
+  createTestLocation,
+  createTestUserSession,
+  getTestContext,
 } from './lib/test-helpers.ts';
 import type { IntegrationTestContext, TestLocationRecord, TestUserSession } from './lib/types.ts';
 

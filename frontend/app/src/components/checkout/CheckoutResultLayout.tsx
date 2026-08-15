@@ -29,12 +29,12 @@ export const CheckoutResultLayout: React.FC<CheckoutResultLayoutProps> = ({
 
   return (
     <div className="min-h-screen bg-canvas px-4 flex items-center justify-center text-ink">
-      <section className="max-w-md w-full rounded-lg border border-line bg-paper p-10 shadow-xl shadow-ink/5 text-center">
-        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+      <section className="max-w-md w-full rounded-card border border-line bg-paper p-10 shadow-card text-center">
+        <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-success/10 text-success">
           {icon}
         </div>
 
-        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700">{eyebrow}</p>
+        <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-success">{eyebrow}</p>
         <h1 className="mt-3 font-[family-name:var(--font-heading)] text-3xl font-bold tracking-tight">{title}</h1>
         <p className="mt-2 text-sm leading-6 text-muted">{message}</p>
 

@@ -1,0 +1,39 @@
+@import 'tailwindcss';
+
+/* Single source of truth for design tokens, shared by admin, app, and (future) hero. */
+@theme {
+  /* Główne kolory akcji i marki – kosmiczny fiolet/neonowa energia i mistyczny jadeit */
+  --color-primary: #7e22ce;
+  --color-primary-hover: #9333ea;
+  --color-secondary: #0d9488;
+  --color-secondary-hover: #14b8a6;
+  --color-accent: #ea580c;
+
+  /* Kolory statusowe – inspirowane florą, zachodzącym słońcem i kosmiczną energią */
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-danger: #be123c;
+  --color-danger-hover: #e11d48;
+  --color-info: #4338ca;
+
+  /* Tła, teksty i obramowania – barwy obsydianu, rzeźbionego piaskowca i wapienia */
+  --color-ink: #14111d;
+  --color-muted: #6f6779;
+  --color-paper: #fdfaf4;
+  --color-canvas: #f4ede0;
+  --color-line: #dcd0be;
+
+  --font-heading: 'Space Grotesk', sans-serif;
+  --font-body: 'Outfit', sans-serif;
+
+  --radius-control: 0.375rem;
+  --radius-card: 0.5rem;
+  --radius-pill: 9999px;
+
+  --shadow-card: 0 20px 25px -5px rgb(20 17 29 / 0.07), 0 8px 10px -6px rgb(20 17 29 / 0.05);
+  --shadow-control: 0 1px 2px 0 rgb(20 17 29 / 0.05);
+
+  --spacing-card-padding: 1.5rem;
+  --spacing-control-x: 0.875rem;
+  --spacing-control-y: 0.75rem;
+}

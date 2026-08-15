@@ -4,6 +4,9 @@
   "scripts": {
     "build": "npm run build:ui && tsc",
     "build:ui": "node scripts/build-ui.mjs",
+    "dev:hero": "vite --config frontend/hero/vite.config.ts",
+    "dev:app": "vite --config frontend/app/vite.config.ts",
+    "dev:admin": "vite --config frontend/admin/vite.config.ts",
     "cdk:synth": "cdk synth",
     "deploy:ui": "node scripts/deploy-ui.mjs",
     "deploy": "node scripts/deploy.mjs",
@@ -12,7 +15,7 @@
     "format": "prettier --write \"{bin,lib,scripts,frontend,test,integration-tests,ui-tests}/**/*.{css,html,js,mjs,ts,tsx}\" \"*.{json,mjs,ts}\" .prettierrc.json",
     "format:check": "prettier --check \"{bin,lib,scripts,frontend,test,integration-tests,ui-tests}/**/*.{css,html,js,mjs,ts,tsx}\" \"*.{json,mjs,ts}\" .prettierrc.json",
     "lint": "eslint --max-warnings=0 bin lib scripts frontend test integration-tests ui-tests",
-    "typecheck": "tsc --noEmit && tsc --noEmit --project frontend/app/tsconfig.json && tsc --noEmit --project frontend/admin/tsconfig.json",
+    "typecheck": "tsc --noEmit && tsc --noEmit --project frontend/app/tsconfig.json && tsc --noEmit --project frontend/admin/tsconfig.json && tsc --noEmit --project frontend/hero/tsconfig.json",
     "test": "npm run test:unit",
     "test:unit": "tsx --test test/**/*.test.ts",
     "test:coverage": "c8 --all --extension .ts --include=lib/handlers/shared/** --reporter=text --reporter=lcov tsx --test test/**/*.test.ts",

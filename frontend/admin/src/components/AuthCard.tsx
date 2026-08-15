@@ -7,9 +7,9 @@ import {
 import { useAdminDispatch, useAdminSelector } from '../store';
 import { adminLoginThunk, selectAdminAuth } from '../store/authSlice';
 
-const fieldLabelClass = 'mb-2 block text-sm font-medium text-slate-700';
+const fieldLabelClass = 'mb-2 block text-sm font-medium text-ink/80';
 const fieldClass =
-  'w-full rounded-md border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 transition focus:border-teal-700 focus:outline-none focus:ring-4 focus:ring-teal-700/10';
+  'w-full rounded-control border border-line bg-paper px-3.5 py-3 text-sm text-ink shadow-control placeholder:text-ink/40 transition focus:border-primary focus:outline-none focus:ring-4 focus:ring-primary/10';
 
 export const AuthCard: React.FC = () => {
   const dispatch = useAdminDispatch();
@@ -29,10 +29,10 @@ export const AuthCard: React.FC = () => {
 
   return (
     <div className="mx-auto w-full max-w-lg">
-      <div className="rounded-lg border border-slate-300 bg-white p-6 shadow-xl shadow-slate-900/5 sm:p-8">
+      <div className="rounded-card border border-line bg-paper p-6 shadow-card sm:p-8">
         {/* Header */}
         <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-10 h-10 rounded-md bg-teal-50 text-teal-700 border border-teal-200 mb-3">
+          <div className="inline-flex items-center justify-center w-10 h-10 rounded-control bg-primary/10 text-primary border border-primary/30 mb-3">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
                 strokeLinecap="round"
@@ -42,12 +42,12 @@ export const AuthCard: React.FC = () => {
               />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-slate-900 tracking-tight">Admin authentication</h2>
-          <p className="mt-1 text-sm text-slate-500">Sign in with administrator credentials</p>
+          <h2 className="text-xl font-bold text-ink tracking-tight">Logowanie Administratora</h2>
+          <p className="mt-1 text-sm text-muted">Zaloguj się danymi konta administratora</p>
         </div>
 
         {error && (
-          <div className="mb-5 rounded-md border border-red-200 bg-red-50 p-3 text-sm leading-relaxed text-red-800">
+          <div className="mb-5 rounded-control border border-danger/30 bg-danger/10 p-3 text-sm leading-relaxed text-danger">
             {error}
           </div>
         )}
@@ -55,13 +55,13 @@ export const AuthCard: React.FC = () => {
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label className={fieldLabelClass} htmlFor="admin-email">
-              Admin Email
+              E-mail Administratora
             </label>
             <input
               id="admin-email"
               type="email"
               className={fieldClass}
-              placeholder="admin@crossboxgym.com"
+              placeholder="admin@crossboxgym.pl"
               value={inputEmail}
               onChange={(e) => handleFieldChange('inputEmail', e.target.value)}
               autoComplete="email"
@@ -71,7 +71,7 @@ export const AuthCard: React.FC = () => {
 
           <div>
             <label className={fieldLabelClass} htmlFor="admin-password">
-              Password
+              Hasło
             </label>
             <input
               id="admin-password"
@@ -88,9 +88,9 @@ export const AuthCard: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="mt-1 flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-teal-700 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-1 flex w-full cursor-pointer items-center justify-center gap-2 rounded-control bg-primary px-4 py-3 text-sm font-semibold text-white shadow-control transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? 'Authenticating Console...' : 'Sign In to Console'}
+            {loading ? 'Weryfikacja uprawnień...' : 'Zaloguj się do Panelu'}
           </button>
         </form>
       </div>

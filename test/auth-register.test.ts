@@ -10,7 +10,6 @@ const mockEnv = {
   ENTRY_LOGS_TABLE_NAME: 'CrossboxGymEntryLogsTable',
   AUDIT_LOGS_TABLE_NAME: 'CrossboxGymAuditLogsTable',
   STRIPE_SECRET_KEY: 'sk_test_mock',
-  STRIPE_SANDBOX: 'true',
 };
 
 describe('Auth Registration & Password Reset Unit Tests', () => {

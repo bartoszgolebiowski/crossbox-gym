@@ -35,7 +35,6 @@ describe('CrossBox Gym Integration Tests', () => {
       ENTRY_LOGS_TABLE_NAME: testContext.entryLogsTableName,
       AUDIT_LOGS_TABLE_NAME: testContext.auditLogsTableName,
       STRIPE_SECRET_KEY: stripeSecretKey,
-      STRIPE_SANDBOX: 'true',
     };
   });
 

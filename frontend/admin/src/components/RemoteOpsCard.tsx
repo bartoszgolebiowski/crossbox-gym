@@ -9,9 +9,9 @@ import {
   selectRemoteOutput,
 } from '../store/adminSlice';
 
-const fieldLabelClass = 'mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-600';
+const fieldLabelClass = 'mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink/70';
 const selectClass =
-  'w-full rounded-md border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition focus:border-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-700/20 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed cursor-pointer';
+  'w-full rounded-control border border-line bg-paper px-3.5 py-3 text-sm text-ink shadow-control transition focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:bg-line/20 disabled:text-ink/40 disabled:cursor-not-allowed cursor-pointer';
 
 export const RemoteOpsCard: React.FC = () => {
   const dispatch = useAdminDispatch();
@@ -74,20 +74,20 @@ export const RemoteOpsCard: React.FC = () => {
   };
 
   return (
-    <div className="bg-white border border-slate-300 rounded-lg p-6 shadow-xl shadow-slate-900/5 flex flex-col justify-between h-full">
+    <div className="bg-paper border border-line rounded-card p-6 shadow-card flex flex-col justify-between h-full">
       <div>
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2.5 font-bold text-base text-slate-900">
-            <span className="rounded-lg border border-amber-200 bg-amber-50 p-2 text-amber-700">
+          <div className="flex items-center gap-2.5 font-bold text-base text-ink">
+            <span className="rounded-card border border-accent/30 bg-accent/10 p-2 text-accent">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </span>
-            <span>Remote Gate Unlock</span>
+            <span>Zdalne Otwieranie Bramki</span>
           </div>
-          <span className="px-2 py-0.5 rounded-full text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200">
-            Hardware Relays
+          <span className="px-2 py-0.5 rounded-pill text-xs font-medium text-accent bg-accent/10 border border-accent/30">
+            Przekaźniki IoT
           </span>
         </div>
 
@@ -95,7 +95,7 @@ export const RemoteOpsCard: React.FC = () => {
         {locationsList.length > 0 && (
           <div className="mb-4">
             <label className={fieldLabelClass} htmlFor="remote-location-select">
-              Active Location
+              Wybrany Obiekt
             </label>
             <select
               id="remote-location-select"
@@ -118,7 +118,7 @@ export const RemoteOpsCard: React.FC = () => {
         {/* Lock Dropdown Select */}
         <div className="mb-5">
           <label className={fieldLabelClass} htmlFor="turnstile-device-id">
-            Target Lock / Turnstile
+            Bramka Wejściowa / Zamek
           </label>
           <select
             id="turnstile-device-id"
@@ -135,7 +135,7 @@ export const RemoteOpsCard: React.FC = () => {
               ))
             ) : (
               <option value="" disabled>
-                No locks available at this location
+                Brak dostępnych bramek w tym obiekcie
               </option>
             )}
           </select>
@@ -144,7 +144,7 @@ export const RemoteOpsCard: React.FC = () => {
         {/* Action Button */}
         <div className="mb-2">
           <button
-            className="flex w-full items-center justify-center gap-2 rounded-md bg-amber-700 px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-amber-600 disabled:cursor-not-allowed disabled:bg-amber-300"
+            className="flex w-full items-center justify-center gap-2 rounded-control bg-accent px-4 py-3 text-sm font-semibold text-white shadow-control transition-colors hover:bg-accent/90 disabled:cursor-not-allowed disabled:bg-accent/40"
             onClick={handleRemoteUnlock}
             disabled={!canUnlock}
           >
@@ -156,19 +156,19 @@ export const RemoteOpsCard: React.FC = () => {
                 d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"
               />
             </svg>
-            <span>Remote Turnstile Unlock Signal</span>
+            <span>Wyślij Sygnał Otwarcia Bramki</span>
           </button>
         </div>
       </div>
 
       {/* Output */}
       {remoteOutput && !remoteOutput.includes('HMAC') && (
-        <div className="mt-4 rounded-md bg-slate-50 border border-slate-200 overflow-hidden text-xs">
-          <div className="bg-slate-100 px-3 py-1.5 border-b border-slate-200 flex items-center justify-between text-[11px] text-slate-500 font-mono">
-            <span>Remote Command Log</span>
-            <span className="text-amber-700">EXECUTED</span>
+        <div className="mt-4 rounded-control bg-line/10 border border-line/60 overflow-hidden text-xs">
+          <div className="bg-line/20 px-3 py-1.5 border-b border-line/60 flex items-center justify-between text-[11px] text-muted font-mono">
+            <span>Rejestr Poleceń Zdalnych</span>
+            <span className="text-accent">WYKONANO</span>
           </div>
-          <pre className="max-h-40 overflow-x-auto whitespace-pre-wrap p-3 font-mono text-[11px] leading-relaxed text-amber-800">
+          <pre className="max-h-40 overflow-x-auto whitespace-pre-wrap p-3 font-mono text-[11px] leading-relaxed text-accent">
             {remoteOutput}
           </pre>
         </div>

@@ -7,9 +7,9 @@ import {
 import { useAdminDispatch, useAdminSelector } from '../store';
 import { memberOverrideThunk, selectOverrideOutput } from '../store/adminSlice';
 
-const fieldLabelClass = 'mb-2 block text-sm font-medium text-slate-700';
+const fieldLabelClass = 'mb-2 block text-sm font-medium text-ink/70';
 const fieldClass =
-  'w-full rounded-md border border-slate-300 bg-white px-3.5 py-3 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 transition focus:border-rose-700 focus:outline-none focus:ring-4 focus:ring-rose-700/10';
+  'w-full rounded-control border border-line bg-paper px-3.5 py-3 text-sm text-ink shadow-control placeholder:text-ink/40 transition focus:border-danger focus:outline-none focus:ring-4 focus:ring-danger/10';
 
 export const MemberOverrideCard: React.FC = () => {
   const dispatch = useAdminDispatch();
@@ -28,12 +28,12 @@ export const MemberOverrideCard: React.FC = () => {
   };
 
   return (
-    <div className="bg-white border border-slate-300 rounded-lg p-6 shadow-xl shadow-slate-900/5 flex flex-col justify-between h-full">
+    <div className="bg-paper border border-line rounded-card p-6 shadow-card flex flex-col justify-between h-full">
       <div>
         {/* Header */}
         <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-2.5 font-bold text-base text-slate-900">
-            <span className="rounded-lg border border-rose-200 bg-rose-50 p-2 text-rose-700">
+          <div className="flex items-center gap-2.5 font-bold text-base text-ink">
+            <span className="rounded-card border border-danger/30 bg-danger/10 p-2 text-danger">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -43,10 +43,10 @@ export const MemberOverrideCard: React.FC = () => {
                 />
               </svg>
             </span>
-            <span>Member Access Overrides</span>
+            <span>Ręczna Blokada / Odblokowanie Konta</span>
           </div>
-          <span className="px-2 py-0.5 rounded-full text-xs font-medium text-rose-700 bg-rose-50 border border-rose-200">
-            Security Controls
+          <span className="px-2 py-0.5 rounded-pill text-xs font-medium text-danger bg-danger/10 border border-danger/30">
+            Dostęp i Bezpieczeństwo
           </span>
         </div>
 
@@ -54,12 +54,12 @@ export const MemberOverrideCard: React.FC = () => {
         <div className="space-y-4 mb-5">
           <div>
             <label className={fieldLabelClass} htmlFor="member-id">
-              Member Email / User ID
+              E-mail Klubowicza / User ID
             </label>
             <input
               id="member-id"
               type="text"
-              placeholder="e.g. member@example.com"
+              placeholder="np. jan.kowalski@example.com"
               className={fieldClass}
               value={overrideUserId}
               onChange={(e) => handleFieldChange('overrideUserId', e.target.value)}
@@ -69,7 +69,7 @@ export const MemberOverrideCard: React.FC = () => {
 
           <div>
             <label className={fieldLabelClass} htmlFor="override-action">
-              Override Action
+              Wybór Działania
             </label>
             <select
               id="override-action"
@@ -77,16 +77,16 @@ export const MemberOverrideCard: React.FC = () => {
               value={overrideAction}
               onChange={(e) => handleFieldChange('overrideAction', e.target.value)}
             >
-              <option value="suspend">Suspend Member Access</option>
-              <option value="activate">Re-Activate Member Access</option>
+              <option value="suspend">Zablokuj Dostęp Klubowiczowi</option>
+              <option value="activate">Odblokuj Dostęp Klubowiczowi</option>
             </select>
           </div>
         </div>
 
         {/* Action Button */}
         <button
-          className={`mb-2 flex w-full items-center justify-center gap-2 rounded-md px-4 py-3 text-sm font-semibold text-white shadow-sm transition-colors disabled:cursor-not-allowed disabled:bg-slate-300 ${
-            overrideAction === 'suspend' ? 'bg-rose-600 hover:bg-rose-500' : 'bg-emerald-600 hover:bg-emerald-500'
+          className={`mb-2 flex w-full items-center justify-center gap-2 rounded-control px-4 py-3 text-sm font-semibold text-white shadow-control transition-colors disabled:cursor-not-allowed disabled:bg-line ${
+            overrideAction === 'suspend' ? 'bg-danger hover:bg-danger-hover' : 'bg-success hover:bg-success/90'
           }`}
           onClick={handleApplyOverride}
           disabled={!canApplyOverride}
@@ -99,18 +99,18 @@ export const MemberOverrideCard: React.FC = () => {
               d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
             />
           </svg>
-          <span>Apply {overrideAction === 'suspend' ? 'Access Suspension' : 'Re-Activation'}</span>
+          <span>{overrideAction === 'suspend' ? 'Zastosuj Blokadę Dostępu' : 'Aktywuj Dostęp Klubowicza'}</span>
         </button>
       </div>
 
       {/* Terminal Output */}
       {overrideOutput && (
-        <div className="mt-4 rounded-md bg-slate-50 border border-slate-200 overflow-hidden text-xs">
-          <div className="bg-slate-100 px-3 py-1.5 border-b border-slate-200 flex items-center justify-between text-[11px] text-slate-500 font-mono">
-            <span>Override Result Log</span>
-            <span className="text-rose-700">APPLIED</span>
+        <div className="mt-4 rounded-control bg-line/10 border border-line/60 overflow-hidden text-xs">
+          <div className="bg-line/20 px-3 py-1.5 border-b border-line/60 flex items-center justify-between text-[11px] text-muted font-mono">
+            <span>Rejestr Modyfikacji Dostępów</span>
+            <span className="text-danger">ZASTOSOWANO</span>
           </div>
-          <pre className="max-h-40 overflow-x-auto whitespace-pre-wrap p-3 font-mono text-[11px] leading-relaxed text-rose-800">
+          <pre className="max-h-40 overflow-x-auto whitespace-pre-wrap p-3 font-mono text-[11px] leading-relaxed text-danger">
             {overrideOutput}
           </pre>
         </div>

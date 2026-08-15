@@ -16,7 +16,7 @@ export default function App() {
   const email = useAppSelector(selectAuthEmail);
   const dashboard = useAppSelector(selectDashboard);
   const membershipActive = isMembershipActive(dashboard);
-  const membershipStatus = membershipActive ? 'Active' : dashboard ? 'Inactive' : 'Checking membership';
+  const membershipStatus = membershipActive ? 'Aktywny' : dashboard ? 'Nieaktywny' : 'Sprawdzanie stanu członkostwa';
 
   const handleLogout = () => {
     dispatch(logout());
@@ -25,18 +25,18 @@ export default function App() {
 
   if (config.error) {
     return (
-      <div className="min-h-screen bg-[#f5f1e8] px-4 flex items-center justify-center text-stone-900">
-        <section className="max-w-md w-full rounded-lg border border-rose-200 bg-[#fffdf8] p-6 shadow-xl shadow-stone-900/5">
-          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-700">Connection unavailable</p>
-          <h1 className="mt-2 text-2xl font-bold">The member portal is not configured.</h1>
-          <p className="mt-3 text-sm leading-6 text-stone-600">{config.error}</p>
+      <div className="min-h-screen bg-canvas px-4 flex items-center justify-center text-ink">
+        <section className="max-w-md w-full rounded-card border border-primary/30 bg-paper p-6 shadow-card">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary-hover">Brak połączenia</p>
+          <h1 className="mt-2 text-2xl font-bold">Portal klubowicza nie jest skonfigurowany.</h1>
+          <p className="mt-3 text-sm leading-6 text-ink/70">{config.error}</p>
           <button
             type="button"
             onClick={() => dispatch(retryConfigThunk())}
             disabled={config.isLoading}
-            className="mt-6 rounded-md bg-rose-800 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-6 rounded-control bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {config.isLoading ? 'Retrying...' : 'Retry connection'}
+            {config.isLoading ? 'Łączenie...' : 'Ponów próbę'}
           </button>
         </section>
       </div>
@@ -45,29 +45,29 @@ export default function App() {
 
   if (!config.isLoaded) {
     return (
-      <div className="min-h-screen bg-[#f5f1e8] flex flex-col items-center justify-center text-stone-600 gap-3">
-        <div className="w-12 h-12 rounded-lg bg-rose-800 flex items-center justify-center font-bold text-white text-xl animate-pulse">
+      <div className="min-h-screen bg-canvas flex flex-col items-center justify-center text-ink/70 gap-3">
+        <div className="w-12 h-12 rounded-card bg-primary flex items-center justify-center font-bold text-white text-xl animate-pulse">
           CB
         </div>
-        <span className="text-sm font-medium">Loading Member Portal...</span>
+        <span className="text-sm font-medium">Ładowanie Portalu Klubowicza...</span>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#f5f1e8] text-stone-900 flex flex-col justify-between selection:bg-rose-800 selection:text-white">
+    <div className="min-h-screen bg-canvas text-ink flex flex-col justify-between selection:bg-primary selection:text-white">
       <Header token={token} email={email} onLogout={handleLogout} />
 
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-10 sm:py-14">
-        <div className="mb-10 border-b border-stone-300 pb-7 sm:flex sm:items-end sm:justify-between">
+        <div className="mb-10 border-b border-line pb-7 sm:flex sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-800">CrossBox membership</p>
-            <h1 className="mt-2 font-[family-name:var(--font-heading)] text-3xl sm:text-4xl font-bold tracking-tight text-stone-900">
-              Your access, kept simple.
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Członkostwo CrossBox Gym 24/7</p>
+            <h1 className="mt-2 font-[family-name:var(--font-heading)] text-3xl sm:text-4xl font-bold tracking-tight text-ink">
+              Szybki dostęp do siłowni bez formalności.
             </h1>
           </div>
-          <p className="mt-3 max-w-sm text-sm leading-6 text-stone-600 sm:text-right">
-            A live turnstile pass, membership controls, and billing records in one place.
+          <p className="mt-3 max-w-sm text-sm leading-6 text-ink/70 sm:text-right">
+            Twój unikalny kod QR, status subskrypcji oraz historia płatności w jednym miejscu.
           </p>
         </div>
 
@@ -77,9 +77,9 @@ export default function App() {
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-px overflow-hidden rounded-lg border border-stone-300 bg-stone-300">
-              <div className="bg-[#fffdf8] p-5 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-md bg-rose-50 text-rose-800 flex items-center justify-center shrink-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-px overflow-hidden rounded-card border border-line bg-line">
+              <div className="bg-paper p-5 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-control bg-primary/10 text-primary flex items-center justify-center shrink-0">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
                       strokeLinecap="round"
@@ -90,18 +90,16 @@ export default function App() {
                   </svg>
                 </div>
                 <div>
-                  <div className="text-xs text-stone-500 font-medium">Turnstile pass</div>
-                  <div
-                    className={`text-sm font-semibold mt-0.5 ${membershipActive ? 'text-emerald-700' : 'text-stone-700'}`}
-                  >
-                    {membershipActive ? 'Active & ready' : 'Membership required'}
+                  <div className="text-xs text-muted font-medium">Wejściowy kod QR</div>
+                  <div className={`text-sm font-semibold mt-0.5 ${membershipActive ? 'text-success' : 'text-ink/70'}`}>
+                    {membershipActive ? 'Aktywny i gotowy' : 'Wymagany aktywny karnet'}
                   </div>
                 </div>
               </div>
 
-              <div className="bg-[#fffdf8] p-5 flex items-center gap-4">
+              <div className="bg-paper p-5 flex items-center gap-4">
                 <div
-                  className={`w-10 h-10 rounded-md flex items-center justify-center shrink-0 ${membershipActive ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-600'}`}
+                  className={`w-10 h-10 rounded-control flex items-center justify-center shrink-0 ${membershipActive ? 'bg-success/10 text-success' : 'bg-line/10 text-ink/70'}`}
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path
@@ -113,30 +111,9 @@ export default function App() {
                   </svg>
                 </div>
                 <div>
-                  <div className="text-xs text-stone-500 font-medium">Membership status</div>
-                  <div
-                    className={`text-sm font-semibold mt-0.5 ${membershipActive ? 'text-emerald-700' : 'text-stone-700'}`}
-                  >
+                  <div className="text-xs text-muted font-medium">Status członkostwa</div>
+                  <div className={`text-sm font-semibold mt-0.5 ${membershipActive ? 'text-success' : 'text-ink/70'}`}>
                     {membershipStatus}
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-[#fffdf8] p-5 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-md bg-amber-50 text-amber-700 flex items-center justify-center shrink-0">
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"
-                    />
-                  </svg>
-                </div>
-                <div>
-                  <div className="text-xs text-stone-500 font-medium">Gym locations</div>
-                  <div className="text-sm font-semibold text-stone-900 mt-0.5">
-                    {dashboard?.locations?.length || 1} Accessible Facility
                   </div>
                 </div>
               </div>

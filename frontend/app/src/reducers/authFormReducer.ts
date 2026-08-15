@@ -1,4 +1,4 @@
-export type AuthMode = 'login' | 'register' | 'forgot' | 'reset';
+export type AuthMode = 'login' | 'register' | 'forgot' | 'reset' | 'invitation';
 
 export interface AuthFormState {
   authMode: AuthMode;

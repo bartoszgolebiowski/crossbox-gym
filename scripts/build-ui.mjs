@@ -6,7 +6,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 
-console.log('🚀 Building UI Frontends (Member CSR App & Admin CSR App)...');
+console.log('🚀 Building UI Frontends (Member CSR App, Admin CSR App & Hero Landing Page)...');
 
 // 1. Build Member CSR App
 console.log('\n📦 Building Member App (frontend/app)...');
@@ -18,6 +18,13 @@ execSync('npx vite build --config frontend/app/vite.config.ts', {
 // 2. Build Admin CSR App
 console.log('\n📦 Building Admin App (frontend/admin)...');
 execSync('npx vite build --config frontend/admin/vite.config.ts', {
+  cwd: rootDir,
+  stdio: 'inherit',
+});
+
+// 3. Build Hero Landing Page
+console.log('\n📦 Building Hero Landing Page (frontend/hero)...');
+execSync('npx vite build --config frontend/hero/vite.config.ts', {
   cwd: rootDir,
   stdio: 'inherit',
 });

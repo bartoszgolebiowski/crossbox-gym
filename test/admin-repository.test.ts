@@ -33,20 +33,19 @@ test('DynamoDbAdminRepository queries location activity through LocationIndex', 
 
   assert.deepEqual(request, {
     TableName: 'entry-logs-table',
-    IndexName: 'LocationIndex',
-    KeyConditionExpression: 'location_id = :locId',
-    FilterExpression: '(scanner_id = :scannerId OR device_id = :scannerId) AND locker_id = :lockerId',
+    FilterExpression:
+      '(location_id = :locId OR location_id = :locPk) AND begins_with(SK, :skPrefix) AND (scanner_id = :scannerId OR device_id = :scannerId) AND locker_id = :lockerId',
     ExpressionAttributeValues: {
       ':locId': 'site-1',
+      ':locPk': 'LOC#site-1',
+      ':skPrefix': 'ENTRY#',
       ':scannerId': 'scanner-1',
       ':lockerId': 'locker-1',
     },
-    ScanIndexForward: false,
-    Limit: 20,
+    Limit: 100,
     ExclusiveStartKey: undefined,
   });
   assert.equal(activity.total_count, 2);
   assert.equal(activity.success_count, 1);
-  assert.equal(activity.unlock_count, 1);
-  assert.equal(activity.denied_count, 0);
+  assert.equal(activity.denied_count, 1);
 });

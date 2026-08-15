@@ -167,7 +167,6 @@ describeLiveStripe('Stripe Live Sandbox Integration Test Suite (No Mocks)', () =
       PAYMENT_PROVIDER: 'mock',
       IDENTITY_PROVIDER: 'mock',
       STRIPE_SECRET_KEY: baseEnv.STRIPE_SECRET_KEY || 'sk_test_mock',
-      STRIPE_SANDBOX: 'true',
     };
 
     const result = await stripeEventHandler(eventBridgeEnvelope);

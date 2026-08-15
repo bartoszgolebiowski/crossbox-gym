@@ -55,8 +55,11 @@ function getFrontendOutputs() {
     'UserPoolClientId',
     'AppBucketName',
     'AdminBucketName',
+    'HeroBucketName',
     'AppDistributionId',
     'AdminDistributionId',
+    'HeroDistributionId',
+    'AppUrl',
   ];
   for (const key of required) {
     if (typeof frontend[key] !== 'string' || !frontend[key]) {
@@ -81,15 +84,20 @@ const config = {
   UserPoolId: frontend.UserPoolId,
   UserPoolClientId: frontend.UserPoolClientId,
 };
+const heroConfig = { ...config, MemberAppUrl: frontend.AppUrl.replace(/\/+$/, '') };
 
 const appDist = path.join(rootDir, 'frontend', 'app', 'dist');
 const adminDist = path.join(rootDir, 'frontend', 'admin', 'dist');
+const heroDist = path.join(rootDir, 'frontend', 'hero', 'dist');
 writeRuntimeConfig(appDist, config);
 writeRuntimeConfig(adminDist, config);
+writeRuntimeConfig(heroDist, heroConfig);
 
 run('aws', ['s3', 'sync', appDist, `s3://${frontend.AppBucketName}`, '--delete']);
 run('aws', ['s3', 'sync', adminDist, `s3://${frontend.AdminBucketName}`, '--delete']);
+run('aws', ['s3', 'sync', heroDist, `s3://${frontend.HeroBucketName}`, '--delete']);
 run('aws', ['cloudfront', 'create-invalidation', '--distribution-id', frontend.AppDistributionId, '--paths', '/*']);
 run('aws', ['cloudfront', 'create-invalidation', '--distribution-id', frontend.AdminDistributionId, '--paths', '/*']);
+run('aws', ['cloudfront', 'create-invalidation', '--distribution-id', frontend.HeroDistributionId, '--paths', '/*']);
 
 console.log('\nUI assets and runtime configuration published successfully.');

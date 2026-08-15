@@ -87,12 +87,15 @@ export const createCheckoutSessionThunk = createAsyncThunk(
   'member/createCheckoutSession',
   async (input: CreateCheckoutSessionInput, { rejectWithValue }) => {
     try {
-      const data = await apiClient.post<{ url: string; message?: string }>('/checkout/session', input);
+      const data = await apiClient.post<{ url: string; message?: string; error?: string }>('/checkout/session', input);
       if (data.url) {
-        window.open(data.url, '_blank');
+        const popup = window.open(data.url, '_blank');
+        if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+          window.location.href = data.url;
+        }
         return 'Checkout Session Created! Redirecting to Stripe...';
       }
-      return rejectWithValue(data.message || 'Checkout creation failed.');
+      return rejectWithValue(data.message || data.error || 'Checkout creation failed.');
     } catch (err: any) {
       return rejectWithValue(err.message || 'Checkout error.');
     }
@@ -103,12 +106,15 @@ export const createPortalSessionThunk = createAsyncThunk(
   'member/createPortalSession',
   async (_, { rejectWithValue }) => {
     try {
-      const data = await apiClient.post<{ url: string; message?: string }>('/member/portal-session');
+      const data = await apiClient.post<{ url: string; message?: string; error?: string }>('/member/portal-session');
       if (data.url) {
-        window.open(data.url, '_blank');
+        const popup = window.open(data.url, '_blank');
+        if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+          window.location.href = data.url;
+        }
         return data.url;
       }
-      return rejectWithValue(data.message || 'Portal session failed.');
+      return rejectWithValue(data.message || data.error || 'Portal session creation failed.');
     } catch (err: any) {
       return rejectWithValue(err.message || 'Portal session error.');
     }

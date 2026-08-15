@@ -2,6 +2,7 @@ export interface RuntimeConfig {
   ApiUrl: string;
   UserPoolId?: string;
   UserPoolClientId?: string;
+  MemberAppUrl?: string;
 }
 
 export interface RuntimeConfigResponse {
@@ -46,14 +47,31 @@ export async function loadRuntimeConfig({
       throw new Error(`Runtime configuration request failed with HTTP ${response.status}.`);
     }
 
-    const config = (await response.json()) as Omit<RuntimeConfig, 'ApiUrl'> & { ApiUrl?: unknown };
+    let config: Omit<RuntimeConfig, 'ApiUrl'> & { ApiUrl?: unknown };
+    if (typeof (response as any).text === 'function') {
+      const text = await (response as any).text();
+      if (typeof text === 'string' && text.trim().startsWith('<')) {
+        throw new Error('/config.json returned HTML instead of JSON.');
+      }
+      config = JSON.parse(text);
+    } else {
+      config = (await response.json()) as any;
+    }
+
     return { ...config, ApiUrl: normalizeApiUrl(config.ApiUrl) };
   } catch (error) {
     if (fallbackApiUrl) {
       return { ApiUrl: normalizeApiUrl(fallbackApiUrl) };
     }
 
-    const message = error instanceof Error ? error.message : 'Unable to load runtime configuration.';
+    const rawMessage = error instanceof Error ? error.message : 'Unable to load runtime configuration.';
+    const message =
+      rawMessage.includes('SyntaxError') ||
+      rawMessage.includes('Unexpected token') ||
+      rawMessage.includes('returned HTML')
+        ? 'Runtime configuration /config.json was missing or invalid.'
+        : rawMessage;
+
     throw new Error(`${message} The application cannot contact its API until configuration is available.`);
   }
 }

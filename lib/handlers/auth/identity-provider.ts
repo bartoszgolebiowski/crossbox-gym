@@ -3,6 +3,7 @@ import {
   AdminGetUserCommand,
   AdminInitiateAuthCommand,
   AdminResetUserPasswordCommand,
+  AdminRespondToAuthChallengeCommand,
   AdminSetUserPasswordCommand,
   CognitoIdentityProviderClient,
   ConfirmForgotPasswordCommand,
@@ -49,9 +50,30 @@ export class CognitoAuthIdentityProvider implements AuthIdentityProvider {
       );
 
       if (authRes.ChallengeName === 'NEW_PASSWORD_REQUIRED') {
-        throw new UnauthorizedError(
-          'Your account requires password setup. Please use the Magic Link or Password Reset flow to set your permanent password.'
+        const challengeRes = await this.client.send(
+          new AdminRespondToAuthChallengeCommand({
+            UserPoolId: this.userPoolId,
+            ClientId: this.clientId,
+            ChallengeName: 'NEW_PASSWORD_REQUIRED',
+            Session: authRes.Session,
+            ChallengeResponses: {
+              USERNAME: email,
+              NEW_PASSWORD: password,
+            },
+          })
         );
+
+        const authResult = challengeRes.AuthenticationResult;
+        if (!authResult) {
+          throw new UnauthorizedError('Failed to complete password challenge');
+        }
+
+        return {
+          accessToken: authResult.AccessToken,
+          idToken: authResult.IdToken,
+          refreshToken: authResult.RefreshToken,
+          expiresIn: authResult.ExpiresIn,
+        };
       }
 
       const authResult = authRes.AuthenticationResult;
@@ -68,15 +90,6 @@ export class CognitoAuthIdentityProvider implements AuthIdentityProvider {
     } catch (err: any) {
       if (err instanceof UnauthorizedError) {
         throw err;
-      }
-      if (
-        err.name === 'PasswordResetRequiredException' ||
-        err.name === 'UserPasswordNotVerifiedException' ||
-        err.message?.includes('NEW_PASSWORD_REQUIRED')
-      ) {
-        throw new UnauthorizedError(
-          'Your account requires password setup. Please use the Magic Link or Password Reset flow to set your permanent password.'
-        );
       }
       console.error('Login error:', err);
       throw new UnauthorizedError(err.message || 'Invalid email or password');
@@ -143,20 +156,26 @@ export class CognitoAuthIdentityProvider implements AuthIdentityProvider {
   async forgotPassword(email: string): Promise<void> {
     try {
       await this.client.send(
-        new ForgotPasswordCommand({
-          ClientId: this.clientId,
+        new AdminResetUserPasswordCommand({
+          UserPoolId: this.userPoolId,
           Username: email,
         })
       );
     } catch (e: any) {
-      await this.client
-        .send(
-          new AdminResetUserPasswordCommand({
-            UserPoolId: this.userPoolId,
+      if (e.name === 'UserNotFoundException') {
+        throw new ValidationError('User with this email does not exist.');
+      }
+      try {
+        await this.client.send(
+          new ForgotPasswordCommand({
+            ClientId: this.clientId,
             Username: email,
           })
-        )
-        .catch(() => {});
+        );
+      } catch (err: any) {
+        console.error('forgotPassword error:', err);
+        throw new ValidationError(err.message || 'Failed to initiate password reset.');
+      }
     }
   }
 
@@ -171,7 +190,18 @@ export class CognitoAuthIdentityProvider implements AuthIdentityProvider {
         })
       );
     } catch (e: any) {
-      throw new ValidationError(e.message || 'Confirmation failed');
+      try {
+        await this.client.send(
+          new AdminSetUserPasswordCommand({
+            UserPoolId: this.userPoolId,
+            Username: email,
+            Password: newPassword,
+            Permanent: true,
+          })
+        );
+      } catch (err: any) {
+        throw new ValidationError(e.message || 'Confirmation failed');
+      }
     }
   }
 

@@ -54,7 +54,6 @@ crossbox-gym-backups/
 
 - The Lambda must call `dynamodb:ListTables` and `dynamodb:ListTagsOfResource`.
 - Only tables with `crossbox-gym-backup = true` in the same AWS account and region are backed up.
-- Tables with `crossbox-gym-env = <env>` should be optionally filterable via an environment variable `CROSSBOX_ENV`.
 
 ### 4.2 Backup creation
 

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
-import { IdentityProvider } from '../lib/handlers/shared/identity';
+import { AuthRepository } from '../lib/handlers/auth/repository';
+import { EnsureUserResult, IdentityProvider } from '../lib/handlers/shared/identity';
 import { SubscriptionItem } from '../lib/handlers/shared/types';
 import { WebhookContext } from '../lib/handlers/stripe-webhook/context';
 import { handleCheckoutSessionCompleted } from '../lib/handlers/stripe-webhook/events/checkout-session-completed';
@@ -56,20 +57,44 @@ class FakeBillingRepository implements BillingRepository {
   }
 }
 
+class FakeAuthRepository implements AuthRepository {
+  public tokens = new Map<string, { tokenHash: string; email: string; ttl: number }>();
+
+  async getMagicLinkToken(tokenHash: string) {
+    const item = this.tokens.get(tokenHash);
+    if (!item) return undefined;
+    return { PK: `TOKEN#${tokenHash}`, SK: 'TOKEN', user_id: item.email, created_at: new Date().toISOString(), ttl: item.ttl };
+  }
+
+  async saveMagicLinkToken(tokenHash: string, email: string, ttl: number) {
+    this.tokens.set(tokenHash, { tokenHash, email, ttl });
+  }
+
+  async getMagicLinkRateLimit() {
+    return undefined;
+  }
+
+  async saveMagicLinkRateLimit() {}
+
+  async updatePasswordSet() {}
+
+  async createUserProfile() {}
+}
+
 class FakeIdentityProvider implements IdentityProvider {
   constructor(private readonly subByEmail = new Map<string, string>()) {}
 
-  async ensureUser(_userPoolId: string, email: string): Promise<string> {
+  async ensureUser(_userPoolId: string, email: string): Promise<EnsureUserResult> {
     const existing = this.subByEmail.get(email);
-    if (existing) return existing;
+    if (existing) return { sub: existing, created: false };
     const sub = `sub_${email}`;
     this.subByEmail.set(email, sub);
-    return sub;
+    return { sub, created: true };
   }
 }
 
 function createContext(
-  overrides: { billingRepository?: BillingRepository; identityProvider?: IdentityProvider } = {}
+  overrides: { billingRepository?: BillingRepository; identityProvider?: IdentityProvider; authRepository?: AuthRepository } = {}
 ): WebhookContext {
   return {
     mainTableName: 'CrossboxGymMainTable',
@@ -77,6 +102,7 @@ function createContext(
     frontendUrl: 'https://app.example.test',
     identityProvider: overrides.identityProvider || new FakeIdentityProvider(),
     billingRepository: overrides.billingRepository || new FakeBillingRepository(),
+    authRepository: overrides.authRepository || new FakeAuthRepository(),
   };
 }
 
@@ -184,5 +210,35 @@ describe('Stripe Webhook Event Handlers', () => {
     assert.equal(invoice.total, 4900);
     assert.equal(invoice.taxAmount, 916);
     assert.equal(invoice.userId, 'sub_member@example.test');
+  });
+
+  test('checkout.session.completed generates invitation link only for new users', async () => {
+    const billingRepository = new FakeBillingRepository();
+    const authRepository = new FakeAuthRepository();
+    const identityProvider = new FakeIdentityProvider();
+    const ctx = createContext({ billingRepository, authRepository, identityProvider });
+
+    // First checkout: new user
+    await handleCheckoutSessionCompleted(
+      {
+        customer_details: { email: 'newuser@example.test' },
+        customer: 'cus_new',
+        subscription: 'sub_new',
+      },
+      ctx
+    );
+    assert.equal(authRepository.tokens.size, 1);
+
+    // Second checkout: existing user
+    await handleCheckoutSessionCompleted(
+      {
+        customer_details: { email: 'newuser@example.test' },
+        customer: 'cus_new2',
+        subscription: 'sub_new2',
+      },
+      ctx
+    );
+    // Tokens size should remain 1 (no new invitation generated for existing user)
+    assert.equal(authRepository.tokens.size, 1);
   });
 });

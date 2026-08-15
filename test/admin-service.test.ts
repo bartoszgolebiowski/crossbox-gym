@@ -69,7 +69,6 @@ class FakeAdminRepository implements AdminRepository {
       location_id: locationId,
       total_count: 0,
       success_count: 0,
-      unlock_count: 0,
       denied_count: 0,
       hourly_stats: {},
       daily_stats: {},

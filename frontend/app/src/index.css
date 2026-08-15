@@ -7,8 +7,8 @@ body,
 }
 
 body {
-  background-color: #f5f1e8;
-  color: #1c1917;
+  background-color: var(--color-canvas);
+  color: var(--color-ink);
   font-family:
     'Outfit',
     -apple-system,
@@ -26,23 +26,23 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #f5f1e8;
+  background: var(--color-canvas);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c9c0af;
+  background: var(--color-line);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a89c89;
+  background: var(--color-muted);
 }
 
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
 a:focus-visible {
-  outline: 3px solid rgba(190, 18, 60, 0.35);
+  outline: 3px solid rgba(159, 18, 57, 0.3);
   outline-offset: 3px;
 }
 

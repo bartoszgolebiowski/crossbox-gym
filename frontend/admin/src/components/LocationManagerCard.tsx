@@ -8,9 +8,9 @@ import { useAdminDispatch, useAdminSelector } from '../store';
 import { createLocationThunk, listLocationsThunk, selectLocationsList } from '../store/adminSlice';
 import { IotDeviceHealthCard } from './IotDeviceHealthCard';
 
-const fieldLabelClass = 'mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-600';
+const fieldLabelClass = 'mb-1.5 block text-xs font-semibold uppercase tracking-wider text-ink/70';
 const fieldClass =
-  'w-full rounded-md border border-slate-300 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm placeholder:text-slate-400 transition focus:border-cyan-700 focus:outline-none focus:ring-2 focus:ring-cyan-700/20 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed';
+  'w-full rounded-control border border-line bg-paper px-3.5 py-3 text-sm text-ink shadow-control placeholder:text-ink/40 transition focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20 disabled:bg-line/20 disabled:text-ink/40 disabled:cursor-not-allowed';
 
 export const LocationManagerCard: React.FC = () => {
   const dispatch = useAdminDispatch();
@@ -53,11 +53,11 @@ export const LocationManagerCard: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white border border-slate-300 rounded-lg p-6 shadow-xl shadow-slate-900/5 space-y-6">
+      <div className="bg-paper border border-line rounded-card p-6 shadow-card space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-          <div className="flex items-center gap-2.5 font-bold text-base text-slate-900">
-            <span className="rounded-lg border border-cyan-200 bg-cyan-50 p-2 text-cyan-700">
+        <div className="flex items-center justify-between pb-2 border-b border-line/60">
+          <div className="flex items-center gap-2.5 font-bold text-base text-ink">
+            <span className="rounded-card border border-secondary/30 bg-secondary/10 p-2 text-secondary">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path
                   strokeLinecap="round"
@@ -73,12 +73,12 @@ export const LocationManagerCard: React.FC = () => {
                 />
               </svg>
             </span>
-            <span>Location & Facility Management</span>
+            <span>Zarządzanie Obiektami i Siłowniami</span>
           </div>
           <button
             type="button"
             onClick={handleListLocations}
-            className="flex items-center gap-1 text-xs font-semibold text-cyan-700 hover:text-cyan-800 bg-cyan-50 hover:bg-cyan-100 border border-cyan-200 px-3 py-1.5 rounded-md transition cursor-pointer"
+            className="flex items-center gap-1 text-xs font-semibold text-secondary hover:text-secondary-hover bg-secondary/10 hover:bg-secondary/20 border border-secondary/30 px-3 py-1.5 rounded-control transition cursor-pointer"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path
@@ -88,36 +88,36 @@ export const LocationManagerCard: React.FC = () => {
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
               />
             </svg>
-            <span>Refresh Database</span>
+            <span>Odśwież Bazę Obiektów</span>
           </button>
         </div>
 
         {/* --- 1. DISPLAY LOCATIONS TABLE --- */}
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-bold text-slate-900 flex items-center gap-2">
-              <span>Registered Gym Locations</span>
-              <span className="px-2 py-0.5 text-xs font-semibold bg-slate-100 text-slate-700 rounded-full border border-slate-200">
-                {locationsList.length} Facilities
+            <span className="text-sm font-bold text-ink flex items-center gap-2">
+              <span>Zarejestrowane Siłownie CrossBox</span>
+              <span className="px-2 py-0.5 text-xs font-semibold bg-line/20 text-ink/80 rounded-pill border border-line/60">
+                {locationsList.length} Obiekt(y)
               </span>
             </span>
           </div>
 
-          <div className="border border-slate-200 rounded-lg overflow-hidden shadow-xs max-h-56 overflow-y-auto">
+          <div className="border border-line/60 rounded-card overflow-hidden shadow-xs max-h-56 overflow-y-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-slate-100 text-slate-700 uppercase tracking-wider font-semibold border-b border-slate-200 sticky top-0">
+              <thead className="bg-line/20 text-ink/80 uppercase tracking-wider font-semibold border-b border-line/60 sticky top-0">
                 <tr>
-                  <th className="px-3.5 py-2.5">Facility Name</th>
-                  <th className="px-3.5 py-2.5">Location ID</th>
-                  <th className="px-3.5 py-2.5">Address</th>
-                  <th className="px-3.5 py-2.5 text-right">Action</th>
+                  <th className="px-3.5 py-2.5">Nazwa Obiektu</th>
+                  <th className="px-3.5 py-2.5">ID Obiektu</th>
+                  <th className="px-3.5 py-2.5">Adres</th>
+                  <th className="px-3.5 py-2.5 text-right">Akcja</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200 bg-white">
+              <tbody className="divide-y divide-line/60 bg-paper">
                 {locationsList.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-slate-400 italic">
-                      No locations found in database. Create one below.
+                    <td colSpan={4} className="px-4 py-6 text-center text-ink/40 italic">
+                      Brak zdefiniowanych obiektów w bazie. Dodaj nowy obiekt poniżej.
                     </td>
                   </tr>
                 ) : (
@@ -127,29 +127,29 @@ export const LocationManagerCard: React.FC = () => {
                     return (
                       <tr
                         key={locId}
-                        className={`transition hover:bg-slate-50 ${isSelected ? 'bg-cyan-50/60 font-medium' : ''}`}
+                        className={`transition hover:bg-line/10 ${isSelected ? 'bg-secondary/10 font-medium' : ''}`}
                       >
-                        <td className="px-3.5 py-2.5 font-semibold text-slate-900 flex items-center gap-2">
-                          <span>{loc.name || 'Unnamed Facility'}</span>
+                        <td className="px-3.5 py-2.5 font-semibold text-ink flex items-center gap-2">
+                          <span>{loc.name || 'Obiekt bez nazwy'}</span>
                           {isSelected && (
-                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-cyan-700 text-white font-bold">
-                              ACTIVE
+                            <span className="px-1.5 py-0.5 rounded text-[10px] bg-secondary text-white font-bold">
+                              WYBRANY
                             </span>
                           )}
                         </td>
-                        <td className="px-3.5 py-2.5 font-mono text-slate-600">{locId}</td>
-                        <td className="px-3.5 py-2.5 text-slate-600 truncate max-w-[180px]">{loc.address || 'N/A'}</td>
+                        <td className="px-3.5 py-2.5 font-mono text-ink/70">{locId}</td>
+                        <td className="px-3.5 py-2.5 text-ink/70 truncate max-w-[180px]">{loc.address || 'Brak danych'}</td>
                         <td className="px-3.5 py-2.5 text-right">
                           <button
                             type="button"
                             onClick={() => selectLocationRow(locId)}
                             className={`px-2.5 py-1 rounded text-xs font-semibold transition cursor-pointer ${
                               isSelected
-                                ? 'bg-cyan-700 text-white'
-                                : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300'
+                                ? 'bg-secondary text-white'
+                                : 'bg-line/20 hover:bg-line/30 text-ink/80 border border-line'
                             }`}
                           >
-                            {isSelected ? 'Selected' : 'Select'}
+                            {isSelected ? 'Wybrany' : 'Wybierz'}
                           </button>
                         </td>
                       </tr>
@@ -162,17 +162,17 @@ export const LocationManagerCard: React.FC = () => {
         </div>
 
         {/* --- CREATE NEW LOCATION --- */}
-        <div className="bg-slate-50/80 p-4 rounded-lg border border-slate-200 space-y-3">
-          <div className="text-xs font-bold uppercase tracking-wider text-slate-700">Add New Facility Location</div>
+        <div className="bg-line/10 p-4 rounded-card border border-line/60 space-y-3">
+          <div className="text-xs font-bold uppercase tracking-wider text-ink/80">Dodaj Nowy Całodobowy Obiekt</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <div>
               <label className={fieldLabelClass} htmlFor="facility-name">
-                Facility Name
+                Nazwa Obiektu
               </label>
               <input
                 id="facility-name"
                 type="text"
-                placeholder="e.g. CrossBox Downtown Gym"
+                placeholder="np. CrossBox Gym Warszawa Centrum 24/7"
                 className={fieldClass}
                 value={locName}
                 onChange={(e) => handleFieldChange('locName', e.target.value)}
@@ -180,12 +180,12 @@ export const LocationManagerCard: React.FC = () => {
             </div>
             <div>
               <label className={fieldLabelClass} htmlFor="facility-address">
-                Address
+                Adres Obiektu
               </label>
               <input
                 id="facility-address"
                 type="text"
-                placeholder="e.g. 100 Main St, Suite 400"
+                placeholder="np. ul. Marszałkowska 10, Warszawa"
                 className={fieldClass}
                 value={locAddress}
                 onChange={(e) => handleFieldChange('locAddress', e.target.value)}
@@ -194,10 +194,10 @@ export const LocationManagerCard: React.FC = () => {
           </div>
           <button
             type="button"
-            className={`w-full flex items-center justify-center gap-1.5 rounded-md px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition ${
+            className={`w-full flex items-center justify-center gap-1.5 rounded-control px-3.5 py-2 text-sm font-semibold text-white shadow-control transition ${
               canCreateLocation
-                ? 'bg-teal-700 hover:bg-teal-600 cursor-pointer'
-                : 'bg-slate-300 text-slate-500 cursor-not-allowed opacity-60'
+                ? 'bg-secondary hover:bg-secondary-hover cursor-pointer'
+                : 'bg-line text-muted cursor-not-allowed opacity-60'
             }`}
             onClick={handleCreateLocation}
             disabled={!canCreateLocation}
@@ -205,7 +205,7 @@ export const LocationManagerCard: React.FC = () => {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
             </svg>
-            <span>Create Facility Location</span>
+            <span>Dodaj Obiekt Do Bazy</span>
           </button>
         </div>
       </div>

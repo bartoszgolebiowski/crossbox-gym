@@ -17,8 +17,10 @@ export interface CrossboxFrontendStackProps extends cdk.StackProps {
 export class CrossboxFrontendStack extends cdk.Stack {
   public readonly appBucket: s3.Bucket;
   public readonly adminBucket: s3.Bucket;
+  public readonly heroBucket: s3.Bucket;
   public readonly appDistribution: cloudfront.Distribution;
   public readonly adminDistribution: cloudfront.Distribution;
+  public readonly heroDistribution: cloudfront.Distribution;
 
   constructor(scope: Construct, id: string, props: CrossboxFrontendStackProps) {
     super(scope, id, props);
@@ -42,6 +44,12 @@ export class CrossboxFrontendStack extends cdk.Stack {
       removalPolicy,
     });
 
+    this.heroBucket = new s3.Bucket(this, 'HeroAssetsBucket', {
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      autoDeleteObjects: isTest,
+      removalPolicy,
+    });
+
     const createSpaDistribution = (distributionId: string, bucket: s3.Bucket): cloudfront.Distribution =>
       new cloudfront.Distribution(this, distributionId, {
         defaultBehavior: {
@@ -60,12 +68,14 @@ export class CrossboxFrontendStack extends cdk.Stack {
     // --- 2. CloudFront Distributions ---
     this.appDistribution = createSpaDistribution('AppDistribution', this.appBucket);
     this.adminDistribution = createSpaDistribution('AdminDistribution', this.adminBucket);
+    this.heroDistribution = createSpaDistribution('HeroDistribution', this.heroBucket);
 
     // --- 3. Bucket Deployments ---
     const configData = {
       ApiUrl: httpApi.apiEndpoint,
       UserPoolId: userPool.userPoolId,
       UserPoolClientId: userPoolClient.userPoolClientId,
+      MemberAppUrl: `https://${this.appDistribution.distributionDomainName}`,
     };
 
     const rootDir = path.join(__dirname, '..', '..');
@@ -89,6 +99,7 @@ export class CrossboxFrontendStack extends cdk.Stack {
 
     deployFrontendAssets('DeployAppAssets', 'app', this.appBucket, this.appDistribution);
     deployFrontendAssets('DeployAdminAssets', 'admin', this.adminBucket, this.adminDistribution);
+    deployFrontendAssets('DeployHeroAssets', 'hero', this.heroBucket, this.heroDistribution);
 
     // --- 4. All Stack Outputs ---
     new cdk.CfnOutput(this, 'ApiUrl', { value: httpApi.apiEndpoint, description: 'API Gateway HTTP API endpoint URL' });
@@ -123,6 +134,14 @@ export class CrossboxFrontendStack extends cdk.Stack {
       value: this.adminBucket.bucketArn,
       description: 'Admin app S3 bucket ARN',
     });
+    new cdk.CfnOutput(this, 'HeroBucketName', {
+      value: this.heroBucket.bucketName,
+      description: 'Hero landing page S3 bucket name',
+    });
+    new cdk.CfnOutput(this, 'HeroBucketArn', {
+      value: this.heroBucket.bucketArn,
+      description: 'Hero landing page S3 bucket ARN',
+    });
     new cdk.CfnOutput(this, 'StaticBucketName', {
       value: this.adminBucket.bucketName,
       description: 'Static assets S3 bucket name (alias for admin bucket)',
@@ -135,6 +154,10 @@ export class CrossboxFrontendStack extends cdk.Stack {
       value: this.adminDistribution.distributionDomainName,
       description: 'Admin app CloudFront distribution domain name',
     });
+    new cdk.CfnOutput(this, 'HeroCloudFrontUrl', {
+      value: this.heroDistribution.distributionDomainName,
+      description: 'Hero landing page CloudFront distribution domain name',
+    });
     new cdk.CfnOutput(this, 'AppUrl', {
       value: `https://${this.appDistribution.distributionDomainName}`,
       description: 'Member app HTTPS URL',
@@ -143,6 +166,10 @@ export class CrossboxFrontendStack extends cdk.Stack {
       value: `https://${this.adminDistribution.distributionDomainName}`,
       description: 'Admin app HTTPS URL',
     });
+    new cdk.CfnOutput(this, 'HeroUrl', {
+      value: `https://${this.heroDistribution.distributionDomainName}`,
+      description: 'Hero landing page HTTPS URL',
+    });
     new cdk.CfnOutput(this, 'AppDistributionId', {
       value: this.appDistribution.distributionId,
       description: 'Member app CloudFront distribution ID',
@@ -150,6 +177,10 @@ export class CrossboxFrontendStack extends cdk.Stack {
     new cdk.CfnOutput(this, 'AdminDistributionId', {
       value: this.adminDistribution.distributionId,
       description: 'Admin app CloudFront distribution ID',
+    });
+    new cdk.CfnOutput(this, 'HeroDistributionId', {
+      value: this.heroDistribution.distributionId,
+      description: 'Hero landing page CloudFront distribution ID',
     });
     new cdk.CfnOutput(this, 'CloudFrontUrl', {
       value: this.appDistribution.distributionDomainName,

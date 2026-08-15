@@ -96,6 +96,7 @@ export class CrossboxApiStack extends cdk.Stack {
           'cognito-idp:AdminGetUser',
           'cognito-idp:AdminSetUserPassword',
           'cognito-idp:AdminInitiateAuth',
+          'cognito-idp:AdminRespondToAuthChallenge',
           'cognito-idp:AdminResetUserPassword',
         ],
         resources: [userPool.userPoolArn],
@@ -129,6 +130,11 @@ export class CrossboxApiStack extends cdk.Stack {
     this.httpApi.addRoutes({
       path: '/auth/magic-link/verify',
       methods: [apigw.HttpMethod.GET],
+      integration: authIntegration,
+    });
+    this.httpApi.addRoutes({
+      path: '/auth/reset-password',
+      methods: [apigw.HttpMethod.POST],
       integration: authIntegration,
     });
 
