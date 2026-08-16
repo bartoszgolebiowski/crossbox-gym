@@ -374,7 +374,32 @@ export const AuthCard: React.FC = () => {
               />
             </div>
 
-            <button type="submit" disabled={loading} className={submitButtonClass}>
+            {/* Mandatory Statute Acceptance Checkbox */}
+            <div className="space-y-2 pt-1 text-left">
+              <label className="flex items-start gap-3 p-3 rounded-control border border-line bg-paper shadow-sm hover:border-primary/40 transition-colors cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={statuteAccepted}
+                  onChange={(e) => setStatuteAccepted(e.target.checked)}
+                  className="w-4 h-4 rounded border-line text-primary focus:ring-primary accent-primary mt-0.5 cursor-pointer"
+                  required
+                />
+                <span className="text-xs text-ink/80 leading-relaxed font-normal">
+                  Oświadczam, że zapoznałem/am się z{' '}
+                  <button
+                    type="button"
+                    onClick={() => setShowStatuteDoc(true)}
+                    className="text-primary font-semibold underline hover:text-primary-hover transition-colors"
+                  >
+                    Regulaminem Klubu CrossGym
+                  </button>{' '}
+                  oraz Polityką Prywatności i w pełni akceptuję ich postanowienia.{' '}
+                  <strong className="text-danger">*</strong>
+                </span>
+              </label>
+            </div>
+
+            <button type="submit" disabled={loading || !statuteAccepted} className={submitButtonClass}>
               {loading ? 'Tworzenie konta...' : 'Utwórz Konto Klubowicza'}
             </button>
           </form>

@@ -71,33 +71,34 @@ test.describe('Deployed CrossBox browser flows', () => {
     await page.goto(memberPortalUrl);
     await page.locator('#login-email').fill(activeMember.email);
     await page.locator('#login-password').fill(activeMember.password);
-    await page.getByRole('button', { name: 'Sign In to Portal' }).click();
+    await page.getByRole('button', { name: /Zaloguj się do Portalu/i }).click();
 
-    await expect(page.getByText('Active & ready')).toBeVisible();
+    await expect(page.getByText('Aktywny i gotowy')).toBeVisible();
   });
 
   test('member can request a password reset', async ({ page }) => {
     if (!resetMember) throw new Error('The reset member was not provisioned.');
 
     await page.goto(memberPortalUrl);
-    await page.getByRole('button', { name: 'Forgot' }).click();
+    await page.getByRole('button', { name: /Resetuj hasło/i }).click();
     await page.locator('#forgot-email').fill(resetMember.email);
-    await page.getByRole('button', { name: 'Send Verification Code' }).click();
+    await page.getByRole('button', { name: /Wyślij Kod Weryfikacyjny/i }).click();
 
-    await expect(page.getByText('Verification code sent to your email!')).toBeVisible();
+    await expect(page.getByText(/Verification code sent to your email!/i)).toBeVisible();
   });
 
   test('visitor can register a member account', async ({ page }) => {
     registeredEmail = `ui-registered-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@example.com`;
 
     await page.goto(memberPortalUrl);
-    await page.getByRole('button', { name: 'Register' }).click();
+    await page.getByRole('button', { name: /Rejestracja/i }).click();
     await page.locator('#register-email').fill(registeredEmail);
     await page.locator('#register-password').fill(browserPassword);
     await page.locator('#register-confirm-password').fill(browserPassword);
-    await page.getByRole('button', { name: 'Create Member Account' }).click();
+    await page.locator('input[type="checkbox"]').check();
+    await page.getByRole('button', { name: /Utwórz Konto Klubowicza/i }).click();
 
-    await expect(page.getByText('Turnstile Access Pass', { exact: true })).toBeVisible();
+    await expect(page.getByText(/Wejściowy Kod QR|Wymagany/i).first()).toBeVisible();
     await expect(page.getByRole('img', { name: 'Turnstile QR Pass' })).toHaveCount(0);
   });
 
@@ -107,14 +108,17 @@ test.describe('Deployed CrossBox browser flows', () => {
     await page.goto(memberPortalUrl);
     await page.locator('#login-email').fill(inactiveMember.email);
     await page.locator('#login-password').fill(inactiveMember.password);
-    await page.getByRole('button', { name: 'Sign In to Portal' }).click();
+    await page.getByRole('button', { name: /Zaloguj się do Portalu/i }).click();
 
-    await expect(page.getByText('Turnstile Access Pass', { exact: true })).toBeVisible();
+    await expect(page.getByText(/Wejściowy Kod QR|Wymagany/i).first()).toBeVisible();
     await expect(page.getByRole('img', { name: 'Turnstile QR Pass' })).toHaveCount(0);
+
+    await page.getByTitle(/Aktywuj subskrypcję/i).click();
+    await page.locator('input[type="checkbox"]').check();
 
     const [checkoutPage] = await Promise.all([
       page.waitForEvent('popup'),
-      page.getByRole('button', { name: 'Subscribe via Stripe Checkout' }).click(),
+      page.getByRole('button', { name: /Przejdź do Płatności Stripe/i }).click(),
     ]);
     await expect.poll(() => checkoutPage.url()).toMatch(/^https?:\/\//);
     await checkoutPage.close();
@@ -126,10 +130,10 @@ test.describe('Deployed CrossBox browser flows', () => {
     await page.goto(memberPortalUrl);
     await page.locator('#login-email').fill(activeMember.email);
     await page.locator('#login-password').fill(activeMember.password);
-    await page.getByRole('button', { name: 'Sign In to Portal' }).click();
+    await page.getByRole('button', { name: /Zaloguj się do Portalu/i }).click();
 
     await expect(page.getByRole('img', { name: 'Turnstile QR Pass' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Subscribe via Stripe Checkout' })).toHaveCount(0);
+    await expect(page.getByText(/Kliknij tutaj, aby aktywować karnet/i)).toHaveCount(0);
   });
 
   test('administrator signs in and creates a location', async ({ page }) => {
@@ -140,12 +144,12 @@ test.describe('Deployed CrossBox browser flows', () => {
     await page.goto(adminConsoleUrl);
     await page.locator('#admin-email').fill(admin.email);
     await page.locator('#admin-password').fill(admin.password);
-    await page.getByRole('button', { name: 'Sign In to Console' }).click();
+    await page.getByRole('button', { name: /Zaloguj się do Panelu/i }).click();
 
-    await expect(page.getByText('Location & Facility Management')).toBeVisible();
+    await expect(page.getByText(/Zarządzanie Obiektami/i).first()).toBeVisible();
     await page.locator('#facility-name').fill(locationName);
     await page.locator('#facility-address').fill(address);
-    await page.getByRole('button', { name: 'Create Facility Location' }).click();
+    await page.getByRole('button', { name: /Dodaj Obiekt Do Bazy/i }).click();
 
     const createdRow = page.getByRole('row').filter({ hasText: locationName }).first();
     await expect(createdRow).toBeVisible();

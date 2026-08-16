@@ -1,145 +1,116 @@
-# Technical Specification: Frictionless Post-Purchase Customer Onboarding
+# Technical Specification: Deferred Subscription Billing Anchor
 
-> Technology-agnostic. Describes required behavior, business rules, and user flows — not implementation details.
+> Technology-agnostic. Describes required behavior, rules, data entities, and user flows for deferred subscription billing anchors.
 
 ## 1. Overview
-- **Purpose / Problem Being Solved**: Eliminate friction during checkout by removing upfront account registration and password creation. Customers complete payment using only their payment details, and account activation is handled seamlessly post-purchase via email.
-- **Primary Goals**:
-  1. Increase checkout conversion by reducing checkout form fields to payment information only.
-  2. Provide automated background account provisioning upon successful payment.
-  3. Ensure verified customer identity via the payment transaction mechanism.
-  4. Enable 1-click email activation leading to password creation and immediate automatic login to the customer dashboard.
-
----
+- **Purpose / Problem Being Solved**: When selling recurring subscriptions or cohort-based programs ahead of an official launch date (e.g. selling access on August 16 for a program launching September 12), standard anniversary billing creates fragmented renewal schedules across arbitrary days of the month.
+- **Primary Goal(s)**:
+  - Collect full 1-month payment immediately upfront at checkout.
+  - Grant immediate pre-launch platform access at no extra cost (no proration surcharges).
+  - Defer the first recurring auto-renewal to a synchronized target anchor calendar day (e.g. October 12).
+  - Allow non-technical team members to configure anchor dates via external metadata (`billing_cycle_anchor`) without code changes or deployments.
+  - Fall back gracefully to standard subscription billing if no valid future anchor date is set.
 
 ## 2. Actors & Roles
-
 | Actor | Description | Permissions / What they can do |
 |---|---|---|
-| **Guest Checkout Customer** | A customer making a purchase without an existing account. | Completes checkout with email & payment details; receives post-purchase activation email. |
-| **Existing Customer** | A customer with an established active or inactive account. | Completes new purchases without receiving redundant activation emails; subscription attaches directly to their profile. |
-| **Unactivated Customer** | A customer whose account was provisioned via payment but has not set a password. | Cannot log in via normal password form until activation link is verified; can request fresh activation email. |
-| **Active Customer** | A customer who has completed password setup and agreement acceptance. | Can log in, access member portal, manage subscriptions, and view QR pass/invoices. |
-
----
+| Customer | End user purchasing a recurring program/membership | Can purchase subscription, gain immediate access, view renewal dates, and cancel subscription. |
+| Product / Marketing Manager | Non-technical administrator setting up campaigns | Can configure or update `billing_cycle_anchor` timestamp in product catalog metadata. |
+| Subscription Management System | Automated core backend handling billing and access | Can process checkouts, evaluate metadata anchors, provision access, and schedule renewal cycles. |
 
 ## 3. Functional Requirements
-
 | ID | Requirement | Acceptance Criteria | Actor(s) |
 |---|---|---|---|
-| **FR-01** | Post-Purchase Account Provisioning | Upon payment approval, if no profile exists for the email, create an account record in `UNACTIVATED` state and attach the active subscription. | Guest Checkout Customer |
-| **FR-02** | Welcome & Activation Email | Immediately after provisioning a new account, dispatch a welcome email containing a secure 48-hour activation link. | Guest Checkout Customer |
-| **FR-03** | Existing Customer Attachment | If payment email matches an existing account, attach the subscription/purchase directly without sending an activation link or email. | Existing Customer |
-| **FR-04** | Activation Link Verification | Clicking the activation link verifies token validity and expiration (48 hours). Valid tokens render the password setup screen with pre-filled email. | Unactivated Customer |
-| **FR-05** | Password Creation & Legal Terms Acceptance | Customer enters a new password (min 8 chars) and accepts Club Regulations. Upon submission, set password, mark account `ACTIVE`, and invalidate token immediately. | Unactivated Customer |
-| **FR-06** | Automatic Login | Successful password creation immediately returns authentication session tokens (JWT) and redirects the user to their active dashboard without manual re-login. | Unactivated Customer |
-| **FR-07** | Unclaimed Account Login Interception | Attempting standard password login on an `UNACTIVATED` account displays an inbox verification prompt and automatically sends a fresh 48h activation link. | Unactivated Customer |
-| **FR-08** | Expired Link Handling | Clicking an expired activation link displays an error message informing the user that a fresh activation link has been sent to their inbox. | Unactivated Customer |
-
----
+| FR-1 | Upfront Payment Collection | Upon checkout, the customer is billed 100% of the listed subscription price immediately. | Customer, Subscription Management System |
+| FR-2 | Immediate Pre-Launch Access | Access is granted immediately upon successful payment (e.g. August 16) through the anchor date (e.g. October 12). | Customer, Subscription Management System |
+| FR-3 | Deferred Billing Anchor Alignment | The customer's first automated renewal date is aligned strictly to the configured anchor timestamp (e.g. October 12). | Subscription Management System |
+| FR-4 | Zero-Proration Receipts | Invoices/receipts display exact listed price without split line items, proration credits, or extra surcharges. | Customer, Subscription Management System |
+| FR-5 | Metadata-Driven Configuration | The anchor date is read dynamically from product catalog metadata key `billing_cycle_anchor` (Unix timestamp). | Product / Marketing Manager, Subscription Management System |
+| FR-6 | Automatic Fallback on Invalid/Past Dates | If `billing_cycle_anchor` is missing, malformed, non-numeric, or in the past, checkout defaults to standard billing without an anchor date. System logs a warning. | Subscription Management System |
+| FR-7 | Pre-Launch Cancellation Access | If a customer cancels during the pre-launch window before the first renewal, access remains active until the anchor date; auto-renewal is cancelled. | Customer, Subscription Management System |
 
 ## 4. Business Rules
-
-- **Rule 1: Activation Link Expiration**:
-  - *Condition*: Token age > 48 hours (172,800 seconds).
-  - *Result*: Token is rejected as EXPIRED. Attempting to use it triggers automatic dispatch of a new 48-hour token email.
-
-- **Rule 2: Single-Use Token Invalidation**:
-  - *Condition*: Password setup form successfully submitted with valid token.
-  - *Result*: Token is permanently invalidated/deleted to prevent replay attacks.
-
-- **Rule 3: Existing Account Attachment Bypass**:
-  - *Condition*: Stripe checkout completed for an email already present in the user directory.
-  - *Result*: Skip user registration and skip activation email dispatch. Attach subscription item directly to existing customer profile.
-
-- **Rule 4: Mandatory Terms Acceptance**:
-  - *Condition*: User submits password setup form.
-  - *Result*: Form submission requires explicit checkbox acceptance of Club Regulations & Privacy Policy.
-
----
+- **Rule BR-1: Upfront Coverage & Cycle Start**
+  - **Condition**: Subscription is purchased prior to configured anchor date.
+  - **Result**: Immediate payment covers access from purchase date through the anchor date (including pre-launch bonus window + official first month).
+- **Rule BR-2: First Auto-Renewal Schedule**
+  - **Condition**: Valid future `billing_cycle_anchor` Unix timestamp exists in product metadata.
+  - **Result**: First recurring renewal charge occurs on the anchor timestamp date. Subsequent renewals occur monthly on that anchored calendar day.
+- **Rule BR-3: Past Anchor Timestamp Fallback**
+  - **Condition**: `billing_cycle_anchor` timestamp is <= current checkout time.
+  - **Result**: System ignores anchor override and creates a standard subscription with renewal 1 cycle from checkout date.
+- **Rule BR-4: Malformed Metadata Fallback**
+  - **Condition**: `billing_cycle_anchor` key is absent, empty, non-numeric, or invalid date format.
+  - **Result**: System logs a non-blocking warning and processes standard subscription checkout.
+- **Rule BR-5: No Trial Period Override**
+  - **Condition**: Checkout initiates for product with `billing_cycle_anchor`.
+  - **Result**: Free trial periods are not applicable. Upfront payment is mandatory to receive pre-launch access.
+- **Rule BR-6: Pre-Launch Cancellation Handling**
+  - **Condition**: Customer cancels subscription before the first anchor renewal date.
+  - **Result**: Subscription status is set to cancel at period end (anchor date). No refund issued automatically. Access remains active until anchor date.
 
 ## 5. Data Entities
-
 | Entity | Attributes | Created by | Read by | Updated by | Deleted by | Retention |
 |---|---|---|---|---|---|---|
-| **UserProfile** | `user_id`, `email`, `role`, `status` (`UNACTIVATED` / `ACTIVE`), `created_at` | Payment Webhook | Auth Handler, Admin | Auth Handler (on password set) | System Admin | Permanent |
-| **Subscription** | `subscription_id`, `user_id`, `status`, `stripe_customer_id`, `created_at` | Payment Webhook | Member Handler, Admin | Payment Webhook, Admin | System Admin | Permanent |
-| **ActivationToken**| `token_hash`, `email`, `expires_at` (TTL = 48h) | Payment Webhook, Auth Handler | Auth Handler | Auth Handler | Auth Handler / TTL cleanup | 48 hours |
-
----
+| Product Catalog Entry | ID, Name, Price, Metadata (`billing_cycle_anchor`) | Product / Marketing Manager | Subscription Management System | Product / Marketing Manager | Admin | Indefinite |
+| Checkout Session | Session ID, Customer ID, Product ID, Anchor Timestamp, Status | Customer / System | System, Customer | System | System | Permanent Audit Log |
+| Subscription Record | Subscription ID, Customer ID, Current Period Start, Current Period End (Anchor Date), Auto-Renew Flag, Status | System | System, Customer | System, Customer | N/A (Soft delete / Cancel) | Permanent Record |
 
 ## 6. Workflows / User Flows
 
-### Flow 1: New Customer Post-Purchase Activation
-1. Customer purchases membership via Stripe Checkout using `newuser@example.com`.
-2. Payment Webhook receives `checkout.session.completed` event.
-3. System checks if `newuser@example.com` exists. No existing profile found.
-4. System creates `UserProfile` (`status=UNACTIVATED`) and `Subscription` (`status=ACTIVE`).
-5. System generates 48-hour secure token, stores token hash, and sends Welcome Email with activation link (`/auth/magic-link/verify?token=...&email=...`).
-6. Customer opens email and clicks activation link.
-7. Frontend opens setup view, validates token via backend `GET /auth/magic-link/verify`.
-8. Customer enters new password, checks Terms & Conditions, and submits form.
-9. System sets permanent password, marks `UserProfile` status as `ACTIVE`, invalidates activation token, and issues authentication JWT tokens.
-10. Customer is automatically logged in and redirected to their active Member Dashboard.
+### Flow 1: Pre-Launch Subscription Checkout with Valid Anchor
+1. Customer initiates checkout for a program on August 16.
+2. System retrieves Product Catalog Entry metadata and extracts `billing_cycle_anchor` timestamp (e.g. October 12, 2026).
+3. System verifies timestamp is valid and in the future.
+4. System creates checkout session charging full 1-month fee upfront, setting subscription billing cycle anchor to October 12.
+5. Customer completes payment.
+6. System provisions immediate platform access (August 16).
+7. System schedules first recurring payment for October 12.
+- **Error / Edge cases**:
+  - *Payment failure*: Access is not provisioned; customer receives standard payment failed notification.
+  - *Metadata missing/invalid*: System logs warning and processes standard checkout (Flow 2).
 
-- **Error/Edge Cases**:
-  - *Invalid/Expired Token*: System displays notification that link expired, generates new token, and emails fresh link to customer.
-  - *Password < 8 characters*: Form validation displays error prompt asking for minimum 8 characters.
+### Flow 2: Standard Fallback Checkout (Missing / Past / Malformed Anchor)
+1. Customer initiates checkout.
+2. System reads Product Metadata `billing_cycle_anchor` and finds it missing, unparseable, or past.
+3. System logs system warning/error for administrator review.
+4. System creates standard recurring subscription starting immediately, with next renewal 1 month from checkout date.
+5. Customer completes payment and receives immediate access.
 
----
-
-### Flow 2: Existing Customer Purchase
-1. Customer purchases membership using `existing@example.com`.
-2. Payment Webhook receives `checkout.session.completed` event.
-3. System checks if `existing@example.com` exists. Profile found.
-4. System attaches new `Subscription` to existing `UserProfile`.
-5. No activation email or token is generated.
-
----
-
-### Flow 3: Unclaimed Account Standard Login Attempt
-1. Unactivated customer attempts standard login at `/auth/login` using email & password.
-2. System detects user status is `UNACTIVATED` or password not set.
-3. System automatically generates a fresh 48-hour activation token and emails a new link.
-4. System displays friendly message: *"Konto wymaga aktywacji. Wyłaliśmy świeży link aktywacyjny na Twój adres e-mail."*
-
----
+### Flow 3: Customer Pre-Launch Cancellation
+1. Customer requests subscription cancellation on August 25 (prior to October 12 anchor).
+2. System marks subscription to cancel at period end (October 12).
+3. System confirms cancellation with customer.
+4. Platform access remains active through October 12.
+5. On October 12, no renewal payment is charged and access expires.
 
 ## 7. Non-Functional Requirements
-- **Performance / Scale**: Activation link verification and password setup must complete in < 500ms.
-- **Availability**: High availability for post-purchase webhook handling and activation URL endpoints.
-- **Security-Relevant Behavior**:
-  - Tokens stored only as cryptographically secure SHA-256 hashes.
-  - One-time token consumption upon password setup.
-  - 48-hour TTL auto-expiry.
-  - HTTPS enforcement on all activation links.
-
----
+- **Performance / Scale**: Metadata extraction and anchor calculation must not add measurable latency (<50ms processing overhead) to checkout initialization.
+- **Availability**: Checkout must remain fully functional even if metadata parsing fails (fallback path must ensure 99.99% checkout availability).
+- **Auditability / Logging**: System must log all anchor evaluation events, including fallback triggers caused by past or malformed metadata.
+- **Security-Relevant Behavior**: Anchor calculations must occur securely on the backend; client-side parameters cannot override billing cycle anchor dates.
 
 ## 8. Scope
 
 ### In Scope
-- Post-purchase automated user provisioning without upfront password prompt.
-- Email dispatch with 48h activation link.
-- Single-use token validation, password creation, terms acceptance, and auto-login.
-- Existing customer attachment without email spam.
-- Interception of unclaimed logins with auto-resend of activation link.
+- Dynamically setting subscription cycle anchor from Product Metadata `billing_cycle_anchor`.
+- Upfront full-price billing with immediate access during pre-launch period.
+- Synchronization of subsequent monthly renewals to the anchor calendar day.
+- Graceful fallback to standard recurring billing on invalid/past/missing metadata.
+- Cancellation handling retaining access through anchor date.
 
 ### Out of Scope
-- Multi-factor authentication (MFA) setup during onboarding.
-- Manual phone number SMS verification.
+- Free trial periods (not supported in pre-sale deferred anchor campaigns).
+- Proration surcharges or partial billing split items.
+- In-flight migration of existing active subscriptions to new anchor dates (applies to new checkouts).
 
----
-
-## 9. Open Questions
-*(All business ambiguities resolved)*
-
----
+## 9. Open Questions (should be empty when finalized)
+*None — all clarifying questions resolved.*
 
 ## 10. Resolved Ambiguities Log
-
 | Question | Answer | Impact |
 |---|---|---|
-| What email should existing customers receive upon new purchase? | No email or activation link needed. Just attach the subscription to their existing account. | Simplifies webhook handling for existing users. |
-| How should expired 48h links or unactivated logins be handled? | Automatically generate and send a fresh 48h activation link email, and display a message to check inbox. | Frictionless self-service recovery for expired links. |
-| How should token invalidation and auto-login behave on setup? | Invalidate activation token immediately upon password setup and return standard JWT tokens for auto-login. | Secure single-use tokens with instant user gratification. |
+| How should purchases on or after the target launch date (past anchor timestamp) be handled? | Automatically fall back to standard subscription billing (no anchor override) if `billing_cycle_anchor` is in the past. | Simplifies post-launch transition without needing code updates. |
+| What happens to platform access if a customer cancels during the pre-launch window? | Access remains active until the anchor renewal date (e.g. October 12), with no further auto-renewals. | Ensures clear customer expectations and prevents premature lockouts. |
+| How should invalid or malformed `billing_cycle_anchor` metadata values be handled? | Log a system warning/error and fall back gracefully to standard subscription billing. | Prevents checkout outages due to misconfigured metadata. |
+| How do trial periods interact with deferred anchor billing? | Free trials are explicitly excluded / not supported; upfront payment is required for pre-sale access. | Clarifies subscription setup rules and eliminates conflicting billing logic. |

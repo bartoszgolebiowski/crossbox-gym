@@ -1,8 +1,30 @@
 import { PaymentProvider, StripeProductPrice } from './types';
 
 export class MockPaymentProvider implements PaymentProvider {
-  async createCheckoutSession(_params: any): Promise<{ url: string }> {
-    return { url: 'https://mock.stripe.com/checkout' };
+  public lastCheckoutSessionParams?: any;
+
+  async createCheckoutSession(params: any): Promise<{ url: string; billingCycleAnchor?: number }> {
+    this.lastCheckoutSessionParams = params;
+
+    let billingCycleAnchor: number | undefined;
+    const products = await this.listProducts();
+    const targetProduct = products.find((p) => p.id === params.priceId);
+    const rawAnchor = targetProduct?.metadata?.billing_cycle_anchor || params.metadata?.billing_cycle_anchor;
+
+    if (rawAnchor) {
+      const trimmedAnchor = String(rawAnchor).trim();
+      const parsedAnchor = parseInt(trimmedAnchor, 10);
+      const nowInSeconds = Math.floor(Date.now() / 1000);
+
+      if (!isNaN(parsedAnchor) && /^\d+$/.test(trimmedAnchor) && parsedAnchor > nowInSeconds) {
+        billingCycleAnchor = parsedAnchor;
+      }
+    }
+
+    return {
+      url: 'https://mock.stripe.com/checkout',
+      ...(billingCycleAnchor ? { billingCycleAnchor } : {}),
+    };
   }
 
   async createPortalSession(_params: any): Promise<{ url: string }> {

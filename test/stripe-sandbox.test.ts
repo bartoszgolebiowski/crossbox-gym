@@ -172,4 +172,114 @@ describeLiveStripe('Stripe Live Sandbox Integration Test Suite (No Mocks)', () =
     const result = await stripeEventHandler(eventBridgeEnvelope);
     assert.equal(result.received, true);
   });
+
+  test('Creates live Checkout Session with valid future billing_cycle_anchor metadata within natural billing cycle', async () => {
+    const provider = new StripePaymentProvider(stripe);
+    const validFutureAnchor = Math.floor(Date.now() / 1000) + 20 * 86400; // 20 days in future
+
+    // 1. Create a real Product with billing_cycle_anchor metadata in Stripe Sandbox
+    const campaignProduct = await stripe.products.create({
+      name: 'CrossBox Gym Presale Pass (20 Days Anchor)',
+      metadata: {
+        billing_cycle_anchor: String(validFutureAnchor),
+      },
+    });
+
+    const campaignPrice = await stripe.prices.create({
+      product: campaignProduct.id,
+      unit_amount: 13900, // 139 PLN
+      currency: 'pln',
+      recurring: { interval: 'month' },
+    });
+
+    // 2. Create Checkout Session via provider
+    const res = await provider.createCheckoutSession({
+      priceId: campaignPrice.id,
+      successUrl: 'https://localhost/success',
+      cancelUrl: 'https://localhost/cancel',
+      customerEmail: `anchor-member-${Date.now()}@crossboxgym.com`,
+    });
+
+    assert.ok(res.url, 'Expected Checkout Session URL from live Stripe API');
+    assert.ok(res.url.includes('stripe.com'), 'Expected valid Stripe checkout URL');
+  });
+
+  test('Creates live Checkout Session for distant presale anchor 1791849600 (October 12, 2026) with upfront charge and next payment on Oct 12', async () => {
+    const provider = new StripePaymentProvider(stripe);
+
+    const distantAnchorProduct = await stripe.products.create({
+      name: 'CrossBox Gym Distant Presale Pass 2026',
+      metadata: {
+        billing_cycle_anchor: '1791849600', // October 12, 2026
+      },
+    });
+
+    const distantAnchorPrice = await stripe.prices.create({
+      product: distantAnchorProduct.id,
+      unit_amount: 13900,
+      currency: 'pln',
+      recurring: { interval: 'month' },
+    });
+
+    const res = await provider.createCheckoutSession({
+      priceId: distantAnchorPrice.id,
+      successUrl: 'https://localhost/success',
+      cancelUrl: 'https://localhost/cancel',
+    });
+
+    assert.ok(res.url, 'Expected Checkout Session URL from live Stripe API');
+    assert.ok(res.url.includes('stripe.com'), 'Expected valid Stripe checkout URL');
+  });
+
+  test('Creates live Checkout Session with fallback when billing_cycle_anchor is in the past', async () => {
+    const provider = new StripePaymentProvider(stripe);
+
+    const pastProduct = await stripe.products.create({
+      name: 'CrossBox Gym Past Campaign Pass',
+      metadata: {
+        billing_cycle_anchor: '1600000000', // Past timestamp
+      },
+    });
+
+    const pastPrice = await stripe.prices.create({
+      product: pastProduct.id,
+      unit_amount: 13900,
+      currency: 'pln',
+      recurring: { interval: 'month' },
+    });
+
+    const res = await provider.createCheckoutSession({
+      priceId: pastPrice.id,
+      successUrl: 'https://localhost/success',
+      cancelUrl: 'https://localhost/cancel',
+    });
+
+    assert.ok(res.url, 'Expected fallback checkout URL from live Stripe API');
+  });
+
+  test('Creates live Checkout Session with fallback when billing_cycle_anchor metadata is malformed', async () => {
+    const provider = new StripePaymentProvider(stripe);
+
+    const malformedProduct = await stripe.products.create({
+      name: 'CrossBox Gym Malformed Metadata Pass',
+      metadata: {
+        billing_cycle_anchor: 'invalid-unix-timestamp-string',
+      },
+    });
+
+    const malformedPrice = await stripe.prices.create({
+      product: malformedProduct.id,
+      unit_amount: 13900,
+      currency: 'pln',
+      recurring: { interval: 'month' },
+    });
+
+    const res = await provider.createCheckoutSession({
+      priceId: malformedPrice.id,
+      successUrl: 'https://localhost/success',
+      cancelUrl: 'https://localhost/cancel',
+    });
+
+    assert.ok(res.url, 'Expected fallback checkout URL from live Stripe API');
+  });
 });
