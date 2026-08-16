@@ -82,7 +82,9 @@ export function HardwareActivityCard() {
             </span>
             <span>Hardware Activity & Usage Analytics</span>
           </h2>
-          <p className="text-xs text-muted mt-0.5">Śledzenie statystyk użycia oraz historii skanów i otwarć bramek w obiektach.</p>
+          <p className="text-xs text-muted mt-0.5">
+            Śledzenie statystyk użycia oraz historii skanów i otwarć bramek w obiektach.
+          </p>
         </div>
         <button
           type="button"

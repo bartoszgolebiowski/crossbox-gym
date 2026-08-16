@@ -11,19 +11,21 @@ export const Header: React.FC<HeaderProps> = ({ token, email, onLogout }) => {
     <header className="sticky top-0 z-50 border-b border-line bg-paper/90 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:h-16 sm:px-6">
         {/* Brand Logo & Title */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <a
+          href="/"
+          className="flex items-center gap-2 sm:gap-3 cursor-pointer hover:opacity-90 transition-opacity"
+          title="Strona główna"
+        >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-primary text-xs font-bold tracking-wider text-white shadow-control sm:h-9 sm:w-9 sm:text-sm">
-            CB
+            CG
           </div>
           <div className="flex items-center gap-2">
-            <span className="whitespace-nowrap text-sm font-bold tracking-tight text-ink sm:text-base">
-              CrossBox Gym
-            </span>
+            <span className="whitespace-nowrap text-sm font-bold tracking-tight text-ink sm:text-base">CrossGym</span>
             <span className="hidden rounded-pill border border-primary/30 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary sm:inline-flex">
               Portal Klubowicza
             </span>
           </div>
-        </div>
+        </a>
 
         {/* User Info & Actions */}
         <div className="flex items-center gap-3">

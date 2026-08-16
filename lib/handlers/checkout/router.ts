@@ -6,6 +6,11 @@ export function createCheckoutRouter(service: CheckoutService) {
   return async (event: APIGatewayProxyEventV2) => {
     const method = event.requestContext.http.method;
     const path = event.requestContext.http.path;
+
+    if (method === 'GET' && (path === '/checkout/products' || path === '/checkout/plans')) {
+      return service.getProducts();
+    }
+
     if (method !== 'POST' || path !== '/checkout/session') {
       throw new NotFoundError(`Route ${method} ${path} not found`);
     }

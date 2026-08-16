@@ -58,6 +58,10 @@ const dataStack = new CrossboxDataStack(app, `${prefix}DataStack`, {
 const apiStack = new CrossboxApiStack(app, `${prefix}ApiStack`, {
   isTest,
   dataStack,
+  appDistributionDomainName:
+    app.node.tryGetContext('appDistributionDomainName') ||
+    process.env.FRONTEND_URL?.replace(/^https?:\/\//, '') ||
+    'd24myygtjwitnk.cloudfront.net',
   partnerBusName: app.node.tryGetContext('stripePartnerBusName') || validatedEnv.STRIPE_PARTNER_BUS_NAME,
   env,
 });

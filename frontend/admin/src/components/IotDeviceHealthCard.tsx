@@ -155,8 +155,8 @@ export const IotDeviceHealthCard: React.FC<IotDeviceHealthCardProps> = ({ locati
             {combinedDevices.length === 0 ? (
               <tr>
                 <td colSpan={5} className="px-4 py-8 text-center text-ink/40 italic">
-                  Brak przypisanych urządzeń IoT do tego obiektu. Urządzenia dodaje się komendą CLI (`npm run provision:devices{' '}
-                  {activeLocationId || '<locationId>'}`).
+                  Brak przypisanych urządzeń IoT do tego obiektu. Urządzenia dodaje się komendą CLI (`npm run
+                  provision:devices {activeLocationId || '<locationId>'}`).
                 </td>
               </tr>
             ) : (

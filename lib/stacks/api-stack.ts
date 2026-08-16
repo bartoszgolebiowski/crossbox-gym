@@ -51,12 +51,6 @@ export class CrossboxApiStack extends cdk.Stack {
       jwtAudience: [userPoolClient.userPoolClientId],
     });
 
-    // Policy to allow Lambda to read Stripe secret from SSM Parameter Store (if defined)
-    const ssmPolicy = new iam.PolicyStatement({
-      actions: ['ssm:GetParameter', 'ssm:GetParameters'],
-      resources: [`arn:aws:ssm:${this.region}:${this.account}:parameter/crossbox/stripe/*`],
-    });
-
     const commonEnv = {
       MAIN_TABLE_NAME: mainTable.tableName,
       ENTRY_LOGS_TABLE_NAME: entryLogsTable.tableName,
@@ -64,8 +58,11 @@ export class CrossboxApiStack extends cdk.Stack {
       USER_POOL_ID: userPool.userPoolId,
       USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
       FRONTEND_URL: appDistributionDomainName ? `https://${appDistributionDomainName}` : 'http://localhost:3000',
+      SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || 'noreply@crossgym.fit',
+      SES_REGION: process.env.SES_REGION || 'eu-central-1',
       PAYMENT_PROVIDER: isTest ? 'mock' : 'stripe',
       IDENTITY_PROVIDER: isTest ? 'mock' : 'cognito',
+      STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || '',
     };
 
     const defaultNodejsFunctionProps: Partial<nodejs.NodejsFunctionProps> = {
@@ -102,6 +99,12 @@ export class CrossboxApiStack extends cdk.Stack {
         resources: [userPool.userPoolArn],
       })
     );
+    const sesPolicy = new iam.PolicyStatement({
+      actions: ['ses:SendEmail', 'ses:SendRawEmail'],
+      resources: ['*'],
+    });
+    authHandler.addToRolePolicy(sesPolicy);
+
     const authIntegration = new HttpLambdaIntegration('AuthIntegration', authHandler);
 
     this.httpApi.addRoutes({ path: '/auth/register', methods: [apigw.HttpMethod.POST], integration: authIntegration });
@@ -149,13 +152,15 @@ export class CrossboxApiStack extends cdk.Stack {
       },
     });
     mainTable.grantReadData(checkoutHandler);
-    if (!isTest) {
-      checkoutHandler.addToRolePolicy(ssmPolicy);
-    }
     const checkoutIntegration = new HttpLambdaIntegration('CheckoutIntegration', checkoutHandler);
     this.httpApi.addRoutes({
       path: '/checkout/session',
       methods: [apigw.HttpMethod.POST],
+      integration: checkoutIntegration,
+    });
+    this.httpApi.addRoutes({
+      path: '/checkout/products',
+      methods: [apigw.HttpMethod.GET],
       integration: checkoutIntegration,
     });
 
@@ -176,9 +181,7 @@ export class CrossboxApiStack extends cdk.Stack {
         resources: [userPool.userPoolArn],
       })
     );
-    if (!isTest) {
-      stripeWebhookHandler.addToRolePolicy(ssmPolicy);
-    }
+    stripeWebhookHandler.addToRolePolicy(sesPolicy);
 
     // EventBridge Bus & Rule for Stripe Events
     this.stripeEventBus = partnerBusName
@@ -212,7 +215,6 @@ export class CrossboxApiStack extends cdk.Stack {
       },
     });
     mainTable.grantReadWriteData(memberHandler);
-    memberHandler.addToRolePolicy(ssmPolicy);
 
     const memberIntegration = new HttpLambdaIntegration('MemberIntegration', memberHandler);
 
@@ -356,6 +358,42 @@ export class CrossboxApiStack extends cdk.Stack {
       schedule: events.Schedule.rate(cdk.Duration.hours(1)),
       targets: [new targets.LambdaFunction(graceExpiryHandler)],
     });
+
+    // --- 7. EventBridge CRON Warmer Rules (Keeps API Lambdas warm 24/7 every 5 minutes) ---
+    // Note: AWS EventBridge limits each rule to a maximum of 5 targets.
+    const apiFunctionsToWarm = [
+      authHandler,
+      checkoutHandler,
+      stripeWebhookHandler,
+      memberHandler,
+      this.verifyEntryFunction,
+      this.deviceHeartbeatFunction,
+      adminHandler,
+    ];
+
+    const warmerPayload = events.RuleTargetInput.fromObject({
+      warmer: true,
+      source: 'eventbridge.warmer',
+      action: 'warmup',
+    });
+
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < apiFunctionsToWarm.length; i += CHUNK_SIZE) {
+      const chunk = apiFunctionsToWarm.slice(i, i + CHUNK_SIZE);
+      const ruleIndex = Math.floor(i / CHUNK_SIZE) + 1;
+      const warmerRule = new events.Rule(this, `ApiLambdasWarmerRule${ruleIndex}`, {
+        schedule: events.Schedule.rate(cdk.Duration.minutes(5)),
+        description: `EventBridge CRON rule batch ${ruleIndex} to keep API Lambdas warm 24/7`,
+      });
+
+      for (const fn of chunk) {
+        warmerRule.addTarget(
+          new targets.LambdaFunction(fn, {
+            event: warmerPayload,
+          })
+        );
+      }
+    }
 
     // --- Stack Outputs ---
     new cdk.CfnOutput(this, 'ApiUrl', {

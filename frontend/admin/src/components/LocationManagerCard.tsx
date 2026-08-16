@@ -96,7 +96,7 @@ export const LocationManagerCard: React.FC = () => {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-sm font-bold text-ink flex items-center gap-2">
-              <span>Zarejestrowane Siłownie CrossBox</span>
+              <span>Zarejestrowane Siłownie CrossGym</span>
               <span className="px-2 py-0.5 text-xs font-semibold bg-line/20 text-ink/80 rounded-pill border border-line/60">
                 {locationsList.length} Obiekt(y)
               </span>
@@ -138,7 +138,9 @@ export const LocationManagerCard: React.FC = () => {
                           )}
                         </td>
                         <td className="px-3.5 py-2.5 font-mono text-ink/70">{locId}</td>
-                        <td className="px-3.5 py-2.5 text-ink/70 truncate max-w-[180px]">{loc.address || 'Brak danych'}</td>
+                        <td className="px-3.5 py-2.5 text-ink/70 truncate max-w-[180px]">
+                          {loc.address || 'Brak danych'}
+                        </td>
                         <td className="px-3.5 py-2.5 text-right">
                           <button
                             type="button"
@@ -172,7 +174,7 @@ export const LocationManagerCard: React.FC = () => {
               <input
                 id="facility-name"
                 type="text"
-                placeholder="np. CrossBox Gym Warszawa Centrum 24/7"
+                placeholder="np. CrossGym Warszawa Centrum 24/7"
                 className={fieldClass}
                 value={locName}
                 onChange={(e) => handleFieldChange('locName', e.target.value)}

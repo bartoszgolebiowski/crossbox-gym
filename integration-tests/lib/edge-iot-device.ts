@@ -1,3 +1,4 @@
+import { IoTDataPlaneClient, PublishCommand } from '@aws-sdk/client-iot-data-plane';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
@@ -232,6 +233,27 @@ export class EdgeIotDevice {
     this.connected = false;
   }
 
+  async publishHeartbeat(): Promise<void> {
+    const client = new IoTDataPlaneClient({
+      endpoint: `https://${this.endpoint}`,
+      region: process.env.AWS_REGION || 'eu-central-1',
+    });
+
+    await client.send(
+      new PublishCommand({
+        topic: `gym/devices/${this.thingName}/heartbeat`,
+        qos: 1,
+        payload: Buffer.from(
+          JSON.stringify({
+            thingName: this.thingName,
+            status: 'online',
+            timestamp: new Date().toISOString(),
+          })
+        ),
+      })
+    );
+  }
+
   async on(): Promise<void> {
     if (!this.registered) {
       throw new Error('Device must be registered before turning on');
@@ -239,6 +261,7 @@ export class EdgeIotDevice {
 
     await this.connectToIotWithMtls();
     await this.startHealthListener();
+    await this.publishHeartbeat();
     this.poweredOn = true;
     this.connected = true;
   }

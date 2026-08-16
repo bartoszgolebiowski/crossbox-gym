@@ -1,10 +1,5 @@
 import { GetParameterCommand, SSMClient } from '@aws-sdk/client-ssm';
-import {
-  SSM_IOT_ENDPOINT_PARAM,
-  SSM_LOCKER_THING_NAME_PARAM,
-  SSM_PATH_STRIPE_SECRET_KEY,
-  SSM_SCANNER_THING_NAME_PARAM,
-} from '../../../config';
+import { SSM_IOT_ENDPOINT_PARAM, SSM_LOCKER_THING_NAME_PARAM, SSM_SCANNER_THING_NAME_PARAM } from '../../../config';
 
 export interface ISsmValueProvider {
   get(): Promise<string>;
@@ -92,12 +87,6 @@ export class SsmLockerThingNameProvider extends CachedSsmValueProvider {
 export class SsmScannerThingNameProvider extends CachedSsmValueProvider {
   constructor(options: SsmValueProviderOptions = {}) {
     super(SSM_SCANNER_THING_NAME_PARAM, false, options);
-  }
-}
-
-export class SsmStripeSecretKeyProvider extends CachedSsmValueProvider {
-  constructor(options: SsmValueProviderOptions = {}) {
-    super(SSM_PATH_STRIPE_SECRET_KEY, true, options);
   }
 }
 

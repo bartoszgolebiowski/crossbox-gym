@@ -1,6 +1,7 @@
 import { CognitoIdentityProviderClient } from '@aws-sdk/client-cognito-identity-provider';
 import { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { ddb } from '../shared/db';
+import { MockEmailService, SESEmailService } from '../shared/email/ses-email-service';
 import { withHandler } from '../shared/http';
 import { loadAuthEnvironment } from './environment';
 import { CognitoAuthIdentityProvider } from './identity-provider';
@@ -17,10 +18,15 @@ export const handler = async (event: APIGatewayProxyEventV2) => {
     environment.userPoolId,
     environment.userPoolClientId
   );
+  const emailService =
+    environment.identityProvider === 'mock' || process.env.USE_MOCK_EMAIL === 'true'
+      ? new MockEmailService()
+      : new SESEmailService();
   const service = new AuthService({
     repository,
     identityProvider,
     frontendUrl: environment.frontendUrl,
+    emailService,
   });
   return withHandler(createAuthRouter(service))(event);
 };

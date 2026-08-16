@@ -59,8 +59,12 @@ export async function handleCheckoutSessionCompleted(session: any, ctx: WebhookC
       )}`;
 
       console.log(`[Checkout Completed] New user invitation link generated for ${customerEmail}: ${invitationUrl}`);
+
+      if (ctx.emailService) {
+        await ctx.emailService.sendWelcomeVerifyEmail(customerEmail, invitationUrl);
+      }
     } catch (err) {
-      console.error(`Failed to generate invitation link for ${customerEmail}:`, err);
+      console.error(`Failed to generate invitation link or send email for ${customerEmail}:`, err);
     }
   }
 }

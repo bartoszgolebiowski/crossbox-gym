@@ -82,7 +82,9 @@ export function LockerActivityCard() {
             </span>
             <span>Locker Door Activity Audit</span>
           </h2>
-          <p className="text-xs text-muted mt-0.5">Rejestr zdarzeń otwarcia szafek depozytowych i ubraniowych w obiekcie.</p>
+          <p className="text-xs text-muted mt-0.5">
+            Rejestr zdarzeń otwarcia szafek depozytowych i ubraniowych w obiekcie.
+          </p>
         </div>
         <button
           type="button"

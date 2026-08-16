@@ -99,7 +99,14 @@ export const QrPassCard: React.FC = () => {
               ) : membershipActive ? (
                 <div className="w-44 h-44 flex flex-col items-center justify-center text-ink/40 gap-2">
                   <svg className="w-6 h-6 animate-spin text-info" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
                     <path
                       className="opacity-75"
                       fill="currentColor"
@@ -124,7 +131,9 @@ export const QrPassCard: React.FC = () => {
                     />
                   </svg>
                   <span className="text-xs leading-5">
-                    {dashboardLoading ? 'Sprawdzanie stanu członkostwa...' : 'Kliknij tutaj, aby aktywować karnet i odblokować kod QR.'}
+                    {dashboardLoading
+                      ? 'Sprawdzanie stanu członkostwa...'
+                      : 'Kliknij tutaj, aby aktywować karnet i odblokować kod QR.'}
                   </span>
                 </button>
               )}

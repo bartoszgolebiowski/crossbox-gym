@@ -8,7 +8,7 @@ export const CheckoutRedirectPage: React.FC = () => {
       <CheckoutResultLayout
         eyebrow="Redirecting"
         title="One moment"
-        message="We're bringing you back to the CrossBox member dashboard."
+        message="We're bringing you back to the CrossGym member dashboard."
         countdownLabel="Continuing in"
         icon={
           <svg

@@ -119,9 +119,7 @@ export const AuthCard: React.FC = () => {
       dispatchForm(setAuthFormError('Invitation token is missing or expired.'));
       return;
     }
-    const result = await dispatch(
-      setPasswordWithTokenThunk({ email: inputEmail, token: inviteToken, newPassword })
-    );
+    const result = await dispatch(setPasswordWithTokenThunk({ email: inputEmail, token: inviteToken, newPassword }));
     if (setPasswordWithTokenThunk.fulfilled.match(result)) {
       dispatch(fetchDashboardThunk());
       dispatch(fetchInvoicesThunk());
@@ -148,11 +146,11 @@ export const AuthCard: React.FC = () => {
             {authMode === 'register' && 'Rejestracja Klubowicza'}
             {authMode === 'forgot' && 'Resetowanie Hasła'}
             {authMode === 'reset' && 'Wprowadź Kod Weryfikacyjny'}
-            {authMode === 'invitation' && 'Witaj w CrossBox Gym! Ustaw swoje hasło'}
+            {authMode === 'invitation' && 'Witaj w CrossGym! Ustaw swoje hasło'}
           </h2>
           <p className="mt-1 text-sm text-muted">
             {authMode === 'login' && 'Zaloguj się, aby uzyskać swój kod QR do bramki'}
-            {authMode === 'register' && 'Załóż konto, aby zarządzać swoim karnetem CrossBox Gym'}
+            {authMode === 'register' && 'Załóż konto, aby zarządzać swoim karnetem CrossGym'}
             {authMode === 'forgot' && 'Wyślemy kod weryfikacyjny na Twój adres e-mail'}
             {authMode === 'reset' && 'Ustaw nowe, bezpieczne hasło do swojego konta'}
             {authMode === 'invitation' && 'Dokończ aktywację konta po zakupie karnetu — ustaw bezpieczne hasło.'}
@@ -165,7 +163,9 @@ export const AuthCard: React.FC = () => {
             <button
               type="button"
               className={`py-1.5 text-xs font-medium rounded-control transition-colors cursor-pointer ${
-                authMode === 'login' ? 'bg-primary text-white font-semibold shadow-control' : 'text-muted hover:text-ink'
+                authMode === 'login'
+                  ? 'bg-primary text-white font-semibold shadow-control'
+                  : 'text-muted hover:text-ink'
               }`}
               onClick={() => switchTab('login')}
             >
@@ -271,9 +271,10 @@ export const AuthCard: React.FC = () => {
                     onClick={() => setShowStatuteDoc(true)}
                     className="text-primary font-semibold underline hover:text-primary-hover transition-colors"
                   >
-                    Regulaminem Klubu CrossBox Gym
+                    Regulaminem Klubu CrossGym
                   </button>{' '}
-                  oraz Polityką Prywatności i w pełni akceptuję ich postanowienia. <strong className="text-danger">*</strong>
+                  oraz Polityką Prywatności i w pełni akceptuję ich postanowienia.{' '}
+                  <strong className="text-danger">*</strong>
                 </span>
               </label>
             </div>
@@ -496,36 +497,56 @@ export const AuthCard: React.FC = () => {
             <div className="pb-3 border-b border-line pr-8">
               <span className="text-xs font-semibold text-primary uppercase tracking-wider">Dokument Prawny</span>
               <h3 className="font-[family-name:var(--font-heading)] text-xl font-bold text-ink mt-0.5">
-                Regulamin Klubu CrossBox Gym 24/7
+                Regulamin Klubu CrossGym 24/7
               </h3>
             </div>
 
             <div className="flex-1 overflow-y-auto py-4 pr-2 space-y-3 text-xs text-ink/80 leading-relaxed">
               <p>
-                <strong>§ 1. Postanowienia Ogólne</strong><br />
-                1. Niniejszy Regulamin określa zasady korzystania z całodobowych siłowni sieci CrossBox Gym oraz świadczenia usług drogą elektroniczną.<br />
-                2. Operatorem i administratorem serwiserwisu oraz sieci klubów jest CrossBox Gym Sp. z o.o.<br />
-                3. Wejście na teren klubu odbywa się w trybie samoobsługowym za pomocą unikalnego kodu QR generowanego w aplikacji mobilnej.
+                <strong>§ 1. Postanowienia Ogólne</strong>
+                <br />
+                1. Niniejszy Regulamin określa zasady korzystania z całodobowych siłowni sieci CrossGym oraz świadczenia
+                usług drogą elektroniczną.
+                <br />
+                2. Operatorem i administratorem serwiserwisu oraz sieci klubów jest CrossGym Sp. z o.o.
+                <br />
+                3. Wejście na teren klubu odbywa się w trybie samoobsługowym za pomocą unikalnego kodu QR generowanego w
+                aplikacji mobilnej.
               </p>
 
               <p>
-                <strong>§ 2. Członkostwo i Subskrypcja Przedsprzedażowa</strong><br />
-                1. W ramach przedsprzedaży Klubowicz uzyskuje stałą gwarancję stawki 139 zł/miesiąc na czas nieokreślony pod warunkiem zachowania ciągłości subskrypcji.<br />
-                2. Rozliczenia są realizowane automatycznie w cyklu miesięcznym za pośrednictwem bezpiecznego operatora płatności Stripe Payments.<br />
-                3. Rezygnacja z subskrypcji może nastąpić w dowolnym momencie ze skutkiem na koniec bieżącego okresu rozliczeniowego z poziomu panelu klubowicza.
+                <strong>§ 2. Członkostwo i Subskrypcja Przedsprzedażowa</strong>
+                <br />
+                1. W ramach przedsprzedaży Klubowicz uzyskuje stałą gwarancję stawki 139 zł/miesiąc na czas nieokreślony
+                pod warunkiem zachowania ciągłości subskrypcji.
+                <br />
+                2. Rozliczenia są realizowane automatycznie w cyklu miesięcznym za pośrednictwem bezpiecznego operatora
+                płatności Stripe Payments.
+                <br />
+                3. Rezygnacja z subskrypcji może nastąpić w dowolnym momencie ze skutkiem na koniec bieżącego okresu
+                rozliczeniowego z poziomu panelu klubowicza.
               </p>
 
               <p>
-                <strong>§ 3. Dostęp do Klubu 24/7 i Zasady Bezpieczeństwa</strong><br />
-                1. Klub jest otwarty 24 godziny na dobę, 7 dni w tygodniu przez cały rok.<br />
-                2. Dostęp do strefy treningowej przyznawany jest wyłącznie zidentyfikowanemu posiadaczowi aktywnego karnetu.<br />
-                3. Zabrania się udostępniania kodu QR osobom trzecim. Obiekt jest całodobowo monitorowany systemem wizyjnym HD z automatyczną detekcją incydentów.
+                <strong>§ 3. Dostęp do Klubu 24/7 i Zasady Bezpieczeństwa</strong>
+                <br />
+                1. Klub jest otwarty 24 godziny na dobę, 7 dni w tygodniu przez cały rok.
+                <br />
+                2. Dostęp do strefy treningowej przyznawany jest wyłącznie zidentyfikowanemu posiadaczowi aktywnego
+                karnetu.
+                <br />
+                3. Zabrania się udostępniania kodu QR osobom trzecim. Obiekt jest całodobowo monitorowany systemem
+                wizyjnym HD z automatyczną detekcją incydentów.
               </p>
 
               <p>
-                <strong>§ 4. Ochrona Danych Osobowych (RODO)</strong><br />
-                1. Dane osobowe Klubowiczów są przetwarzane zgodnie z rozporządzeniem RODO w celu realizacji umowy członkowskiej oraz zapewnienia bezpieczeństwa w obiekcie.<br />
-                2. Każdemu Klubowiczowi przysługuje prawo dostępu do swoich danych, ich sprostowania, usunięcia oraz ograniczenia przetwarzania.
+                <strong>§ 4. Ochrona Danych Osobowych (RODO)</strong>
+                <br />
+                1. Dane osobowe Klubowiczów są przetwarzane zgodnie z rozporządzeniem RODO w celu realizacji umowy
+                członkowskiej oraz zapewnienia bezpieczeństwa w obiekcie.
+                <br />
+                2. Każdemu Klubowiczowi przysługuje prawo dostępu do swoich danych, ich sprostowania, usunięcia oraz
+                ograniczenia przetwarzania.
               </p>
             </div>
 

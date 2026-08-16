@@ -507,7 +507,7 @@ To enable single-command integration testing (`npm run test:e2e`), the CDK stack
    - Production mode: API Gateway CORS strictly restricted to CloudFront distribution domain (`CDNDistribution`).
 
 3. **Secrets Management**:
-   - Live Stripe secret key (`STRIPE_SECRET_KEY`) stored in **AWS SSM Parameter Store** (`/crossbox/stripe/secret-key`).
+   - Live Stripe secret key (`STRIPE_SECRET_KEY`) passed via environment variable (`STRIPE_SECRET_KEY`).
    - Non-prod / Mock mode uses dummy key strings inline.
 
 4. **Seed Admin Provisioning**:

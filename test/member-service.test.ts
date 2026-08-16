@@ -63,6 +63,10 @@ class FakePaymentProvider implements PaymentProvider {
   async listInvoices() {
     return [];
   }
+
+  async listProducts() {
+    return [];
+  }
 }
 
 test('MemberService generates a deterministic short-lived QR code through injected dependencies', async () => {

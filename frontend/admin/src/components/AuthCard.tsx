@@ -61,7 +61,7 @@ export const AuthCard: React.FC = () => {
               id="admin-email"
               type="email"
               className={fieldClass}
-              placeholder="admin@crossboxgym.pl"
+              placeholder="admin@crossgym.pl"
               value={inputEmail}
               onChange={(e) => handleFieldChange('inputEmail', e.target.value)}
               autoComplete="email"

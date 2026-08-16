@@ -27,6 +27,7 @@ export class CognitoIdentityProvider implements IdentityProvider {
           UserPoolId: userPoolId,
           Username: email,
           TemporaryPassword: tempPassword,
+          MessageAction: 'SUPPRESS',
           UserAttributes: [
             { Name: 'email', Value: email },
             { Name: 'email_verified', Value: 'true' },

@@ -1,5 +1,5 @@
 import { ValidationError } from '../shared/http';
-import { PaymentProvider } from '../shared/payment';
+import { PaymentProvider, StripeProductPrice } from '../shared/payment';
 
 export interface CreateCheckoutRequest {
   priceId?: string;
@@ -14,6 +14,15 @@ export class CheckoutService {
     private readonly paymentProvider: PaymentProvider,
     private readonly frontendUrl: string
   ) {}
+
+  async getProducts(): Promise<StripeProductPrice[]> {
+    try {
+      return await this.paymentProvider.listProducts();
+    } catch (error) {
+      console.error('Failed to list checkout products:', error);
+      throw new ValidationError(error instanceof Error ? error.message : 'Failed to fetch products');
+    }
+  }
 
   async createSession(request: CreateCheckoutRequest): Promise<{ url: string }> {
     const redirectUrl = request.redirectUrl?.replace(/\/$/, '');

@@ -83,7 +83,9 @@ export const ProfileCard: React.FC<ProfileCardProps> = ({ email }) => {
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 rounded-pill border border-accent/30 bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent">
-                    {dashboard.subscription?.status === 'INACTIVE' ? 'Nieaktywny' : dashboard.subscription?.status || 'Nieaktywny'}
+                    {dashboard.subscription?.status === 'INACTIVE'
+                      ? 'Nieaktywny'
+                      : dashboard.subscription?.status || 'Nieaktywny'}
                   </span>
                 )}
               </div>

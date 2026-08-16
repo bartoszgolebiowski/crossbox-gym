@@ -1,6 +1,6 @@
 import Stripe from 'stripe';
 import { getStripeClient } from './stripe-client-manager';
-import { PaymentProvider } from './types';
+import { PaymentProvider, StripeProductPrice } from './types';
 
 export class StripePaymentProvider implements PaymentProvider {
   async createCheckoutSession(params: {
@@ -132,5 +132,39 @@ export class StripePaymentProvider implements PaymentProvider {
       status: inv.status,
       createdAt: new Date(inv.created * 1000).toISOString(),
     }));
+  }
+
+  async listProducts(): Promise<StripeProductPrice[]> {
+    const stripe = await getStripeClient();
+    try {
+      const prices = await stripe.prices.list({
+        active: true,
+        expand: ['data.product'],
+        limit: 50,
+      });
+
+      return prices.data
+        .filter((price) => {
+          if (!price.active) return false;
+          if (!price.product || typeof price.product === 'string') return false;
+          return (price.product as Stripe.Product).active !== false;
+        })
+        .map((price) => {
+          const product = price.product as Stripe.Product;
+          return {
+            id: price.id,
+            productId: product.id,
+            name: product.name,
+            description: product.description || null,
+            unitAmount: price.unit_amount || 0,
+            currency: price.currency,
+            interval: price.recurring?.interval || null,
+            metadata: product.metadata || {},
+          };
+        });
+    } catch (err) {
+      console.error('Error fetching Stripe products:', err);
+      return [];
+    }
   }
 }

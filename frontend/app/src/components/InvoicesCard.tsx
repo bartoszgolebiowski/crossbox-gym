@@ -69,9 +69,7 @@ export const InvoicesCard: React.FC = () => {
                   <div className="text-[11px] text-muted flex items-center gap-2 mt-0.5">
                     <span>Data: {new Date(inv.createdAt).toLocaleDateString()}</span>
                     <span>•</span>
-                    <span>
-                      VAT: {(inv.tax / 100).toFixed(2)} PLN
-                    </span>
+                    <span>VAT: {(inv.tax / 100).toFixed(2)} PLN</span>
                   </div>
                 </div>
               </div>

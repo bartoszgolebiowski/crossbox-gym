@@ -61,7 +61,7 @@ export default function App() {
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-10 sm:py-14">
         <div className="mb-10 border-b border-line pb-7 sm:flex sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Członkostwo CrossBox Gym 24/7</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Członkostwo CrossGym 24/7</p>
             <h1 className="mt-2 font-[family-name:var(--font-heading)] text-3xl sm:text-4xl font-bold tracking-tight text-ink">
               Szybki dostęp do siłowni bez formalności.
             </h1>

@@ -20,6 +20,21 @@ class FakePaymentProvider implements PaymentProvider {
   async listInvoices() {
     return [];
   }
+
+  async listProducts() {
+    return [
+      {
+        id: 'price_test_1',
+        productId: 'prod_test_1',
+        name: 'Test Membership',
+        description: 'Test Description',
+        unitAmount: 10000,
+        currency: 'pln',
+        interval: 'month',
+        metadata: {},
+      },
+    ];
+  }
 }
 
 test('CheckoutService resolves return routes from configured frontend URL', async () => {
@@ -45,4 +60,14 @@ test('CheckoutService derives checkout routes from an explicit redirect URL', as
 
   assert.equal(paymentProvider.checkoutRequest?.successUrl, 'https://partner.example.test/return/checkout/success');
   assert.equal(paymentProvider.checkoutRequest?.cancelUrl, 'https://partner.example.test/return/checkout/cancel');
+});
+
+test('CheckoutService.getProducts returns products from payment provider', async () => {
+  const paymentProvider = new FakePaymentProvider();
+  const service = new CheckoutService(paymentProvider, 'https://app.example.test');
+
+  const products = await service.getProducts();
+  assert.equal(products.length, 1);
+  assert.equal(products[0].id, 'price_test_1');
+  assert.equal(products[0].name, 'Test Membership');
 });

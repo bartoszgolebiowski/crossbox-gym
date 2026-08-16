@@ -7,7 +7,7 @@ export const CheckoutSuccessPage: React.FC = () => {
     <>
       <CheckoutResultLayout
         eyebrow="Payment successful"
-        title="Welcome to CrossBox"
+        title="Welcome to CrossGym"
         message="Your membership is being activated. Check your email for a code to set your password."
         countdownLabel="Redirecting to the member dashboard in"
         icon={

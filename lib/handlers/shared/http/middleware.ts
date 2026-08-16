@@ -61,8 +61,55 @@ const COMMON_HEADERS = {
   Vary: 'Origin',
 };
 
+export function isWarmingEvent(event: any): boolean {
+  if (!event || typeof event !== 'object') return false;
+
+  // Explicit warmer flags or custom event attributes
+  if (event.warmer === true || event.isWarming === true) return true;
+  if (event.action === 'warmup' || event.type === 'warmup') return true;
+  if (event.source === 'eventbridge.warmer' || event.source === 'serverless-plugin-warmup') return true;
+
+  // EventBridge Scheduled Event default payload
+  if (event.source === 'aws.events' && event['detail-type'] === 'Scheduled Event') return true;
+
+  // HTTP Ping query param or custom header
+  if (event.queryStringParameters?.warmup === 'true' || event.headers?.['x-ping'] === 'warmup') return true;
+
+  return false;
+}
+
+/**
+ * Higher-Order Function (HOF) to keep generic Lambda functions warm.
+ * Intercepts healthcheck/warmer events (e.g. from EventBridge CRON) and returns immediately 200 OK,
+ * avoiding execution of DB connections or heavy business logic.
+ */
+export function withWarming<THandler extends (...args: any[]) => Promise<any>>(handler: THandler) {
+  return async (...args: Parameters<THandler>): Promise<any> => {
+    const [event] = args;
+    if (isWarmingEvent(event)) {
+      console.log('[Warmer] Lambda pinged by EventBridge CRON. Container warm.');
+      return {
+        statusCode: 200,
+        headers: COMMON_HEADERS,
+        body: JSON.stringify({ status: 'warmed', timestamp: new Date().toISOString() }),
+      };
+    }
+    return handler(...args);
+  };
+}
+
 export function withHandler(handler: (event: APIGatewayProxyEventV2) => Promise<any>) {
   return async (event: APIGatewayProxyEventV2): Promise<APIGatewayProxyResultV2> => {
+    // Intercept EventBridge CRON healthcheck / warming events
+    if (isWarmingEvent(event)) {
+      console.log('[Warmer] Lambda pinged by EventBridge CRON. Container warm.');
+      return {
+        statusCode: 200,
+        headers: COMMON_HEADERS,
+        body: JSON.stringify({ status: 'warmed', timestamp: new Date().toISOString() }),
+      };
+    }
+
     // Handle CORS preflight OPTIONS request
     const method = event.requestContext?.http?.method || (event as any).httpMethod;
     if (method === 'OPTIONS') {

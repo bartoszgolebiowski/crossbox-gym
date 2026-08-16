@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { AuthRepository, DynamoDbAuthRepository } from '../auth/repository';
 import { ddb } from '../shared/db';
+import { EmailService, MockEmailService, SESEmailService } from '../shared/email/ses-email-service';
 import { IdentityProvider } from '../shared/identity';
 import { CognitoIdentityProvider, MockIdentityProvider } from '../shared/identity/cognito-identity-provider';
 import { BillingRepository, DynamoDbBillingRepository } from './repository';
@@ -34,11 +35,13 @@ export interface WebhookContext {
   identityProvider: IdentityProvider;
   billingRepository: BillingRepository;
   authRepository: AuthRepository;
+  emailService: EmailService;
 }
 
 export function createWebhookContext(): WebhookContext {
   const env = stripeWebhookEnvironmentSchema.parse(process.env);
   const mainTableName = env.MAIN_TABLE_NAME;
+  const isMock = env.IDENTITY_PROVIDER === 'mock' || process.env.USE_MOCK_EMAIL === 'true';
   return {
     mainTableName,
     userPoolId: env.USER_POOL_ID,
@@ -46,5 +49,6 @@ export function createWebhookContext(): WebhookContext {
     identityProvider: createIdentityProvider(env.IDENTITY_PROVIDER),
     billingRepository: new DynamoDbBillingRepository(ddb, mainTableName),
     authRepository: new DynamoDbAuthRepository(ddb, mainTableName),
+    emailService: isMock ? new MockEmailService() : new SESEmailService(),
   };
 }

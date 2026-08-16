@@ -62,7 +62,7 @@ export const StatuteCheckoutModal: React.FC<StatuteCheckoutModalProps> = ({
           <div className="mt-4 rounded-control bg-line/10 p-4 border border-line/60 space-y-2">
             <div className="flex items-center justify-between text-xs sm:text-sm font-semibold text-ink">
               <span>Plan subskrypcji:</span>
-              <span className="font-bold text-primary">CrossBox Gym 24/7 All-Access</span>
+              <span className="font-bold text-primary">CrossGym 24/7 All-Access</span>
             </div>
             <div className="flex items-baseline justify-between text-xs sm:text-sm border-t border-line/40 pt-2">
               <span className="text-muted">Cena w przedsprzedaży:</span>
@@ -95,17 +95,14 @@ export const StatuteCheckoutModal: React.FC<StatuteCheckoutModalProps> = ({
                   onClick={() => setShowStatuteDoc(true)}
                   className="text-primary font-semibold underline hover:text-primary-hover transition-colors"
                 >
-                  Regulaminem Klubu CrossBox Gym
+                  Regulaminem Klubu CrossGym
                 </button>{' '}
-                oraz Polityką Prywatności i w pełni akceptuję ich postanowienia. <strong className="text-danger">*</strong>
+                oraz Polityką Prywatności i w pełni akceptuję ich postanowienia.{' '}
+                <strong className="text-danger">*</strong>
               </span>
             </label>
 
-            {(localError || error) && (
-              <p className="text-xs font-medium text-danger px-1">
-                {localError || error}
-              </p>
-            )}
+            {(localError || error) && <p className="text-xs font-medium text-danger px-1">{localError || error}</p>}
           </div>
 
           {/* Buttons */}
@@ -157,36 +154,56 @@ export const StatuteCheckoutModal: React.FC<StatuteCheckoutModalProps> = ({
             <div className="pb-3 border-b border-line pr-8">
               <span className="text-xs font-semibold text-primary uppercase tracking-wider">Dokument Prawny</span>
               <h3 className="font-[family-name:var(--font-heading)] text-xl font-bold text-ink mt-0.5">
-                Regulamin Klubu CrossBox Gym 24/7
+                Regulamin Klubu CrossGym 24/7
               </h3>
             </div>
 
             <div className="flex-1 overflow-y-auto py-4 pr-2 space-y-3 text-xs text-ink/80 leading-relaxed">
               <p>
-                <strong>§ 1. Postanowienia Ogólne</strong><br />
-                1. Niniejszy Regulamin określa zasady korzystania z całodobowych siłowni sieci CrossBox Gym oraz świadczenia usług drogą elektroniczną.<br />
-                2. Operatorem i administratorem serwisu oraz sieci klubów jest CrossBox Gym Sp. z o.o.<br />
-                3. Wejście na teren klubu odbywa się w trybie samoobsługowym za pomocą unikalnego kodu QR generowanego w aplikacji mobilnej.
+                <strong>§ 1. Postanowienia Ogólne</strong>
+                <br />
+                1. Niniejszy Regulamin określa zasady korzystania z całodobowych siłowni sieci CrossGym oraz świadczenia
+                usług drogą elektroniczną.
+                <br />
+                2. Operatorem i administratorem serwisu oraz sieci klubów jest CrossGym Sp. z o.o.
+                <br />
+                3. Wejście na teren klubu odbywa się w trybie samoobsługowym za pomocą unikalnego kodu QR generowanego w
+                aplikacji mobilnej.
               </p>
 
               <p>
-                <strong>§ 2. Członkostwo i Subskrypcja Przedsprzedażowa</strong><br />
-                1. W ramach przedsprzedaży Klubowicz uzyskuje stałą gwarancję stawki 139 zł/miesiąc na czas nieokreślony pod warunkiem zachowania ciągłości subskrypcji.<br />
-                2. Rozliczenia są realizowane automatycznie w cyklu miesięcznym za pośrednictwem bezpiecznego operatora płatności Stripe Payments.<br />
-                3. Rezygnacja z subskrypcji może nastąpić w dowolnym momencie ze skutkiem na koniec bieżącego okresu rozliczeniowego z poziomu panelu klubowicza.
+                <strong>§ 2. Członkostwo i Subskrypcja Przedsprzedażowa</strong>
+                <br />
+                1. W ramach przedsprzedaży Klubowicz uzyskuje stałą gwarancję stawki 139 zł/miesiąc na czas nieokreślony
+                pod warunkiem zachowania ciągłości subskrypcji.
+                <br />
+                2. Rozliczenia są realizowane automatycznie w cyklu miesięcznym za pośrednictwem bezpiecznego operatora
+                płatności Stripe Payments.
+                <br />
+                3. Rezygnacja z subskrypcji może nastąpić w dowolnym momencie ze skutkiem na koniec bieżącego okresu
+                rozliczeniowego z poziomu panelu klubowicza.
               </p>
 
               <p>
-                <strong>§ 3. Dostęp do Klubu 24/7 i Zasady Bezpieczeństwa</strong><br />
-                1. Klub jest otwarty 24 godziny na dobę, 7 dni w tygodniu przez cały rok.<br />
-                2. Dostęp do strefy treningowej przyznawany jest wyłącznie zidentyfikowanemu posiadaczowi aktywnego karnetu.<br />
-                3. Zabrania się udostępniania kodu QR osobom trzecim. Obiekt jest całodobowo monitorowany systemem wizyjnym HD z automatyczną detekcją incydentów.
+                <strong>§ 3. Dostęp do Klubu 24/7 i Zasady Bezpieczeństwa</strong>
+                <br />
+                1. Klub jest otwarty 24 godziny na dobę, 7 dni w tygodniu przez cały rok.
+                <br />
+                2. Dostęp do strefy treningowej przyznawany jest wyłącznie zidentyfikowanemu posiadaczowi aktywnego
+                karnetu.
+                <br />
+                3. Zabrania się udostępniania kodu QR osobom trzecim. Obiekt jest całodobowo monitorowany systemem
+                wizyjnym HD z automatyczną detekcją incydentów.
               </p>
 
               <p>
-                <strong>§ 4. Ochrona Danych Osobowych (RODO)</strong><br />
-                1. Dane osobowe Klubowiczów są przetwarzane zgodnie z rozporządzeniem RODO w celu realizacji umowy członkowskiej oraz zapewnienia bezpieczeństwa w obiekcie.<br />
-                2. Każdemu Klubowiczowi przysługuje prawo dostępu do swoich danych, ich sprostowania, usunięcia oraz ograniczenia przetwarzania.
+                <strong>§ 4. Ochrona Danych Osobowych (RODO)</strong>
+                <br />
+                1. Dane osobowe Klubowiczów są przetwarzane zgodnie z rozporządzeniem RODO w celu realizacji umowy
+                członkowskiej oraz zapewnienia bezpieczeństwa w obiekcie.
+                <br />
+                2. Każdemu Klubowiczowi przysługuje prawo dostępu do swoich danych, ich sprostowania, usunięcia oraz
+                ograniczenia przetwarzania.
               </p>
             </div>
 

@@ -1,3 +1,14 @@
+export interface StripeProductPrice {
+  id: string;
+  productId: string;
+  name: string;
+  description: string | null;
+  unitAmount: number;
+  currency: string;
+  interval: string | null;
+  metadata: Record<string, string>;
+}
+
 export interface PaymentProvider {
   createCheckoutSession(params: {
     priceId?: string;
@@ -22,4 +33,6 @@ export interface PaymentProvider {
       createdAt: string;
     }>
   >;
+
+  listProducts(): Promise<StripeProductPrice[]>;
 }

@@ -130,7 +130,7 @@ describeLiveStripe('Stripe Live Sandbox Integration Test Suite (No Mocks)', () =
     assert.ok(Array.isArray(invoices.data));
   });
 
-  test('StripePaymentProvider methods execute successfully with SSM or direct client', async () => {
+  test('StripePaymentProvider methods execute successfully with direct client', async () => {
     // Validate direct SDK instantiation
     const directProvider = new StripePaymentProvider();
     assert.ok(directProvider);

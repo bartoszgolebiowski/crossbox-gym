@@ -28,8 +28,7 @@
     "test:ui:install": "playwright install chromium",
     "test:ui": "playwright test",
     "seed": "tsx scripts/seed-admin.ts",
-    "fetch:certs": "node scripts/fetch-certs.mjs",
-    "push:stripe-secret": "node scripts/push-stripe-secret.mjs"
+    "fetch:certs": "node scripts/fetch-certs.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",
@@ -63,6 +62,7 @@
     "@aws-sdk/client-lambda": "^3.1101.0",
     "@aws-sdk/client-s3": "^3.731.0",
     "@aws-sdk/client-secrets-manager": "^3.1101.0",
+    "@aws-sdk/client-ses": "^3.731.0",
     "@aws-sdk/client-sqs": "^3.731.0",
     "@aws-sdk/client-ssm": "^3.731.0",
     "@aws-sdk/lib-dynamodb": "^3.731.0",

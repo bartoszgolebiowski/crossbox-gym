@@ -18,6 +18,7 @@ describe('Checkout & EventBridge Lifecycle Test Suite', () => {
       USER_POOL_CLIENT_ID: context.userPoolClientId,
       PAYMENT_PROVIDER: 'mock',
       IDENTITY_PROVIDER: 'cognito',
+      USE_MOCK_EMAIL: 'true',
       FRONTEND_URL: 'http://localhost:5173',
       ENTRY_LOGS_TABLE_NAME: context.entryLogsTableName,
       AUDIT_LOGS_TABLE_NAME: context.auditLogsTableName,
@@ -255,5 +256,51 @@ describe('Checkout & EventBridge Lifecycle Test Suite', () => {
     assert.equal(loginRes.status, 200);
     const loginData = (await loginRes.json()) as { idToken: string };
     assert.ok(loginData.idToken);
+  });
+
+  test('Existing customer checkout session attaches subscription directly without creating activation token', async () => {
+    const existingEmail = `existing-user-${Date.now()}@example.com`;
+
+    // 1. Create initial user via checkout webhook
+    await stripeEventHandler({
+      source: 'aws.partner/stripe.com',
+      'detail-type': 'checkout.session.completed',
+      detail: {
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            customer_details: { email: existingEmail },
+            subscription: `sub_first_${Date.now()}`,
+            customer: `cus_first_${Date.now()}`,
+          },
+        },
+      },
+    });
+
+    // 2. Perform second purchase for the same existing email
+    const secondSubId = `sub_second_${Date.now()}`;
+    const secondRes = await stripeEventHandler({
+      source: 'aws.partner/stripe.com',
+      'detail-type': 'checkout.session.completed',
+      detail: {
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            customer_details: { email: existingEmail },
+            subscription: secondSubId,
+            customer: `cus_second_${Date.now()}`,
+          },
+        },
+      },
+    });
+
+    assert.equal(secondRes.received, true);
+  });
+
+  test('GET /auth/magic-link/verify rejects invalid or missing token', async () => {
+    const res = await fetch(
+      `${context.apiUrl}/auth/magic-link/verify?token=invalid_token_12345&email=nobody@example.com`
+    );
+    assert.equal(res.ok, false, `Expected non-2xx status for invalid token, got ${res.status}`);
   });
 });

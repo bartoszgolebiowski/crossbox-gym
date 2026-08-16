@@ -2,9 +2,6 @@ import rawIotFleet from './iot-fleet.json';
 import rawSsmPaths from './ssm-paths.json';
 
 export interface SsmPaths {
-  stripe: {
-    secretKey: string;
-  };
   iot: {
     endpoint: string;
     lockerThingName: string;
@@ -51,7 +48,6 @@ export interface IotFleet {
 const ssmPaths: SsmPaths = rawSsmPaths;
 export const iotFleet: IotFleet = rawIotFleet as unknown as IotFleet;
 
-export const SSM_PATH_STRIPE_SECRET_KEY = ssmPaths.stripe.secretKey;
 export const SSM_IOT_ENDPOINT_PARAM = ssmPaths.iot.endpoint;
 export const SSM_LOCKER_THING_NAME_PARAM = ssmPaths.iot.lockerThingName;
 export const SSM_SCANNER_THING_NAME_PARAM = ssmPaths.iot.scannerThingName;

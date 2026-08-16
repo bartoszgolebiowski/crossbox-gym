@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { AuthRepository } from '../lib/handlers/auth/repository';
+import { MockEmailService } from '../lib/handlers/shared/email/ses-email-service';
 import { EnsureUserResult, IdentityProvider } from '../lib/handlers/shared/identity';
 import { SubscriptionItem } from '../lib/handlers/shared/types';
 import { WebhookContext } from '../lib/handlers/stripe-webhook/context';
@@ -63,7 +64,13 @@ class FakeAuthRepository implements AuthRepository {
   async getMagicLinkToken(tokenHash: string) {
     const item = this.tokens.get(tokenHash);
     if (!item) return undefined;
-    return { PK: `TOKEN#${tokenHash}`, SK: 'TOKEN', user_id: item.email, created_at: new Date().toISOString(), ttl: item.ttl };
+    return {
+      PK: `TOKEN#${tokenHash}`,
+      SK: 'TOKEN',
+      user_id: item.email,
+      created_at: new Date().toISOString(),
+      ttl: item.ttl,
+    };
   }
 
   async saveMagicLinkToken(tokenHash: string, email: string, ttl: number) {
@@ -94,7 +101,11 @@ class FakeIdentityProvider implements IdentityProvider {
 }
 
 function createContext(
-  overrides: { billingRepository?: BillingRepository; identityProvider?: IdentityProvider; authRepository?: AuthRepository } = {}
+  overrides: {
+    billingRepository?: BillingRepository;
+    identityProvider?: IdentityProvider;
+    authRepository?: AuthRepository;
+  } = {}
 ): WebhookContext {
   return {
     mainTableName: 'CrossboxGymMainTable',
@@ -103,6 +114,7 @@ function createContext(
     identityProvider: overrides.identityProvider || new FakeIdentityProvider(),
     billingRepository: overrides.billingRepository || new FakeBillingRepository(),
     authRepository: overrides.authRepository || new FakeAuthRepository(),
+    emailService: new MockEmailService(),
   };
 }
 

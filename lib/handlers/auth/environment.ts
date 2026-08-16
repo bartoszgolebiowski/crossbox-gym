@@ -5,6 +5,7 @@ export interface AuthEnvironment {
   userPoolId: string;
   userPoolClientId: string;
   frontendUrl: string;
+  identityProvider?: string;
 }
 
 const authEnvironmentSchema = z.object({
@@ -12,6 +13,7 @@ const authEnvironmentSchema = z.object({
   USER_POOL_ID: z.string().min(1, 'USER_POOL_ID is required'),
   USER_POOL_CLIENT_ID: z.string().min(1, 'USER_POOL_CLIENT_ID is required'),
   FRONTEND_URL: z.string().min(1, 'FRONTEND_URL is required'),
+  IDENTITY_PROVIDER: z.string().optional(),
 });
 
 export function loadAuthEnvironment(env: NodeJS.ProcessEnv = process.env): AuthEnvironment {
@@ -21,5 +23,6 @@ export function loadAuthEnvironment(env: NodeJS.ProcessEnv = process.env): AuthE
     userPoolId: validated.USER_POOL_ID,
     userPoolClientId: validated.USER_POOL_CLIENT_ID,
     frontendUrl: validated.FRONTEND_URL,
+    identityProvider: validated.IDENTITY_PROVIDER,
   };
 }

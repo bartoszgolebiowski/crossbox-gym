@@ -103,7 +103,9 @@ export default function App() {
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-8">
         <div className="mb-6 border-b border-line pb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">Zarządzanie Obiektami CrossBox 24/7</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              Zarządzanie Obiektami CrossGym 24/7
+            </p>
             <h1 className="mt-1 font-[family-name:var(--font-heading)] text-3xl font-bold tracking-tight text-ink">
               Panel Administratora
             </h1>

@@ -1,7 +1,4 @@
 {
-  "stripe": {
-    "secretKey": "/crossbox/stripe/secret-key"
-  },
   "iot": {
     "endpoint": "/crossbox/iot/endpoint",
     "lockerThingName": "/crossbox/iot/locker-thing-name",

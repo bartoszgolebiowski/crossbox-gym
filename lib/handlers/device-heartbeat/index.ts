@@ -42,6 +42,6 @@ export const handler = async (event: HeartbeatEventRecord[]) => {
       console.warn('[DeviceHeartbeat] Missing thingName, skipping record:', record);
       continue;
     }
-    repo.updatePresence(thingName, new Date().toISOString());
+    await repo.updatePresence(thingName, new Date().toISOString());
   }
 };

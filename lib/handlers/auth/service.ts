@@ -1,4 +1,5 @@
 import { createHash, randomBytes } from 'crypto';
+import { EmailService } from '../shared/email/ses-email-service';
 import { ValidationError } from '../shared/http';
 import { AuthIdentityProvider, AuthResult } from './identity-provider';
 import { AuthRepository } from './repository';
@@ -7,6 +8,7 @@ export interface AuthServiceDependencies {
   repository: AuthRepository;
   identityProvider: AuthIdentityProvider;
   frontendUrl: string;
+  emailService?: EmailService;
   now?: () => Date;
   randomBytes?: (size: number) => Buffer;
 }
@@ -74,7 +76,11 @@ export class AuthService {
       throw new ValidationError('Invalid or expired magic link token');
     }
 
-    return { verified: true, email, message: 'Magic link verified successfully' };
+    return {
+      verified: true,
+      email,
+      message: 'Magic link token verified successfully',
+    };
   }
 
   async setPassword(sub: string, email: string, newPassword: string): Promise<{ message: string }> {

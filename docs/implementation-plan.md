@@ -303,11 +303,8 @@ Ordered build sequence. Each step depends on the resources listed. Within a sing
   - Handler: `src/handlers/checkout.handler`
   - Environment variables:
     - `PAYMENT_PROVIDER` — `stripe` | `mock`
-  - Imported config:
-    - `STRIPE_SECRET_KEY_SSM_PATH` — `/crossbox/stripe/secret-key` (read at init)
-- **IAM permissions:**
-  - `ssm:GetParameter` on `arn:aws:ssm:*:*:parameter/crossbox/stripe/secret-key` (when `PAYMENT_PROVIDER=stripe`)
-  - `kms:Decrypt` on default SSM KMS key (for SecureString)
+    - `STRIPE_SECRET_KEY`
+- **IAM permissions:** None required for payment key (passed via env).
 - **Error handling:** Sync API response. No DLQ.
 - **Observability:** CloudWatch Logs.
 - **Provider adapters used:** `PaymentProvider`
@@ -328,15 +325,12 @@ Ordered build sequence. Each step depends on the resources listed. Within a sing
     - `MAIN_TABLE_NAME`
     - `USER_POOL_ID`
     - `PAYMENT_PROVIDER` — `stripe` | `mock`
-  - Imported config:
-    - `STRIPE_SECRET_KEY_SSM_PATH` — `/crossbox/stripe/secret-key`
+    - `STRIPE_SECRET_KEY`
 - **IAM permissions:**
   - `dynamodb:PutItem`, `UpdateItem`, `GetItem` on `MainTable`
   - `dynamodb:Query` on `MainTable` `EmailIndex`, `StripeSubIndex` GSIs
   - `cognito-idp:AdminCreateUser` on User Pool ARN
   - `cognito-idp:AdminAddUserToGroup` on User Pool ARN (for adding to default member group if needed)
-  - `ssm:GetParameter` on `/crossbox/stripe/*` SSM paths
-  - `kms:Decrypt` on default SSM KMS key
 - **Error handling:** Return 200 to Stripe on success. Return 500 on transient failure — Stripe retries for up to 3 days. All operations are idempotent (check-before-write).
 - **Observability:** CloudWatch Logs. Monitor error rate — indicates provisioning or status transition failures.
 - **Provider adapters used:** `PaymentProvider`
@@ -356,13 +350,10 @@ Ordered build sequence. Each step depends on the resources listed. Within a sing
   - Environment variables:
     - `MAIN_TABLE_NAME`
     - `PAYMENT_PROVIDER` — `stripe` | `mock`
-  - Imported config:
-    - `STRIPE_SECRET_KEY_SSM_PATH`
+    - `STRIPE_SECRET_KEY`
 - **IAM permissions:**
   - `dynamodb:GetItem`, `Query`, `PutItem` on `MainTable` (user, subscription, consent, config, locations via GSI1)
   - `dynamodb:Query` on `MainTable` `CognitoSubIndex` GSI (JWT sub → user_id)
-  - `ssm:GetParameter` on `/crossbox/stripe/secret-key` (for portal session creation)
-  - `kms:Decrypt` on default SSM KMS key
 - **Error handling:** Sync API response. No DLQ.
 - **Observability:** CloudWatch Logs.
 - **Provider adapters used:** `PaymentProvider`
@@ -468,12 +459,12 @@ Ordered build sequence. Each step depends on the resources listed. Within a sing
 
 | Secret / Config | Storage | Access Method | Used By |
 |---|---|---|---|
-| Stripe secret key | SSM Parameter Store: `/crossbox/stripe/secret-key` (SecureString) | Lambda reads at cold start via SDK. Cached in memory. | `CheckoutHandler`, `StripeWebhookHandler`, `MemberHandler` |
+| Stripe secret key | Lambda environment variable: `STRIPE_SECRET_KEY` | Direct env var read. | `CheckoutHandler`, `StripeWebhookHandler`, `MemberHandler` |
 | HMAC signing keys | DynamoDB `MainTable` (`CONFIG#HMAC_CURRENT_KEY`, `CONFIG#HMAC_PREVIOUS_KEY`) | `GetItem` at runtime per request. | `VerifyEntry`, `MemberHandler` (QR gen), `AdminHandler` (rotation) |
 | SES sender email | Lambda environment variable: `SES_SENDER_EMAIL` | Direct env var read. | `AuthHandler`, `StripeWebhookHandler`, `GraceExpiryCron` |
 
 **Pre-deployment prerequisites:**
-1. Create SSM SecureString parameters manually: `/crossbox/stripe/secret-key`
+1. Configure `STRIPE_SECRET_KEY` environment variable
 2. Verify SES domain identity (DNS records)
 3. Seed initial HMAC key in DynamoDB MainTable (`CONFIG#HMAC_CURRENT_KEY`)
 

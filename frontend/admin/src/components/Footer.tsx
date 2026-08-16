@@ -6,9 +6,9 @@ export const Footer: React.FC = () => {
       <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-success"></span>
-          <span className="text-ink/80 font-medium">System Administracyjny CrossBox Gym 24/7 Aktywny</span>
+          <span className="text-ink/80 font-medium">System Administracyjny CrossGym 24/7 Aktywny</span>
         </div>
-        <p className="text-muted">&copy; {new Date().getFullYear()} CrossBox Gym. Wszelkie prawa zastrzeżone.</p>
+        <p className="text-muted">&copy; {new Date().getFullYear()} CrossGym. Wszelkie prawa zastrzeżone.</p>
       </div>
     </footer>
   );
