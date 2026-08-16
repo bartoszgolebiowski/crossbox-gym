@@ -59,7 +59,7 @@ export class CrossboxApiStack extends cdk.Stack {
       USER_POOL_CLIENT_ID: userPoolClient.userPoolClientId,
       FRONTEND_URL: appDistributionDomainName ? `https://${appDistributionDomainName}` : 'http://localhost:3000',
       SES_FROM_EMAIL: process.env.SES_FROM_EMAIL || 'noreply@crossgym.fit',
-      SES_REGION: process.env.SES_REGION || 'eu-central-1',
+      SES_REGION: process.env.SES_REGION || 'eu-west-1',
       PAYMENT_PROVIDER: isTest ? 'mock' : 'stripe',
       IDENTITY_PROVIDER: isTest ? 'mock' : 'cognito',
       STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY || '',

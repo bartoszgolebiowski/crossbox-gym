@@ -133,7 +133,8 @@ export class StripePaymentProvider implements PaymentProvider {
             currency: retrievedPrice.currency,
             product_data: {
               name: `${productObj?.name || 'Karnet'} (Dostęp Przedsprzedażowy)`,
-              description: productObj?.description || 'Dostęp przedsprzedażowy od momentu zakupu do pierwszego odnowienia',
+              description:
+                productObj?.description || 'Dostęp przedsprzedażowy od momentu zakupu do pierwszego odnowienia',
             },
             unit_amount: retrievedPrice.unit_amount || 0,
           },

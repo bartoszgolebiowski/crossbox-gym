@@ -158,53 +158,209 @@ export const StatuteCheckoutModal: React.FC<StatuteCheckoutModalProps> = ({
               </h3>
             </div>
 
-            <div className="flex-1 overflow-y-auto py-4 pr-2 space-y-3 text-xs text-ink/80 leading-relaxed">
-              <p>
-                <strong>§ 1. Postanowienia Ogólne</strong>
-                <br />
-                1. Niniejszy Regulamin określa zasady korzystania z całodobowych siłowni sieci CrossGym oraz świadczenia
-                usług drogą elektroniczną.
-                <br />
-                2. Operatorem i administratorem serwisu oraz sieci klubów jest CrossGym Sp. z o.o.
-                <br />
-                3. Wejście na teren klubu odbywa się w trybie samoobsługowym za pomocą unikalnego kodu QR generowanego w
-                aplikacji mobilnej.
-              </p>
+            <div className="flex-1 overflow-y-auto py-4 pr-2 text-xs text-ink/80 leading-relaxed font-normal">
+              <div className="space-y-4">
+                <div className="bg-primary/5 p-3.5 rounded-xl border border-primary/20 space-y-1 text-xs">
+                  <p className="font-extrabold text-ink text-sm">
+                    CROSSGYM KIELCE 24/7 REGULAMIN KLUBU ORAZ KLAUZULA INFORMACYJNA (UMOWA ONLINE)
+                  </p>
+                  <p className="text-secondary font-semibold">
+                    Obowiązuje od momentu akceptacji elektronicznej | Obiekt Całodobowy 24/7
+                  </p>
+                  <p className="text-ink/80">
+                    <strong>Podmiot prowadzący Klub:</strong> Adam Burek prowadzący działalność gospodarczą, ul. Biskupa
+                    Czesława Kaczmarka 16, 25-022 Kielce, NIP: 7991938916, REGON: 142857130 (zwany dalej „Operatorem
+                    Klubu”).
+                  </p>
+                  <p className="text-ink/80">
+                    <strong>Adres obiektu Klubu:</strong> CrossGym Kielce 24/7, ul. Jana Nowaka Jeziorańskiego 73a,
+                    25-432 Kielce.
+                  </p>
+                </div>
 
-              <p>
-                <strong>§ 2. Członkostwo i Subskrypcja Przedsprzedażowa</strong>
-                <br />
-                1. W ramach przedsprzedaży Klubowicz uzyskuje stałą gwarancję stawki 139 zł/miesiąc na czas nieokreślony
-                pod warunkiem zachowania ciągłości subskrypcji.
-                <br />
-                2. Rozliczenia są realizowane automatycznie w cyklu miesięcznym za pośrednictwem bezpiecznego operatora
-                płatności Stripe Payments.
-                <br />
-                3. Rezygnacja z subskrypcji może nastąpić w dowolnym momencie ze skutkiem na koniec bieżącego okresu
-                rozliczeniowego z poziomu panelu klubowicza.
-              </p>
+                <div>
+                  <h4 className="font-bold text-ink text-xs sm:text-sm uppercase tracking-wider mb-1 text-primary">
+                    I. ZAWARCIE UMOWY ONLINE I POSTANOWIENIA OGÓLNE
+                  </h4>
+                  <ol className="list-decimal list-inside space-y-1 text-ink/80 pl-1">
+                    <li>
+                      Umowa o korzystanie z usług Klubu CrossGym Kielce 24/7 zawarta zostaje pomiędzy osobą korzystającą
+                      z usług Klubu (zwaną dalej „Członkiem Klubu”) a Operatorem Klubu drogą elektroniczną (online).
+                    </li>
+                    <li>
+                      Potwierdzeniem zawarcia Umowy jest akceptacja Regulaminu w procesie rejestracji online (poprzez
+                      stronę internetową lub aplikację Klubu) oraz uiszczenie opłaty za wybrany karnet. Strony nie
+                      składają fizycznego podpisu papierowego.
+                    </li>
+                    <li>
+                      Członkiem Klubu może zostać osoba pełnoletnia (posiadająca pełną zdolność do czynności prawnych).
+                      Za pisemną lub elektroniczną zgodą opiekuna prawnego Członkiem Klubu może zostać osoba od 16. roku
+                      życia.
+                    </li>
+                    <li>
+                      Udostępnianie profilu, aplikacji dostępowej, opaski lub karty osobom trzecim jest bezwzględnie
+                      zabronione i skutkuje natychmiastowym zablokowaniem dostępu do Klubu.
+                    </li>
+                    <li>
+                      Członek Klubu ma prawo do korzystania z obiektu w trybie całodobowym (24/7) na zasadach
+                      wynikających z zakupionego wariantu karnetu.
+                    </li>
+                  </ol>
+                </div>
 
-              <p>
-                <strong>§ 3. Dostęp do Klubu 24/7 i Zasady Bezpieczeństwa</strong>
-                <br />
-                1. Klub jest otwarty 24 godziny na dobę, 7 dni w tygodniu przez cały rok.
-                <br />
-                2. Dostęp do strefy treningowej przyznawany jest wyłącznie zidentyfikowanemu posiadaczowi aktywnego
-                karnetu.
-                <br />
-                3. Zabrania się udostępniania kodu QR osobom trzecim. Obiekt jest całodobowo monitorowany systemem
-                wizyjnym HD z automatyczną detekcją incydentów.
-              </p>
+                <div>
+                  <h4 className="font-bold text-ink text-xs sm:text-sm uppercase tracking-wider mb-1 text-primary">
+                    II. CZAS TRWANIA UMOWY I PŁATNOŚCI ODNAWIALNE
+                  </h4>
+                  <ol className="list-decimal list-inside space-y-1 text-ink/80 pl-1">
+                    <li>
+                      Umowa zostaje zawarta na czas nieokreślony i ulega automatycznemu przedłużeniu na kolejne
+                      miesięczne okresy rozliczeniowe.
+                    </li>
+                    <li>
+                      Wysokość opłat za poszczególne rodzaje karnetów określa Cennik w systemie rejestracji online.
+                      Płatność za każdy kolejny miesiąc pobierana jest automatycznie z karty płatniczej przypisanej do
+                      konta Członka Klubu.
+                    </li>
+                    <li>
+                      Cena karnetu nie uwzględnia ubezpieczenia od następstw nieszczęśliwych wypadków (NNW). Członek
+                      Klubu trenuje we własnym zakresie i na własną odpowiedzialność.
+                    </li>
+                    <li>
+                      W przypadku braku możliwości pobrania opłaty za kolejny okres rozliczeniowy, dostęp do obiektu
+                      ulega automatycznemu zawieszeniu do momentu uregulowania należności.
+                    </li>
+                  </ol>
+                </div>
 
-              <p>
-                <strong>§ 4. Ochrona Danych Osobowych (RODO)</strong>
-                <br />
-                1. Dane osobowe Klubowiczów są przetwarzane zgodnie z rozporządzeniem RODO w celu realizacji umowy
-                członkowskiej oraz zapewnienia bezpieczeństwa w obiekcie.
-                <br />
-                2. Każdemu Klubowiczowi przysługuje prawo dostępu do swoich danych, ich sprostowania, usunięcia oraz
-                ograniczenia przetwarzania.
-              </p>
+                <div>
+                  <h4 className="font-bold text-ink text-xs sm:text-sm uppercase tracking-wider mb-1 text-primary">
+                    III. ANULOWANIE SUBSKRYPCJI ONLINE
+                  </h4>
+                  <ol className="list-decimal list-inside space-y-1 text-ink/80 pl-1">
+                    <li>
+                      Członek Klubu może w dowolnym momencie zrezygnować z dalszego automatycznego odnawiania umowy,
+                      wyłączając subskrypcję w panelu klienta w aplikacji lub serwisie internetowym (bądź kontaktując
+                      się z Klubem drogą mailową).
+                    </li>
+                    <li>
+                      Anulowanie subskrypcji wywołuje skutek na koniec bieżącego, opłaconego okresu rozliczeniowego. Do
+                      tego dnia Członek Klubu zachowuje pełne prawo do korzystania z obiektu, a od kolejnego miesiąca
+                      opłaty nie będą pobierane.
+                    </li>
+                  </ol>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-ink text-xs sm:text-sm uppercase tracking-wider mb-1 text-primary">
+                    IV. CAŁODOBOWY MONITORING I REJESTRACJA OBRAZU (MONITORING 24/7)
+                  </h4>
+                  <ol className="list-decimal list-inside space-y-1 text-ink/80 pl-1">
+                    <li>
+                      Cały teren obiektu CrossGym Kielce 24/7 jest objęty całodobowym systemem monitoringu wizyjnego
+                      (24/7) z automatyczną rejestracją obrazu. Nagrywanie rozpoczyna się od momentu wejścia do obiektu.
+                    </li>
+                    <li>
+                      Monitoring jest prowadzony w celu zapewnienia bezpieczeństwa osobom przebywającym w obiekcie,
+                      ochrony mienia, weryfikacji uprawnień wstępu oraz kontroli przestrzegania regulaminu obiektu
+                      działającego w trybie bezobsługowym 24/7.
+                    </li>
+                    <li>
+                      Warunkiem koniecznym do zakupu karnetu online oraz wstępu do Klubu jest wyrażenie zgody na
+                      rejestrację obrazu z udziałem Członka Klubu. Brak akceptacji klauzuli monitoringu uniemożliwia
+                      zawarcie umowy oraz korzystanie z obiektu.
+                    </li>
+                  </ol>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-ink text-xs sm:text-sm uppercase tracking-wider mb-1 text-primary">
+                    V. KLAUZULA INFORMACYJNA RODO (OCHRONA DANYCH OSOBOWYCH)
+                  </h4>
+                  <ol className="list-decimal list-inside space-y-1 text-ink/80 pl-1">
+                    <li>
+                      <strong>Administrator Danych:</strong> Administratorem danych osobowych jest Adam Burek prowadzący
+                      działalność gospodarczą, ul. Biskupa Czesława Kaczmarka 16, 25-022 Kielce, NIP: 7991938916, REGON:
+                      142857130.
+                    </li>
+                    <li>
+                      <strong>Podstawa prawna i cele przetwarzania:</strong>
+                      <ul className="list-disc list-inside pl-4 mt-0.5 space-y-0.5">
+                        <li>Art. 6 ust. 1 lit. b RODO: zawarcie i realizacja umowy świadczonej drogą elektroniczną;</li>
+                        <li>
+                          Art. 6 ust. 1 lit. f RODO: prawnie uzasadniony interes Administratora (bezpieczeństwo osób i
+                          mienia w obiekcie 24/7, ochrona przed roszczeniami).
+                        </li>
+                      </ul>
+                    </li>
+                    <li>
+                      <strong>Okres przechowywania danych:</strong> Nagrania z monitoringu przechowywane są do 30 dni,
+                      po czym są automatycznie nadpisywane. Dane konta przechowywane są przez okres trwania umowy oraz
+                      do czasu przedawnienia roszczeń.
+                    </li>
+                    <li>
+                      <strong>Prawa Członka Klubu:</strong> Osobie, której dane dotyczą, przysługuje prawo dostępu do
+                      danych, ich sprostowania, usunięcia, ograniczenia przetwarzania, sprzeciwu oraz prawo wniesienia
+                      skargi do Prezesa UODO.
+                    </li>
+                  </ol>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-ink text-xs sm:text-sm uppercase tracking-wider mb-1 text-primary">
+                    VI. ZASADY KORZYSTANIA Z OBIEKTU I BEZPIECZEŃSTWO
+                  </h4>
+                  <ol className="list-decimal list-inside space-y-1 text-ink/80 pl-1">
+                    <li>
+                      Członek Klubu zobowiązany jest do korzystania z urządzeń i sprzętu zgodnie z ich przeznaczeniem
+                      oraz odkładania sprzętu na miejsce po zakończeniu ćwiczeń. Ponosi odpowiedzialność materialną za
+                      wyrządzone uszkodzenia mienia.
+                    </li>
+                    <li>
+                      Obowiązuje bezwzględny nakaz noszenia czystego, zmiennego obuwia sportowego oraz używania ręcznika
+                      treningowego. W strefie prysznicowej obowiązuje obuwie kąpielowe z podeszwą antypoślizgową.
+                    </li>
+                    <li>
+                      Zabrania się przebywania w Klubie osobom pod wpływem alkoholu, środków odurzających lub leków
+                      obniżających sprawność psychofizyczną.
+                    </li>
+                    <li>
+                      Osoby ze schorzeniami układu krążenia, cukrzycą, nienormowanym ciśnieniem lub w ciąży powinny
+                      przed przystąpieniem do ćwiczeń skonsultować się z lekarzem.
+                    </li>
+                    <li>
+                      Szatnie wyposażone są w szafki zamykane przez Członka Klubu. Członek Klubu zobowiązany jest do
+                      prawidłowego zamknięcia szafki na czas treningu oraz niepozostawiania w niej przedmiotów o
+                      znacznej wartości, gotówki ani cennej dokumentacji. Klub nie ponosi odpowiedzialności za rzeczy
+                      pozostawione poza zamkniętą szafką oraz za szkody powstałe w wyniku niezamknięcia szafki przez
+                      Członka Klubu.
+                    </li>
+                  </ol>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-ink text-xs sm:text-sm uppercase tracking-wider mb-1 text-primary">
+                    VII. WIZERUNEK MARKETINGOWY I POSTANOWIENIA KOŃCOWE
+                  </h4>
+                  <ol className="list-decimal list-inside space-y-1 text-ink/80 pl-1">
+                    <li>
+                      Klub ma prawo do utrwalania i używania wizerunku w celach promocyjnych/marketingowych wyłącznie za
+                      uprzednią, odrębną zgodą Członka Klubu.
+                    </li>
+                    <li>
+                      W przypadku rażącego naruszenia Regulaminu lub zasad współżycia społecznego Operator Klubu ma
+                      prawo do natychmiastowego zablokowania konta i rozwiązania Umowy. W sprawach nieuregulowanych
+                      niniejszym Regulaminem zastosowanie mają przepisy prawa polskiego, w tym Kodeksu Cywilnego.
+                      Ewentualne spory rozstrzygane będą przez właściwe sądy powszechne.
+                    </li>
+                  </ol>
+                </div>
+
+                <div className="pt-2 border-t border-line/60 text-[11px] text-muted text-center font-medium">
+                  Adam Burek • CrossGym Kielce 24/7 • ul. Jana Nowaka Jeziorańskiego 73a, 25-432 Kielce • NIP:
+                  7991938916 • Akceptacja Online
+                </div>
+              </div>
             </div>
 
             <div className="pt-3 border-t border-line flex justify-end">
