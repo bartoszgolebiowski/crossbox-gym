@@ -6,6 +6,11 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   plugins: [tailwindcss()],
   root: path.resolve(__dirname),
+  server: {
+    fs: {
+      allow: [path.resolve(__dirname, '../..')],
+    },
+  },
   build: {
     outDir: path.resolve(__dirname, 'dist'),
     emptyOutDir: true,

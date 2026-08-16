@@ -7,6 +7,11 @@ export function createFrontendViteConfig(dirname: string) {
   return defineConfig({
     plugins: [react(), tailwindcss()],
     root: path.resolve(dirname),
+    server: {
+      fs: {
+        allow: [path.resolve(dirname, '../..')],
+      },
+    },
     build: {
       outDir: path.resolve(dirname, 'dist'),
       emptyOutDir: true,

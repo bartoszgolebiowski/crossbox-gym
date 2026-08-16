@@ -1,4 +1,5 @@
 import React from 'react';
+import sharedIcon from '../../../shared/icon.png';
 
 interface HeaderProps {
   token: string | null;
@@ -16,9 +17,11 @@ export const Header: React.FC<HeaderProps> = ({ token, email, onLogout }) => {
           className="flex items-center gap-2 sm:gap-3 cursor-pointer hover:opacity-90 transition-opacity"
           title="Strona główna"
         >
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-control bg-primary text-xs font-bold tracking-wider text-white shadow-control sm:h-9 sm:w-9 sm:text-sm">
-            CG
-          </div>
+          <img
+            src={sharedIcon}
+            alt="CrossGym Logo"
+            className="h-8 w-8 sm:h-9 sm:w-9 shrink-0 rounded-control object-contain bg-white/10 p-0.5 shadow-control"
+          />
           <div className="flex items-center gap-2">
             <span className="whitespace-nowrap text-sm font-bold tracking-tight text-ink sm:text-base">
               CrossGym Admin

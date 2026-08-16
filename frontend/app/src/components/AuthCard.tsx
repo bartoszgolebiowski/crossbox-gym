@@ -18,6 +18,7 @@ import {
   setPasswordWithTokenThunk,
   verifyMagicLinkThunk,
 } from '../store/authSlice';
+import sharedIcon from '../../../shared/icon.png';
 import { fetchDashboardThunk, fetchInvoicesThunk } from '../store/memberSlice';
 
 const fieldLabelClass = 'mb-2 block text-sm font-medium text-ink/70';
@@ -131,16 +132,11 @@ export const AuthCard: React.FC = () => {
       <div className="rounded-card border border-line bg-paper p-6 shadow-card sm:p-8">
         {/* Card Header Title */}
         <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-10 h-10 rounded-control bg-primary/10 text-primary border border-primary/30 mb-3">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
-            </svg>
-          </div>
+          <img
+            src={sharedIcon}
+            alt="CrossGym Logo"
+            className="w-12 h-12 rounded-xl object-contain shadow-sm border border-line/40 bg-paper p-1 mb-3 inline-block"
+          />
           <h2 className="text-xl font-bold text-ink tracking-tight">
             {authMode === 'login' && 'Witaj ponownie'}
             {authMode === 'register' && 'Rejestracja Klubowicza'}
