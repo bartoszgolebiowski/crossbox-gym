@@ -21,5 +21,10 @@ export const handler = async (event: CustomMessageEvent): Promise<CustomMessageE
     event.response.emailMessage = `Użyj poniższego kodu, aby ustawić nowe hasło w CrossBox Gym 24/7: ${event.request.codeParameter}\n\nJeśli nie prosiłeś/aś o reset hasła, zignoruj tę wiadomość.`;
   }
 
+  if (event.triggerSource === 'CustomMessage_SignUp' || event.triggerSource === 'CustomMessage_ResendCode') {
+    event.response.emailSubject = 'Witaj w CrossBox Gym 24/7! Zweryfikuj swoje konto';
+    event.response.emailMessage = `Witaj w CrossBox Gym 24/7!\n\nTwój kod weryfikacyjny to: ${event.request.codeParameter}\n\nWpisz ten kod, aby dokończyć weryfikację i aktywować konto.\n\nŻyczymy udanych treningów!\nZespół CrossBox Gym 24/7`;
+  }
+
   return event;
 };

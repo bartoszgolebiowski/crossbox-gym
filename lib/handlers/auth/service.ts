@@ -61,6 +61,10 @@ export class AuthService {
       email
     )}`;
 
+    if (this.dependencies.emailService) {
+      await this.dependencies.emailService.sendWelcomeVerifyEmail(email, magicUrl);
+    }
+
     return { message: 'Magic link generated successfully', magicUrl };
   }
 

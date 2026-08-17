@@ -27,9 +27,21 @@ describe('Cognito custom message handler', () => {
     assert.match(event.response.emailMessage ?? '', /\{####\}/);
   });
 
-  test('leaves other Cognito messages unchanged', async () => {
+  test('uses verification template for sign-up and resend-code triggers', async () => {
     const event = await handler({
       triggerSource: 'CustomMessage_SignUp',
+      request: { codeParameter: '{####}' },
+      response: {},
+    });
+
+    assert.equal(event.response.emailSubject, 'Witaj w CrossBox Gym 24/7! Zweryfikuj swoje konto');
+    assert.match(event.response.emailMessage ?? '', /Twój kod weryfikacyjny to/);
+    assert.match(event.response.emailMessage ?? '', /\{####\}/);
+  });
+
+  test('leaves unknown Cognito messages unchanged', async () => {
+    const event = await handler({
+      triggerSource: 'CustomMessage_UpdateUserAttribute',
       request: { codeParameter: '{####}' },
       response: {},
     });

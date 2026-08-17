@@ -119,10 +119,18 @@ export class CrossboxDataStack extends cdk.Stack {
       tagTableForBackup(this.auditLogsTable, 'AuditLogs');
     }
 
+    const sesFromEmail = process.env.SES_FROM_EMAIL || 'noreply@crossgym.fit';
+    const sesRegion = process.env.SES_REGION || 'eu-west-1';
+
     // --- 2. Cognito User Pool & Client ---
     this.userPool = new cognito.UserPool(this, 'UserPool', {
       selfSignUpEnabled: false,
       signInAliases: { email: true },
+      email: cognito.UserPoolEmail.withSES({
+        fromEmail: sesFromEmail,
+        fromName: 'CrossBox Gym 24/7',
+        sesRegion,
+      }),
       passwordPolicy: {
         minLength: 8,
         requireLowercase: true,
