@@ -37,7 +37,11 @@ export class StripePaymentProvider implements PaymentProvider {
 
         if (retrievedPrice && retrievedPrice.product && typeof retrievedPrice.product !== 'string') {
           const product = retrievedPrice.product as Stripe.Product;
-          const rawAnchor = product.metadata?.billing_cycle_anchor;
+          const rawAnchor =
+            product.metadata?.billing_cycle_anchor ||
+            product.metadata?.trial_end ||
+            params.metadata?.billing_cycle_anchor ||
+            params.metadata?.trial_end;
 
           if (rawAnchor) {
             const trimmedAnchor = rawAnchor.trim();
@@ -156,7 +160,7 @@ export class StripePaymentProvider implements PaymentProvider {
       const session = await stripe.checkout.sessions.create(sessionParams);
       return { url: session.url! };
     } catch (err: any) {
-      if (err.message?.includes('billing_cycle_anchor')) {
+      if (err.message?.includes('billing_cycle_anchor') || err.message?.includes('proration_behavior')) {
         console.warn(
           `[Deferred Anchor] Stripe rejected billing_cycle_anchor (${err.message}). Retrying checkout without anchor override.`
         );
