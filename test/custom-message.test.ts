@@ -10,8 +10,8 @@ describe('Cognito custom message handler', () => {
       response: {},
     });
 
-    assert.equal(event.response.emailSubject, 'Witaj w CrossBox Gym 24/7! Ustaw swoje hasło');
-    assert.match(event.response.emailMessage ?? '', /Witaj w CrossBox Gym 24\/7!/);
+    assert.equal(event.response.emailSubject, 'Witaj w CrossGym 24/7! Ustaw swoje hasło');
+    assert.match(event.response.emailMessage ?? '', /Witaj w CrossGym 24\/7!/);
     assert.match(event.response.emailMessage ?? '', /\{####\}/);
   });
 
@@ -22,7 +22,7 @@ describe('Cognito custom message handler', () => {
       response: {},
     });
 
-    assert.equal(event.response.emailSubject, 'Resetuj swoje hasło w CrossBox Gym 24/7');
+    assert.equal(event.response.emailSubject, 'Resetuj swoje hasło w CrossGym 24/7');
     assert.match(event.response.emailMessage ?? '', /ustawić nowe hasło/);
     assert.match(event.response.emailMessage ?? '', /\{####\}/);
   });
@@ -34,7 +34,7 @@ describe('Cognito custom message handler', () => {
       response: {},
     });
 
-    assert.equal(event.response.emailSubject, 'Witaj w CrossBox Gym 24/7! Zweryfikuj swoje konto');
+    assert.equal(event.response.emailSubject, 'Witaj w CrossGym 24/7! Zweryfikuj swoje konto');
     assert.match(event.response.emailMessage ?? '', /Twój kod weryfikacyjny to/);
     assert.match(event.response.emailMessage ?? '', /\{####\}/);
   });
