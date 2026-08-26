@@ -10,6 +10,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 const outputsPath = path.join(rootDir, 'cdk-outputs.json');
+const envPath = path.join(rootDir, '.env');
+if (fs.existsSync(envPath)) {
+  try {
+    process.loadEnvFile(envPath);
+  } catch {}
+}
 
 function run(command, args) {
   execFileSync(command, args, { cwd: rootDir, stdio: 'inherit' });
@@ -84,7 +90,21 @@ const config = {
   UserPoolId: frontend.UserPoolId,
   UserPoolClientId: frontend.UserPoolClientId,
 };
-const heroConfig = { ...config, MemberAppUrl: frontend.AppUrl.replace(/\/+$/, '') };
+const gaMeasurementId =
+  frontend.GaMeasurementId ||
+  (() => {
+    try {
+      return JSON.parse(fs.readFileSync(path.join(rootDir, 'frontend', 'hero', 'public', 'config.json'), 'utf8'))
+        .GaMeasurementId;
+    } catch {
+      return undefined;
+    }
+  })();
+const heroConfig = {
+  ...config,
+  MemberAppUrl: frontend.AppUrl.replace(/\/+$/, ''),
+  ...(gaMeasurementId ? { GaMeasurementId: gaMeasurementId } : {}),
+};
 
 const appDist = path.join(rootDir, 'frontend', 'app', 'dist');
 const adminDist = path.join(rootDir, 'frontend', 'admin', 'dist');
