@@ -21,6 +21,7 @@ export class CrossboxFrontendStack extends cdk.Stack {
   public readonly appDistribution: cloudfront.Distribution;
   public readonly adminDistribution: cloudfront.Distribution;
   public readonly heroDistribution: cloudfront.Distribution;
+  public readonly securityHeadersPolicy: cloudfront.ResponseHeadersPolicy;
 
   constructor(scope: Construct, id: string, props: CrossboxFrontendStackProps) {
     super(scope, id, props);
@@ -30,6 +31,24 @@ export class CrossboxFrontendStack extends cdk.Stack {
     const { httpApi, stripeEventBus } = apiStack;
 
     const removalPolicy = isTest ? cdk.RemovalPolicy.DESTROY : cdk.RemovalPolicy.RETAIN;
+
+    // Shared security headers policy applied to all frontend distributions
+    this.securityHeadersPolicy = new cloudfront.ResponseHeadersPolicy(this, 'SecurityHeadersPolicy', {
+      responseHeadersPolicyName: `${this.stackName}-SecurityHeaders`,
+      securityHeadersBehavior: {
+        strictTransportSecurity: {
+          accessControlMaxAge: cdk.Duration.seconds(63072000), // 2 years
+          includeSubdomains: true,
+          override: false,
+        },
+        contentTypeOptions: { override: true },
+        referrerPolicy: {
+          referrerPolicy: cloudfront.HeadersReferrerPolicy.STRICT_ORIGIN_WHEN_CROSS_ORIGIN,
+          override: true,
+        },
+      },
+      comment: 'Basic security headers (HSTS, nosniff, referrer-policy) for Crossbox Gym frontends',
+    });
 
     // --- 1. S3 Buckets ---
     this.appBucket = new s3.Bucket(this, 'AppAssetsBucket', {
@@ -56,6 +75,7 @@ export class CrossboxFrontendStack extends cdk.Stack {
           origin: origins.S3BucketOrigin.withOriginAccessControl(bucket),
           allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
           viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+          responseHeadersPolicy: this.securityHeadersPolicy,
         },
         defaultRootObject: 'index.html',
         errorResponses: [
@@ -65,10 +85,36 @@ export class CrossboxFrontendStack extends cdk.Stack {
         priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
       });
 
+    // Long-TTL cache behavior factory for content-hashed static assets (/assets/*)
+    const assetCacheBehavior = (bucket: s3.Bucket): cloudfront.BehaviorOptions => ({
+      origin: origins.S3BucketOrigin.withOriginAccessControl(bucket),
+      allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+      viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+      cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+      responseHeadersPolicy: this.securityHeadersPolicy,
+    });
+
     // --- 2. CloudFront Distributions ---
     this.appDistribution = createSpaDistribution('AppDistribution', this.appBucket);
     this.adminDistribution = createSpaDistribution('AdminDistribution', this.adminBucket);
-    this.heroDistribution = createSpaDistribution('HeroDistribution', this.heroBucket);
+    // Hero is a single-route static page: serve real 404s instead of SPA fallback (avoids soft-404s for crawlers)
+    this.heroDistribution = new cloudfront.Distribution(this, 'HeroDistribution', {
+      defaultBehavior: {
+        origin: origins.S3BucketOrigin.withOriginAccessControl(this.heroBucket),
+        allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+        responseHeadersPolicy: this.securityHeadersPolicy,
+      },
+      additionalBehaviors: {
+        'assets/*': assetCacheBehavior(this.heroBucket),
+      },
+      defaultRootObject: 'index.html',
+      errorResponses: [
+        { httpStatus: 403, responseHttpStatus: 404, responsePagePath: '/404.html' },
+        { httpStatus: 404, responseHttpStatus: 404, responsePagePath: '/404.html' },
+      ],
+      priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
+    });
 
     // --- 3. Bucket Deployments ---
     const configData = {
