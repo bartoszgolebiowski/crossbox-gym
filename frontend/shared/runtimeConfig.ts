@@ -3,6 +3,8 @@ export interface RuntimeConfig {
   UserPoolId?: string;
   UserPoolClientId?: string;
   MemberAppUrl?: string;
+  /** GA4 measurement ID (format G-XXXXXXXXXX). Analytics must only load after cookie consent. */
+  GaMeasurementId?: string;
 }
 
 export interface RuntimeConfigResponse {

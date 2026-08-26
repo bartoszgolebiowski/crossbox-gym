@@ -71,6 +71,7 @@ new CrossboxFrontendStack(app, `${prefix}FrontendStack`, {
   isTest,
   dataStack,
   apiStack,
+  gaMeasurementId: validatedEnv.GA_MEASUREMENT_ID,
   env,
 });
 

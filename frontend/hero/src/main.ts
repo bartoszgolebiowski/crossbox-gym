@@ -1,4 +1,5 @@
 import { loadRuntimeConfig } from '../../shared/runtimeConfig';
+import { initCookieConsent } from './cookieConsent';
 import './index.css';
 
 export interface StripeProductPrice {
@@ -265,9 +266,12 @@ if (statuteCheckbox) {
   statuteCheckbox.addEventListener('change', updateConfirmButtonState);
 }
 
+const footerOpenStatuteDocBtn = document.getElementById('footer-open-statute-doc');
+
 if (closeTermsModalBtn) closeTermsModalBtn.addEventListener('click', closeTermsModal);
 if (cancelTermsModalBtn) cancelTermsModalBtn.addEventListener('click', closeTermsModal);
 if (openStatuteDocTrigger) openStatuteDocTrigger.addEventListener('click', openStatuteDocModal);
+if (footerOpenStatuteDocBtn) footerOpenStatuteDocBtn.addEventListener('click', openStatuteDocModal);
 if (closeStatuteDocBtn) closeStatuteDocBtn.addEventListener('click', closeStatuteDocModal);
 if (acceptAndCloseStatuteBtn) {
   acceptAndCloseStatuteBtn.addEventListener('click', () => {
@@ -352,3 +356,10 @@ if (spotsEl) {
 
 // Load dynamic products from Stripe API on initial script load
 loadStripeProducts();
+
+// Cookie consent banner (GDPR) — loads Google Analytics only after explicit acceptance
+loadRuntimeConfig()
+  .then((config) => initCookieConsent(config))
+  .catch(() => {
+    // Runtime config unavailable — skip analytics entirely; the site works without it.
+  });

@@ -12,6 +12,8 @@ export interface CrossboxFrontendStackProps extends cdk.StackProps {
   isTest: boolean;
   dataStack: CrossboxDataStack;
   apiStack: CrossboxApiStack;
+  /** Optional GA4 measurement ID (format G-XXXXXXXXXX). Injected into hero config.json for consent-gated analytics. */
+  gaMeasurementId?: string;
 }
 
 export class CrossboxFrontendStack extends cdk.Stack {
@@ -122,6 +124,7 @@ export class CrossboxFrontendStack extends cdk.Stack {
       UserPoolId: userPool.userPoolId,
       UserPoolClientId: userPoolClient.userPoolClientId,
       MemberAppUrl: `https://${this.appDistribution.distributionDomainName}`,
+      ...(props.gaMeasurementId ? { GaMeasurementId: props.gaMeasurementId } : {}),
     };
 
     const rootDir = path.join(__dirname, '..', '..');

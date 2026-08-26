@@ -10,11 +10,12 @@
     />
     <meta name="robots" content="index, follow" />
     <meta name="theme-color" content="#7e22ce" />
-    <link rel="canonical" href="https://crossfit.gym/" />
+    <!-- Google Search Console: Domain ownership verified via DNS TXT record. -->
+    <link rel="canonical" href="https://crossgym.fit/" />
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://crossfit.gym/" />
+    <meta property="og:url" content="https://crossgym.fit/" />
     <meta property="og:site_name" content="CrossGym" />
     <meta property="og:locale" content="pl_PL" />
     <meta property="og:title" content="CrossGym — Siłownia 24/7 Kielce | Przedsprzedaż 139 zł/mies" />
@@ -22,7 +23,7 @@
       property="og:description"
       content="Całodobowy dostęp 24/7 kodem QR w telefonie, brak umów i nowoczesny sprzęt. Karnet przedsprzedażowy 139 zł/mies. Start: wrzesień 2026."
     />
-    <meta property="og:image" content="https://crossfit.gym/logo-przedsprzedaz.jpg" />
+    <meta property="og:image" content="https://crossgym.fit/logo.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="CrossGym — karnet przedsprzedażowy 139 zł/mies., siłownia 24/7 w Kielcach" />
@@ -34,7 +35,7 @@
       name="twitter:description"
       content="Całodobowy dostęp 24/7 kodem QR w telefonie, brak umów i nowoczesny sprzęt. Karnet przedsprzedażowy 139 zł/mies. Start: wrzesień 2026."
     />
-    <meta name="twitter:image" content="https://crossfit.gym/logo-przedsprzedaz.jpg" />
+    <meta name="twitter:image" content="https://crossgym.fit/logo.png" />
 
     <!-- Structured data: local business, FAQ and presale offer.
          NOTE: FAQPage answers must be kept in sync with the #faq section below. -->
@@ -44,10 +45,10 @@
         "@graph": [
           {
             "@type": "ExerciseGym",
-            "@id": "https://crossfit.gym/#gym",
+            "@id": "https://crossgym.fit/#gym",
             "name": "CrossGym Kielce 24/7",
-            "url": "https://crossfit.gym/",
-            "image": "https://crossfit.gym/logo-przedsprzedaz.jpg",
+            "url": "https://crossgym.fit/",
+            "image": "https://crossgym.fit/logo.png",
             "description": "Smart siłownia 24/7 w Kielcach. Całodobowy dostęp kodem QR w telefonie, brak umów, nowoczesny sprzęt.",
             "priceRange": "139 zł - 169 zł",
             "currenciesAccepted": "PLN",
@@ -81,7 +82,7 @@
           },
           {
             "@type": "FAQPage",
-            "@id": "https://crossfit.gym/#faq",
+            "@id": "https://crossgym.fit/#faq",
             "mainEntity": [
               {
                 "@type": "Question",
@@ -119,19 +120,19 @@
           },
           {
             "@type": "Product",
-            "@id": "https://crossfit.gym/#karnet",
+            "@id": "https://crossgym.fit/#karnet",
             "name": "Karnet Przedsprzedażowy CrossGym 24/7",
             "description": "Miesięczny karnet na siłownię CrossGym Kielce 24/7 w cenie przedsprzedażowej. Całodobowy dostęp kodem QR, brak umów.",
-            "image": "https://crossfit.gym/logo-przedsprzedaz.jpg",
+            "image": "https://crossgym.fit/logo.png",
             "brand": { "@type": "Brand", "name": "CrossGym" },
             "offers": {
               "@type": "Offer",
-              "url": "https://crossfit.gym/",
+              "url": "https://crossgym.fit/",
               "priceCurrency": "PLN",
               "price": "139",
               "availability": "https://schema.org/PreOrder",
               "itemCondition": "https://schema.org/NewCondition",
-              "seller": { "@id": "https://crossfit.gym/#gym" }
+              "seller": { "@id": "https://crossgym.fit/#gym" }
             }
           }
         ]
@@ -147,7 +148,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Space+Grotesk:wght@700&display=swap"
       media="print"
-      onload="this.media='all'"
+      onload="this.media = 'all'"
     />
     <noscript>
       <link
@@ -986,7 +987,21 @@
           <span class="text-ink font-bold text-sm">CrossGym</span>
           <span class="text-[11px] text-muted ml-2">Smart Siłownia 24/7</span>
         </div>
-        <div class="flex items-center gap-5">
+        <div class="flex flex-wrap items-center gap-4 sm:gap-6">
+          <button
+            type="button"
+            id="footer-open-statute-doc"
+            class="text-ink/75 hover:text-primary transition-colors font-semibold cursor-pointer"
+          >
+            Regulamin & Polityka Prywatności
+          </button>
+          <button
+            type="button"
+            id="open-cookie-settings-btn"
+            class="text-ink/75 hover:text-primary transition-colors font-semibold cursor-pointer"
+          >
+            Ustawienia cookies
+          </button>
           <a
             href="https://www.facebook.com/people/CrossGym24h7/61574298879003/"
             target="_blank"
@@ -1309,6 +1324,27 @@
                   <strong>Prawa Członka Klubu:</strong> Osobie, której dane dotyczą, przysługuje prawo dostępu do
                   danych, ich sprostowania, usunięcia, ograniczenia przetwarzania, sprzeciwu oraz prawo wniesienia
                   skargi do Prezesa UODO.
+                </li>
+                <li>
+                  <strong>Pliki cookies i Google Analytics:</strong>
+                  <ul class="list-disc list-inside pl-4 mt-0.5 space-y-0.5">
+                    <li>
+                      Strona korzysta z plików cookies analitycznych (Google Analytics, administrator: Google Ireland
+                      Limited) wyłącznie po uzyskaniu Twojej zgody — zgoda jest dobrowolna i może być wycofana w każdej
+                      chwili poprzez wyczyszczenie danych przeglądarki (podstawa prawna: art. 6 ust. 1 lit. a RODO oraz
+                      art. 173 ustawy Prawo komunikacji elektronicznej).
+                    </li>
+                    <li>
+                      Zebrane dane obejmują anonimizowany adres IP, typ urządzenia/przeglądarki oraz odwiedzane
+                      podstrony; służą wyłącznie do pomiaru ruchu i analizy popularności treści. Nie są łączone z danymi
+                      konta Członka Klubu ani wykorzystywane do profilowania reklamowego.
+                    </li>
+                    <li>
+                      Dane analityczne przechowywane są przez Google do 14 miesięcy. Możesz zablokować pliki cookies w
+                      ustawieniach przeglądarki lub skorzystać z oficjalnego dodatku wyłączającego Google Analytics:
+                      https://tools.google.com/dlpage/gaoptout.
+                    </li>
+                  </ul>
                 </li>
               </ol>
             </div>

@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://crossfit.gym/sitemap.xml
+Sitemap: https://crossgym.fit/sitemap.xml

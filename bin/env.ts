@@ -12,6 +12,10 @@ export const cdkEnvSchema = z.object({
   AWS_REGION: z.string().min(1, 'AWS_REGION is required'),
   STRIPE_PARTNER_BUS_NAME: z.string().min(1, 'STRIPE_PARTNER_BUS_NAME is required for Stripe integration').optional(),
   FRONTEND_URL: z.string().min(1, 'FRONTEND_URL is required for frontend deployment').optional(),
+  GA_MEASUREMENT_ID: z
+    .string()
+    .regex(/^G-[A-Z0-9]{4,}$/, 'GA_MEASUREMENT_ID must be a GA4 measurement ID (format G-XXXXXXXXXX)')
+    .optional(),
   IS_TEST: z
     .union([z.enum(['true', 'false']), z.boolean()])
     .optional()
