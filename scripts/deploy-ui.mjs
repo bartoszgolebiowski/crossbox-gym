@@ -91,15 +91,7 @@ const config = {
   UserPoolClientId: frontend.UserPoolClientId,
 };
 const gaMeasurementId =
-  frontend.GaMeasurementId ||
-  (() => {
-    try {
-      return JSON.parse(fs.readFileSync(path.join(rootDir, 'frontend', 'hero', 'public', 'config.json'), 'utf8'))
-        .GaMeasurementId;
-    } catch {
-      return undefined;
-    }
-  })();
+  frontend.GaMeasurementId || process.env.GA_MEASUREMENT_ID;
 const heroConfig = {
   ...config,
   MemberAppUrl: frontend.AppUrl.replace(/\/+$/, ''),

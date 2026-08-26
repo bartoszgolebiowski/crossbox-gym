@@ -22,15 +22,31 @@ function createFakeStorage(initial: Record<string, string> = {}): Storage {
 
 function createFakeDocument() {
   const scripts: { src: string; dataset: Record<string, string> }[] = [];
-  const appendedChildren: Node[] = [];
+  const appendedChildren: any[] = [];
   const fakeDoc = {
     querySelector: (selector: string) =>
       selector === 'script[data-ga-injected="true"]' && scripts.length > 0 ? scripts[0] : null,
     createElement: (_tag: string) => {
-      const el = {
+      const attributes = new Map<string, string>();
+      const el: any = {
+        id: '',
         src: '',
         async: false,
+        innerHTML: '',
         dataset: {} as Record<string, string>,
+        classList: {
+          add: () => {},
+          remove: () => {},
+          toggle: () => {},
+          contains: () => false,
+        },
+        setAttribute: (key: string, val: string) => attributes.set(key, val),
+        getAttribute: (key: string) => attributes.get(key) ?? null,
+        remove: () => {},
+        querySelector: () => null,
+        querySelectorAll: () => [],
+        addEventListener: () => {},
+        scrollIntoView: () => {},
       };
       return el;
     },
@@ -72,7 +88,7 @@ describe('cookie consent', () => {
     assert.equal(readStoredConsent(createFakeStorage({ 'cg-cookie-consent': 'bogus' })), null);
   });
 
-  test('loadGoogleAnalytics injects exactly one gtag script with the measurement ID', () => {
+  test('loadGoogleAnalytics injects exactly one gtag script with the measurement ID and sends consent update', () => {
     const { fakeDoc, scripts } = createFakeDocument();
     const { fakeWindow, dataLayer } = createFakeWindow();
     loadGoogleAnalytics(GA_ID, fakeDoc, fakeWindow);
@@ -80,13 +96,10 @@ describe('cookie consent', () => {
     assert.equal(scripts.length, 1);
     assert.ok(scripts[0].src.includes(`id=${GA_ID}`));
     assert.equal(scripts[0].dataset.gaInjected, 'true');
-    // Consent defaults: analytics granted (explicit consent), all ad purposes denied.
-    const consentCall = dataLayer.find((args) => args[0] === 'consent') as unknown[] | undefined;
-    assert.ok(consentCall);
-    assert.deepEqual(consentCall[2], {
-      ad_storage: 'denied',
-      ad_user_data: 'denied',
-      ad_personalization: 'denied',
+    // Consent update signal: analytics_storage granted
+    const consentUpdateCall = dataLayer.find((args) => args[0] === 'consent' && args[1] === 'update') as unknown[] | undefined;
+    assert.ok(consentUpdateCall);
+    assert.deepEqual(consentUpdateCall[2], {
       analytics_storage: 'granted',
     });
     const configCall = dataLayer.find((args) => args[0] === 'config') as unknown[] | undefined;

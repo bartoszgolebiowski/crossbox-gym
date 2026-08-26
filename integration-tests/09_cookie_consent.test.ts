@@ -18,7 +18,7 @@ describe('GDPR cookie consent and analytics configuration', () => {
     assert.match(config.GaMeasurementId ?? '', /^G-[A-Z0-9]+$/, 'GaMeasurementId must be a GA4 measurement ID');
   });
 
-  test('hero index.html contains no hardcoded gtag script (analytics must be consent-gated)', async () => {
+  test('hero index.html declares Consent Mode V2 default denied state before Google tag', async () => {
     const heroDomain = await requireOutput('HeroCloudFrontUrl');
     const site = asUrl(heroDomain);
 
@@ -26,8 +26,8 @@ describe('GDPR cookie consent and analytics configuration', () => {
     assert.equal(response.ok, true, `${site.origin}/ should be available`);
 
     const html = await response.text();
-    assert.doesNotMatch(html, /googletagmanager\.com|gtag\(/i, 'No GA script may load before user consent');
-    // The consent logic itself must be bundled so the banner can render.
+    assert.match(html, /analytics_storage': 'denied'/i, 'Consent Mode V2 default denied must be declared');
+    assert.match(html, /googletagmanager\.com\/gtag\/js\?id=/i, 'Google tag script should be present');
     assert.match(html, /<script[^>]*src="[^"]*\/assets\/[^"]*\.js"/, 'Hero bundle script should be present');
   });
 });

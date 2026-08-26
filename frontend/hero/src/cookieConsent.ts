@@ -46,23 +46,40 @@ function storeConsent(choice: ConsentChoice, dom: ConsentDom): void {
   dom.localStorage.setItem(CONSENT_STORAGE_KEY, choice);
 }
 
-/** Injects the GA4 gtag.js snippet. Only ever called after explicit consent. */
-export function loadGoogleAnalytics(measurementId: string, doc: Document = document, win?: ConsentDom['window']): void {
-  if (doc.querySelector('script[data-ga-injected="true"]')) return;
-
+export function initConsentDefaults(win?: ConsentDom['window']): void {
   const gtagWindow = win ?? ({ dataLayer: [] } as unknown as NonNullable<ConsentDom['window']>);
   gtagWindow.dataLayer = gtagWindow.dataLayer || [];
-  gtagWindow.gtag = function gtag(...args: unknown[]) {
-    gtagWindow.dataLayer!.push(args);
-  };
-  gtagWindow.gtag('js', new Date());
-  // No ad signals; analytics_storage granted by explicit user consent.
+  if (typeof gtagWindow.gtag !== 'function') {
+    gtagWindow.gtag = function gtag(...args: unknown[]) {
+      gtagWindow.dataLayer!.push(args);
+    };
+  }
   gtagWindow.gtag('consent', 'default', {
     ad_storage: 'denied',
     ad_user_data: 'denied',
     ad_personalization: 'denied',
+    analytics_storage: 'denied',
+  });
+}
+
+/** Injects the GA4 gtag.js snippet. Only ever called after explicit consent. */
+export function loadGoogleAnalytics(measurementId: string, doc: Document = document, win?: ConsentDom['window']): void {
+  const gtagWindow = win ?? ({ dataLayer: [] } as unknown as NonNullable<ConsentDom['window']>);
+  gtagWindow.dataLayer = gtagWindow.dataLayer || [];
+  if (typeof gtagWindow.gtag !== 'function') {
+    gtagWindow.gtag = function gtag(...args: unknown[]) {
+      gtagWindow.dataLayer!.push(args);
+    };
+  }
+
+  // Google Consent Mode V2: emit 'update' signal so Tag Assistant & GTM unblock deferred triggers
+  gtagWindow.gtag('consent', 'update', {
     analytics_storage: 'granted',
   });
+
+  if (doc.querySelector('script[data-ga-injected="true"]')) return;
+
+  gtagWindow.gtag('js', new Date());
   gtagWindow.gtag('config', measurementId, { anonymize_ip: true });
 
   const script = doc.createElement('script');
@@ -162,6 +179,10 @@ export function initCookieConsent(
   footerCookieBtn?.addEventListener('click', () => openCookieSettings(config, override));
 
   const stored = readStoredConsent(dom.localStorage);
+
+  if (config.GaMeasurementId) {
+    initConsentDefaults(dom.window);
+  }
 
   if (stored === 'granted' && config.GaMeasurementId) {
     loadGoogleAnalytics(config.GaMeasurementId, dom.document, dom.window);
