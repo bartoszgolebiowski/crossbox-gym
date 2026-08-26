@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import {
-  initCookieConsent,
-  loadGoogleAnalytics,
-  openCookieSettings,
-  readStoredConsent,
+    initCookieConsent,
+    loadGoogleAnalytics,
+    openCookieSettings,
+    readStoredConsent,
 } from '../frontend/hero/src/cookieConsent';
 
 /** Minimal DOM/localStorage test doubles — no jsdom dependency needed. */
