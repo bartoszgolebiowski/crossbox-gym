@@ -94,3 +94,26 @@ test('LockerFacade does not audit an unlock command when MQTT publication fails'
   );
   assert.deepEqual(auditEvents, []);
 });
+
+test('LockerDeviceThing publishes Fail-Secure Inversion command (on=false, toggle_after=5.0, src)', async () => {
+  let publishedTopic = '';
+  let publishedPayload: unknown;
+
+  const mockMqtt: IotMqttClient = {
+    publish: async (topic, payload) => {
+      publishedTopic = topic;
+      publishedPayload = payload;
+    },
+  };
+
+  const locker = new LockerDeviceThing(mockMqtt, 'gym/lockers/{thingName}/command');
+  const result = await locker.unlock('crossbox-locker-relay-01', 'admin-session-123', 5.0);
+
+  assert.equal(publishedTopic, 'gym/lockers/crossbox-locker-relay-01/command');
+  assert.equal(result.method, 'Switch.Set');
+  assert.equal(result.src, 'admin-session-123');
+  assert.equal(result.params.id, 0);
+  assert.equal(result.params.on, false); // Fail-Secure Inversion
+  assert.equal(result.params.toggle_after, 5.0); // Required Gate 1
+  assert.deepEqual(publishedPayload, result);
+});

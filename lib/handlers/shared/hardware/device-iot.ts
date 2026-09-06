@@ -3,6 +3,7 @@ import { IotMqttClient, MqttFeedbackPayload } from '../iot';
 
 export interface LockerCommandPayload {
   id: number;
+  src: string;
   method: string;
   params: {
     id: number;
@@ -18,6 +19,7 @@ export interface IDeviceIot<TCommand, TResult> {
 export interface LockerDeviceCommand {
   lockerId: string;
   id?: number;
+  src?: string;
   on?: boolean;
   toggleAfterSeconds?: number;
 }
@@ -34,13 +36,15 @@ export class LockerDeviceThing implements IDeviceIot<LockerDeviceCommand, Locker
   ) {}
 
   async execute(command: LockerDeviceCommand): Promise<LockerCommandPayload> {
+    const durationSeconds = command.toggleAfterSeconds ?? 5.0;
     const payload: LockerCommandPayload = {
-      id: 1,
+      id: command.id ?? Date.now(),
+      src: command.src || 'crossbox-api',
       method: 'Switch.Set',
       params: {
-        id: command.id ?? 0,
-        on: command.on ?? true,
-        toggle_after: command.toggleAfterSeconds ?? 5,
+        id: 0,
+        on: command.on ?? false, // Fail-Secure Inversion: on=false otwiera elektromagnes
+        toggle_after: durationSeconds, // Wymagane gdy on=false!
       },
     };
     const topic = formatDeviceTopic(this.commandTopicTemplate, command.lockerId);
@@ -48,8 +52,8 @@ export class LockerDeviceThing implements IDeviceIot<LockerDeviceCommand, Locker
     return payload;
   }
 
-  async unlock(lockerId: string): Promise<LockerCommandPayload> {
-    return this.execute({ lockerId });
+  async unlock(lockerId: string, src = 'crossbox-api', durationSeconds = 5.0): Promise<LockerCommandPayload> {
+    return this.execute({ lockerId, src, on: false, toggleAfterSeconds: durationSeconds });
   }
 }
 

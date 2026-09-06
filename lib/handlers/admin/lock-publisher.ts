@@ -62,7 +62,7 @@ export class MqttLockPublisher implements LockPublisher {
     const targetLockerId = await this.dependencies.targetResolver.resolve(deviceId);
 
     await Promise.all([
-      this.dependencies.lockerThing.unlock(targetLockerId),
+      this.dependencies.lockerThing.unlock(targetLockerId, entryId),
       this.dependencies.feedbackPublisher.sendUnlockFeedback(deviceId, entryId),
     ]);
   }

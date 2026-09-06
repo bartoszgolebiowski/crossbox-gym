@@ -28,6 +28,7 @@
     "test:ui:install": "playwright install chromium",
     "test:ui": "playwright test",
     "seed": "tsx scripts/seed-admin.ts",
+    "provision:devices": "node scripts/provision-devices.mjs",
     "fetch:certs": "node scripts/fetch-certs.mjs"
   },
   "devDependencies": {

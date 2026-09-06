@@ -12,7 +12,8 @@
  */
 
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDBDocumentClient, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBDocumentClient, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { randomBytes } from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
@@ -71,23 +72,67 @@ function resolveDeviceTopic(device, topicKey) {
   return formatDeviceTopic(template, device.thingName);
 }
 
-function requireArg(name, value) {
+function validateLocationIdArg(value) {
   if (!value || !value.trim()) {
-    console.error(`\n❌ Missing required argument: ${name}`);
-    console.error(`Usage: node scripts/provision-devices.mjs <locationId>\n`);
-    process.exit(1);
+    return undefined;
   }
   const trimmed = value.trim();
   if (trimmed.startsWith('-')) {
-    console.error(`\n❌ Invalid ${name}: "${trimmed}" looks like a flag, not a location id.`);
-    console.error(`Usage: node scripts/provision-devices.mjs <locationId>\n`);
+    console.error(`\n❌ Invalid locationId: "${trimmed}" looks like a flag, not a location id.`);
+    console.error(`Usage: node scripts/provision-devices.mjs [locationId]\n`);
     process.exit(1);
   }
   if (!/^[a-f0-9]+$/i.test(trimmed)) {
-    console.error(`\n❌ Invalid ${name}: "${trimmed}" must be a hex location id.\n`);
+    console.error(`\n❌ Invalid locationId: "${trimmed}" must be a hex location id.\n`);
     process.exit(1);
   }
   return trimmed;
+}
+
+async function resolveOrCreateLocation(ddb, tableName, explicitId) {
+  if (explicitId) {
+    return explicitId;
+  }
+
+  // Look for existing locations
+  const queryResult = await ddb.send(
+    new QueryCommand({
+      TableName: tableName,
+      IndexName: 'GSI1',
+      KeyConditionExpression: 'GSI1PK = :pk',
+      ExpressionAttributeValues: { ':pk': 'LOCATIONS' },
+    })
+  );
+
+  const locations = queryResult.Items || [];
+  if (locations.length > 0) {
+    const existing = locations[0];
+    const locId = (existing.PK || '').replace(/^LOC#/, '');
+    console.log(`ℹ️  Using existing location: "${existing.name || locId}" (ID: ${locId})`);
+    return locId;
+  }
+
+  // Create default location
+  const newLocId = randomBytes(8).toString('hex');
+  const now = new Date().toISOString();
+  console.log(`📍 No locations found in database. Creating default location (ID: ${newLocId})...`);
+
+  await ddb.send(
+    new PutCommand({
+      TableName: tableName,
+      Item: {
+        PK: `LOC#${newLocId}`,
+        SK: 'METADATA',
+        name: 'Crossbox Gym - Główna',
+        address: 'ul. Sportowa 1, Warszawa',
+        created_at: now,
+        GSI1PK: 'LOCATIONS',
+        GSI1SK: `LOC#${newLocId}`,
+      },
+    })
+  );
+  console.log(`✅ Default location created: "Crossbox Gym - Główna" (ID: ${newLocId})`);
+  return newLocId;
 }
 
 async function main() {
@@ -104,10 +149,10 @@ async function main() {
     throw new Error('MAIN_TABLE_NAME is required. Run `npm run deploy` and ensure cdk-outputs.json exists.');
   }
 
-  const locationId = requireArg('locationId', process.argv[2]);
-  const now = new Date().toISOString();
-
   const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
+  const explicitArg = validateLocationIdArg(process.argv[2]);
+  const locationId = await resolveOrCreateLocation(ddb, mainTableName, explicitArg);
+  const now = new Date().toISOString();
 
   // Use the configured IoT fleet thing names as stable device identifiers.
   const scannerThing = getDeviceByType('scanner');

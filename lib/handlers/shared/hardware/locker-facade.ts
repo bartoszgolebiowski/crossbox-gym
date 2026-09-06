@@ -24,7 +24,7 @@ export class LockerFacade {
   }
 
   async unlock(command: LockerUnlockCommand): Promise<LockerCommandPayload> {
-    const payload = await this.deviceThing.unlock(command.lockerId);
+    const payload = await this.deviceThing.unlock(command.lockerId, command.entryId);
     await this.audit.recordUnlockCommandPublished(command);
     return payload;
   }
