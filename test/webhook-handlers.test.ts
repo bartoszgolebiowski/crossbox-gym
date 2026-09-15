@@ -170,6 +170,29 @@ describe('Stripe Webhook Event Handlers', () => {
     assert.ok(billingRepository.statusUpdates[0].gracePeriodEnd);
   });
 
+  test('customer.subscription.updated maps trialing status to ACTIVE', async () => {
+    const billingRepository = new FakeBillingRepository();
+    const ctx = createContext({ billingRepository });
+
+    await handleCheckoutSessionCompleted(
+      {
+        customer_details: { email: 'presale@example.test' },
+        customer: 'cus_presale_123',
+        subscription: 'sub_presale_123',
+      },
+      ctx
+    );
+
+    await handleSubscriptionUpdated(
+      { id: 'sub_presale_123', status: 'trialing' },
+      'customer.subscription.updated',
+      ctx
+    );
+
+    assert.equal(billingRepository.statusUpdates.length, 1);
+    assert.equal(billingRepository.statusUpdates[0].status, 'ACTIVE');
+  });
+
   test('customer.subscription.deleted sets status to CANCELED', async () => {
     const billingRepository = new FakeBillingRepository();
     const ctx = createContext({ billingRepository });

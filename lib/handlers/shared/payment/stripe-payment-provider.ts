@@ -252,7 +252,7 @@ export class StripePaymentProvider implements PaymentProvider {
   }
 
   async listProducts(): Promise<StripeProductPrice[]> {
-    const stripe = await getStripeClient();
+    const stripe = await this.getClient();
     try {
       const prices = await stripe.prices.list({
         active: true,

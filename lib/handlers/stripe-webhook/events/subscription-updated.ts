@@ -2,6 +2,7 @@ import { WebhookContext } from '../context';
 
 const STATUS_MAP: Record<string, string> = {
   active: 'ACTIVE',
+  trialing: 'ACTIVE',
   past_due: 'PAST_DUE',
   canceled: 'CANCELED',
   unpaid: 'SUSPENDED',

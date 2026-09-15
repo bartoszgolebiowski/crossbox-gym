@@ -134,8 +134,8 @@ describe('Deferred Subscription Billing Anchor Tests', () => {
     assert.equal(capturedSessionParams.subscription_data?.proration_behavior, 'none');
   });
 
-  test('StripePaymentProvider configures upfront charge and trial_end for distant presale anchor (1791849600 / October 12, 2026)', async () => {
-    const campaignTimestamp = 1791849600; // October 12, 2026
+  test('StripePaymentProvider configures upfront charge and trial_end for distant presale anchor', async () => {
+    const campaignTimestamp = Math.floor(Date.now() / 1000) + 40 * 86400; // 40 days in future (> 31 days)
     let capturedSessionParams: any = null;
 
     const mockStripe: any = {
@@ -251,5 +251,158 @@ describe('Deferred Subscription Billing Anchor Tests', () => {
     assert.equal(res.url, 'https://checkout.stripe.com/c/pay/cs_test_123');
     assert.ok(capturedSessionParams);
     assert.equal(capturedSessionParams.subscription_data, undefined);
+  });
+
+  test('StripePaymentProvider rejects checkout when presale_end_date has passed', async () => {
+    const pastPresaleDate = Math.floor(Date.now() / 1000) - 3600; // 1 hour ago
+    const mockStripe: any = {
+      prices: {
+        retrieve: async (_priceId: string, _opts: any) => ({
+          id: 'price_presale_expired',
+          product: {
+            id: 'prod_presale_expired',
+            metadata: {
+              presale_end_date: String(pastPresaleDate),
+            },
+          },
+        }),
+      },
+    };
+
+    const provider = new StripePaymentProvider(mockStripe);
+    await assert.rejects(
+      provider.createCheckoutSession({
+        priceId: 'price_presale_expired',
+        successUrl: 'https://app.example.com/success',
+        cancelUrl: 'https://app.example.com/cancel',
+      }),
+      { message: 'This campaign pass is no longer available for purchase.' }
+    );
+  });
+
+  test('StripePaymentProvider allows checkout when presale_end_date is extended to 1790020800 (Sept 21, 2026)', async () => {
+    const extendedPresaleDate = 1790020800; // Sept 21, 2026 22:00:00 CEST
+    let capturedSessionParams: any = null;
+
+    const mockStripe: any = {
+      prices: {
+        retrieve: async (_priceId: string, _opts: any) => ({
+          id: 'price_presale_extended',
+          product: {
+            id: 'prod_presale_extended',
+            metadata: {
+              presale_end_date: String(extendedPresaleDate),
+            },
+          },
+        }),
+      },
+      checkout: {
+        sessions: {
+          create: async (params: any) => {
+            capturedSessionParams = params;
+            return { url: 'https://checkout.stripe.com/c/pay/cs_test_extended' };
+          },
+        },
+      },
+    };
+
+    const provider = new StripePaymentProvider(mockStripe);
+    const res = await provider.createCheckoutSession({
+      priceId: 'price_presale_extended',
+      successUrl: 'https://app.example.com/success',
+      cancelUrl: 'https://app.example.com/cancel',
+    });
+
+    assert.equal(res.url, 'https://checkout.stripe.com/c/pay/cs_test_extended');
+    assert.ok(capturedSessionParams);
+  });
+
+  test('StripePaymentProvider configures distant anchor using metadata.trial_end = 1792612800 (Oct 21, 2026)', async () => {
+    const trialEndTimestamp = 1792612800; // Oct 21, 2026 (+30 days after opening)
+    let capturedSessionParams: any = null;
+
+    const mockStripe: any = {
+      prices: {
+        retrieve: async (_priceId: string, _opts: any) => ({
+          id: 'price_presale_trial',
+          unit_amount: 13900,
+          currency: 'pln',
+          product: {
+            id: 'prod_presale_trial',
+            name: 'Karnet Przedsprzedażowy',
+            metadata: {
+              presale_end_date: '1790020800',
+              trial_end: String(trialEndTimestamp),
+            },
+          },
+        }),
+      },
+      checkout: {
+        sessions: {
+          create: async (params: any) => {
+            capturedSessionParams = params;
+            return { url: 'https://checkout.stripe.com/c/pay/cs_test_trial' };
+          },
+        },
+      },
+    };
+
+    const provider = new StripePaymentProvider(mockStripe);
+    const res = await provider.createCheckoutSession({
+      priceId: 'price_presale_trial',
+      successUrl: 'https://app.example.com/success',
+      cancelUrl: 'https://app.example.com/cancel',
+    });
+
+    assert.equal(res.url, 'https://checkout.stripe.com/c/pay/cs_test_trial');
+    assert.ok(capturedSessionParams);
+    assert.equal(capturedSessionParams.line_items.length, 2);
+    assert.equal(capturedSessionParams.line_items[0].price_data?.unit_amount, 13900); // Upfront fee for access
+    assert.equal(capturedSessionParams.subscription_data?.trial_end, trialEndTimestamp); // Subsequent billing deferred
+  });
+
+  test('StripePaymentProvider.listProducts filters out expired presale and displays extended presale', async () => {
+    const pastPresaleDate = Math.floor(Date.now() / 1000) - 3600; // 1 hour ago
+    const extendedPresaleDate = 1790020800; // Sept 21, 2026 22:00:00 CEST
+
+    const mockStripe: any = {
+      prices: {
+        list: async () => ({
+          data: [
+            {
+              id: 'price_expired',
+              active: true,
+              unit_amount: 12900,
+              currency: 'pln',
+              product: {
+                id: 'prod_expired',
+                name: 'Wygasły Karnet',
+                active: true,
+                metadata: { presale_end_date: String(pastPresaleDate) },
+              },
+            },
+            {
+              id: 'price_extended',
+              active: true,
+              unit_amount: 13900,
+              currency: 'pln',
+              product: {
+                id: 'prod_extended',
+                name: 'Przedłużony Karnet',
+                active: true,
+                metadata: { presale_end_date: String(extendedPresaleDate) },
+              },
+            },
+          ],
+        }),
+      },
+    };
+
+    const provider = new StripePaymentProvider(mockStripe);
+    const products = await provider.listProducts();
+
+    assert.equal(products.length, 1);
+    assert.equal(products[0].id, 'price_extended');
+    assert.equal(products[0].name, 'Przedłużony Karnet');
   });
 });
