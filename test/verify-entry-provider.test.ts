@@ -156,7 +156,7 @@ test('6. a valid QR scan is delegated to the scanner facade', async () => {
     lockerFacade: {
       unlock: async (command) => {
         lockerUnlocks.push(command);
-        return { id: 1, method: 'Switch.Set', params: { id: 0, on: true, toggle_after: 3 } };
+        return { id: 1, src: 'shelly-plus-1', method: 'Switch.Set', params: { id: 0, on: true, toggle_after: 3 } };
       },
     },
   });

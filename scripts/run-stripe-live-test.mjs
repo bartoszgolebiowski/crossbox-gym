@@ -14,7 +14,7 @@ if (fs.existsSync(path.join(rootDir, '.env'))) {
   }
 }
 
-const env = validateEnv(stripeLiveTestEnvSchema, {
+validateEnv(stripeLiveTestEnvSchema, {
   ...process.env,
   RUN_STRIPE_LIVE_TESTS: process.env.RUN_STRIPE_LIVE_TESTS ?? 'true',
 });

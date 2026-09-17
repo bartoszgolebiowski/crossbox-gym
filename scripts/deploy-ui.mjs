@@ -14,7 +14,9 @@ const envPath = path.join(rootDir, '.env');
 if (fs.existsSync(envPath)) {
   try {
     process.loadEnvFile(envPath);
-  } catch {}
+  } catch {
+    // Ignore missing or malformed environment file
+  }
 }
 
 function run(command, args) {
@@ -90,8 +92,7 @@ const config = {
   UserPoolId: frontend.UserPoolId,
   UserPoolClientId: frontend.UserPoolClientId,
 };
-const gaMeasurementId =
-  frontend.GaMeasurementId || process.env.GA_MEASUREMENT_ID;
+const gaMeasurementId = frontend.GaMeasurementId || process.env.GA_MEASUREMENT_ID;
 const heroConfig = {
   ...config,
   MemberAppUrl: frontend.AppUrl.replace(/\/+$/, ''),

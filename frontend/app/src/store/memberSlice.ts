@@ -1,4 +1,5 @@
 import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
+import QRCode from 'qrcode';
 import { apiClient } from '../services/apiClient';
 
 export interface Invoice {
@@ -24,6 +25,9 @@ export interface MemberState {
   dashboardLoading: boolean;
   qrUrl: string | null;
   qrInfo: string;
+  qrExpiresIn: number;
+  qrGeneratedAt: number | null;
+  qrLoading: boolean;
   invoices: Invoice[];
   invoicesLoading: boolean;
   checkoutStatus: string | null;
@@ -36,7 +40,10 @@ const initialState: MemberState = {
   dashboard: null,
   dashboardLoading: false,
   qrUrl: null,
-  qrInfo: 'Tap "Generate / Refresh Pass QR" to create active entry pass',
+  qrInfo: 'Zeskanuj kod QR przy bramce wejściowej siłowni 24/7',
+  qrExpiresIn: 60,
+  qrGeneratedAt: null,
+  qrLoading: false,
   invoices: [],
   invoicesLoading: false,
   checkoutStatus: null,
@@ -55,15 +62,26 @@ export const generateQRThunk = createAsyncThunk('member/generateQR', async (_, {
   try {
     const data = await apiClient.post<{ qr_code: string; expires_in: number; message?: string }>('/member/qr');
     if (data?.qr_code) {
-      const qrImage = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(data.qr_code)}`;
+      const qrImage = await QRCode.toDataURL(data.qr_code, {
+        width: 220,
+        margin: 1,
+        errorCorrectionLevel: 'M',
+        color: {
+          dark: '#14111d',
+          light: '#ffffff',
+        },
+      });
+      const expiresIn = typeof data.expires_in === 'number' && data.expires_in > 0 ? data.expires_in : 60;
       return {
         qrUrl: qrImage,
-        qrInfo: `✅ Signed HMAC Pass Valid (Expires in ${data.expires_in}s)`,
+        expiresIn,
+        generatedAt: Date.now(),
+        qrInfo: 'Zeskanuj kod QR przy bramce wejściowej siłowni 24/7',
       };
     }
-    return rejectWithValue(data?.message || 'Active subscription required for turnstile access');
+    return rejectWithValue(data?.message || 'Aktywny karnet jest wymagany do wejścia przez bramkę');
   } catch (err: any) {
-    return rejectWithValue(err.message || 'Failed to generate QR pass.');
+    return rejectWithValue(err.message || 'Nie udało się wygenerować kodu QR.');
   }
 });
 
@@ -128,7 +146,10 @@ const memberSlice = createSlice({
     clearMemberData: (state) => {
       state.dashboard = null;
       state.qrUrl = null;
-      state.qrInfo = 'Tap "Generate / Refresh Pass QR" to create active entry pass';
+      state.qrInfo = 'Zeskanuj kod QR przy bramce wejściowej siłowni 24/7';
+      state.qrExpiresIn = 60;
+      state.qrGeneratedAt = null;
+      state.qrLoading = false;
       state.invoices = [];
       state.checkoutStatus = null;
     },
@@ -143,17 +164,24 @@ const memberSlice = createSlice({
         state.dashboard = action.payload;
         if (!isMembershipActive(action.payload)) {
           state.qrUrl = null;
-          state.qrInfo = 'An active paid membership is required for turnstile access.';
+          state.qrInfo = 'Wymagana jest aktywna subskrypcja, aby uzyskać kod dostępu.';
         }
       })
       .addCase(fetchDashboardThunk.rejected, (state) => {
         state.dashboardLoading = false;
       })
+      .addCase(generateQRThunk.pending, (state) => {
+        state.qrLoading = true;
+      })
       .addCase(generateQRThunk.fulfilled, (state, action) => {
+        state.qrLoading = false;
         state.qrUrl = action.payload.qrUrl;
         state.qrInfo = action.payload.qrInfo;
+        state.qrExpiresIn = action.payload.expiresIn;
+        state.qrGeneratedAt = action.payload.generatedAt;
       })
       .addCase(generateQRThunk.rejected, (state, action) => {
+        state.qrLoading = false;
         state.qrInfo = `⚠️ ${action.payload as string}`;
       })
       .addCase(fetchInvoicesThunk.pending, (state) => {
@@ -184,6 +212,9 @@ export const selectDashboard = (state: { member: MemberState }) => state.member.
 export const selectDashboardLoading = (state: { member: MemberState }) => state.member.dashboardLoading;
 export const selectQrUrl = (state: { member: MemberState }) => state.member.qrUrl;
 export const selectQrInfo = (state: { member: MemberState }) => state.member.qrInfo;
+export const selectQrExpiresIn = (state: { member: MemberState }) => state.member.qrExpiresIn;
+export const selectQrGeneratedAt = (state: { member: MemberState }) => state.member.qrGeneratedAt;
+export const selectQrLoading = (state: { member: MemberState }) => state.member.qrLoading;
 export const selectInvoices = (state: { member: MemberState }) => state.member.invoices;
 export const selectInvoicesLoading = (state: { member: MemberState }) => state.member.invoicesLoading;
 export const selectCheckoutStatus = (state: { member: MemberState }) => state.member.checkoutStatus;

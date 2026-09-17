@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../store';
 import { selectAuthEmail } from '../store/authSlice';
 import {
@@ -7,7 +7,10 @@ import {
   isMembershipActive,
   selectDashboard,
   selectDashboardLoading,
+  selectQrExpiresIn,
+  selectQrGeneratedAt,
   selectQrInfo,
+  selectQrLoading,
   selectQrUrl,
 } from '../store/memberSlice';
 import { StatuteCheckoutModal } from './StatuteCheckoutModal';
@@ -18,20 +21,57 @@ export const QrPassCard: React.FC = () => {
   const dashboardLoading = useAppSelector(selectDashboardLoading);
   const qrUrl = useAppSelector(selectQrUrl);
   const qrInfo = useAppSelector(selectQrInfo);
+  const qrExpiresIn = useAppSelector(selectQrExpiresIn);
+  const qrGeneratedAt = useAppSelector(selectQrGeneratedAt);
+  const qrLoading = useAppSelector(selectQrLoading);
   const email = useAppSelector(selectAuthEmail);
   const membershipActive = isMembershipActive(dashboard);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(60);
+  const autoRefreshedCycleRef = useRef<number | null>(null);
 
+  // Initial QR code generation if user has active membership
   useEffect(() => {
-    if (membershipActive && !qrUrl) {
+    if (membershipActive && !qrUrl && !qrLoading) {
       dispatch(generateQRThunk());
     }
-  }, [dispatch, membershipActive, qrUrl]);
+  }, [dispatch, membershipActive, qrUrl, qrLoading]);
+
+  // Countdown timer and auto-refresh before expiry (at 5 seconds remaining)
+  useEffect(() => {
+    if (!membershipActive || !qrUrl || !qrGeneratedAt) {
+      setRemainingSeconds(qrExpiresIn || 60);
+      return;
+    }
+
+    const calculateRemaining = () => {
+      const totalMs = (qrExpiresIn || 60) * 1000;
+      const elapsedMs = Date.now() - qrGeneratedAt;
+      return Math.max(0, Math.ceil((totalMs - elapsedMs) / 1000));
+    };
+
+    setRemainingSeconds(calculateRemaining());
+
+    const interval = setInterval(() => {
+      const remaining = calculateRemaining();
+      setRemainingSeconds(remaining);
+
+      // Trigger automatic regeneration when 5 seconds or less remain
+      if (remaining <= 5 && autoRefreshedCycleRef.current !== qrGeneratedAt && !qrLoading) {
+        autoRefreshedCycleRef.current = qrGeneratedAt;
+        dispatch(generateQRThunk());
+      }
+    }, 500);
+
+    return () => clearInterval(interval);
+  }, [dispatch, membershipActive, qrUrl, qrGeneratedAt, qrExpiresIn, qrLoading]);
 
   const handleRefresh = () => {
-    dispatch(generateQRThunk());
+    if (membershipActive && !qrLoading) {
+      dispatch(generateQRThunk());
+    }
   };
 
   const handleConfirmCheckout = async () => {
@@ -56,6 +96,10 @@ export const QrPassCard: React.FC = () => {
       setIsSubmitting(false);
     }
   };
+
+  const totalSec = qrExpiresIn || 60;
+  const progressPercent = Math.max(0, Math.min(100, (remainingSeconds / totalSec) * 100));
+  const isExpiringSoon = membershipActive && Boolean(qrUrl) && remainingSeconds <= 5;
 
   return (
     <>
@@ -91,10 +135,84 @@ export const QrPassCard: React.FC = () => {
 
           {/* QR Display */}
           <div className="my-4 flex flex-col items-center justify-center">
-            <div className="p-4 rounded-card bg-line/10 border border-line/60">
+            <div className="p-4 rounded-card bg-line/10 border border-line/60 flex flex-col items-center">
               {membershipActive && qrUrl ? (
-                <div className="rounded-card bg-paper p-3 shadow-md">
-                  <img src={qrUrl} alt="Turnstile QR Pass" className="w-44 h-44 object-contain" />
+                <div className="flex flex-col items-center">
+                  <div className="rounded-card bg-paper p-3 shadow-md relative">
+                    <img src={qrUrl} alt="Turnstile QR Pass" className="w-44 h-44 object-contain" />
+                    {qrLoading && (
+                      <div className="absolute inset-0 bg-paper/85 backdrop-blur-[1px] flex flex-col items-center justify-center rounded-card gap-2">
+                        <svg className="w-7 h-7 animate-spin text-primary" fill="none" viewBox="0 0 24 24">
+                          <circle
+                            className="opacity-25"
+                            cx="12"
+                            cy="12"
+                            r="10"
+                            stroke="currentColor"
+                            strokeWidth="4"
+                          ></circle>
+                          <path
+                            className="opacity-75"
+                            fill="currentColor"
+                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                          ></path>
+                        </svg>
+                        <span className="text-[11px] font-semibold text-primary">Odświeżanie kodu...</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Countdown & Progress bar */}
+                  <div className="w-48 mt-3">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <span className="text-muted text-[11px] font-medium flex items-center gap-1">
+                        <svg className="w-3.5 h-3.5 text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth="2"
+                            d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+                          />
+                        </svg>
+                        Ważność kodu:
+                      </span>
+                      <span
+                        className={`font-mono text-xs font-bold ${isExpiringSoon ? 'text-warning animate-pulse' : 'text-ink'}`}
+                      >
+                        0:{remainingSeconds.toString().padStart(2, '0')}
+                      </span>
+                    </div>
+
+                    <div className="w-full bg-line/50 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-300 ${
+                          isExpiringSoon
+                            ? 'bg-warning animate-pulse'
+                            : remainingSeconds <= 15
+                              ? 'bg-accent'
+                              : 'bg-primary'
+                        }`}
+                        style={{ width: `${progressPercent}%` }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Notice when expiring or refreshing */}
+                  {(isExpiringSoon || qrLoading) && (
+                    <div className="mt-2.5 px-3 py-1.5 rounded-control bg-warning/10 border border-warning/30 text-warning text-xs font-medium flex items-center justify-center gap-1.5 animate-pulse text-center w-48">
+                      <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth="2"
+                          d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                        />
+                      </svg>
+                      <span className="text-[11px] leading-tight">
+                        {qrLoading ? 'Odświeżanie kodu QR...' : `Wygasa za ${remainingSeconds}s – odświeżam...`}
+                      </span>
+                    </div>
+                  )}
                 </div>
               ) : membershipActive ? (
                 <div className="w-44 h-44 flex flex-col items-center justify-center text-ink/40 gap-2">
@@ -149,10 +267,15 @@ export const QrPassCard: React.FC = () => {
 
         <button
           onClick={handleRefresh}
-          disabled={!membershipActive}
+          disabled={!membershipActive || qrLoading}
           className="mt-5 w-full py-2.5 px-4 rounded-control font-medium text-xs text-ink/70 bg-paper hover:bg-line/10 border border-line transition-colors cursor-pointer flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <svg className="w-4 h-4 text-ink/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg
+            className={`w-4 h-4 text-ink/40 ${qrLoading ? 'animate-spin' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -160,7 +283,7 @@ export const QrPassCard: React.FC = () => {
               d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
             />
           </svg>
-          <span>{membershipActive ? 'Odśwież Kod QR' : 'Wymagany Aktywny Karnet'}</span>
+          <span>{!membershipActive ? 'Wymagany Aktywny Karnet' : qrLoading ? 'Odświeżanie...' : 'Odśwież Kod QR'}</span>
         </button>
       </div>
 
